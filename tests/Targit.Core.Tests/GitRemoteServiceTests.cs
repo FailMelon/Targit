@@ -107,6 +107,51 @@ public sealed class GitRemoteServiceTests
     }
 
     [Fact]
+    public async Task CanSetAndClearCurrentBranchUpstream()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "targit-upstream-" + Guid.NewGuid().ToString("N"));
+        var sourcePath = Path.Combine(root, "source");
+        var localPath = Path.Combine(root, "local");
+        Directory.CreateDirectory(sourcePath);
+        try
+        {
+            Repository.Init(sourcePath);
+            using (var source = new Repository(sourcePath))
+            {
+                File.WriteAllText(Path.Combine(sourcePath, "readme.txt"), "initial\n");
+                Commands.Stage(source, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                source.Commit("Initial", signature, signature);
+            }
+            Repository.Clone(sourcePath, localPath);
+            string branchName;
+            using (var local = new Repository(localPath))
+                branchName = local.Head.FriendlyName;
+            var service = new GitRemoteService();
+            await service.ClearCurrentBranchUpstreamAsync(localPath);
+            using (var local = new Repository(localPath))
+                Assert.False(local.Head.IsTracking);
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SetCurrentBranchUpstreamAsync(localPath, "origin", "nonexistent"));
+            await service.SetCurrentBranchUpstreamAsync(localPath, "origin", branchName);
+            using (var local = new Repository(localPath))
+            {
+                Assert.True(local.Head.IsTracking);
+                Assert.Equal("origin", local.Head.RemoteName);
+            }
+            await service.ClearCurrentBranchUpstreamAsync(localPath);
+            using (var local = new Repository(localPath))
+                Assert.False(local.Head.IsTracking);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public async Task PullRequiresTrackingBranch()
     {
         var path = Path.Combine(Path.GetTempPath(), "targit-pull-" + Guid.NewGuid().ToString("N"));
