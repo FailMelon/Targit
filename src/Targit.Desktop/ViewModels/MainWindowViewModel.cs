@@ -283,6 +283,30 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task DeleteBranchAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedBranchLine is not { } selected) return;
+        var name = selected.Trim();
+        if (name.StartsWith("* ", StringComparison.Ordinal)) name = name[2..];
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _branches.DeleteAsync(repo.Path, name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await RefreshAsync();
+            Status = $"Deleted branch {name}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Delete branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
     private async Task StageSelectedAsync()
     {
         await ChangeStageAsync(stage: true);
