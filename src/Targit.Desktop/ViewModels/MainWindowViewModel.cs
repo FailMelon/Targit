@@ -22,6 +22,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly SemaphoreSlim _saveLock = new(1, 1);
     private bool _initialized;
     private bool _loadingSettings = true;
+    private long _repositorySelectionVersion;
     public ObservableCollection<RepositoryInfo> Repositories { get; } = [];
     public ObservableCollection<string> Tabs { get; } = ["History", "Changes", "Branches", "Output"];
     public IReadOnlyList<string> LayoutNames { get; } = ["Standard", "Review", "Merge Resolution"];
@@ -59,20 +60,30 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e) { FileLog.Error(e, "Load settings"); Status = e.Message; }
         finally { _loadingSettings = false; _initialized = true; }
     }
-    partial void OnSelectedRepositoryChanged(RepositoryInfo? value) => _ = ActivateAsync(value);
-    private async Task ActivateAsync(RepositoryInfo? repository)
+    partial void OnSelectedRepositoryChanged(RepositoryInfo? value)
+    {
+        var version = Interlocked.Increment(ref _repositorySelectionVersion);
+        if (value is null)
+        {
+            CurrentBranch = "No repository";
+            CommitLines.Clear(); ChangeLines.Clear(); BranchLines.Clear();
+            InspectorText = "Select a repository to inspect it.";
+        }
+        else _ = ActivateAsync(value, version);
+    }
+    private async Task ActivateAsync(RepositoryInfo? repository, long version)
     {
         if (repository is null) return;
         try
         {
             var snapshot = await _sessions.GetSession(repository.Path).OpenAsync();
-            if (SelectedRepository != repository) return;
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
             CurrentBranch = snapshot.Branch ?? "Detached HEAD";
             Status = $"Opened {repository.Name}";
             await RefreshAsync();
-            await PersistAsync();
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) await PersistAsync();
         }
-        catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
+        catch (Exception e) { FileLog.Error(e, "Open repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message; }
     }
     partial void OnSelectedLayoutChanged(string value) { if (!_loadingSettings) _ = PersistAsync(); }
     partial void OnSelectedTabChanged(string value) { if (!_loadingSettings) _ = PersistAsync(); }
