@@ -108,6 +108,25 @@ public sealed class GitWorkingTreeServiceTests
     }
 
     [Fact]
+    public async Task UnicodeAndWhitespacePathsCanBeStagedAndCommitted()
+    {
+        var path = NewRepository();
+        try
+        {
+            var git = new GitWorkingTreeService();
+            var relativePath = "notes café file.txt";
+            File.WriteAllText(Path.Combine(path, relativePath), "content");
+            await git.StageAsync(path, relativePath);
+            await git.CommitAsync(path, "Add unicode filename", "Tester", "tester@example.invalid");
+
+            using var repo = new Repository(path);
+            Assert.NotNull(repo.Head.Tip[relativePath]);
+            Assert.False(repo.RetrieveStatus().IsDirty);
+        }
+        finally { Cleanup(path); }
+    }
+
+    [Fact]
     public async Task UnstageTrackedModificationPreservesWorkingTreeFile()
     {
         var path = NewRepository();
