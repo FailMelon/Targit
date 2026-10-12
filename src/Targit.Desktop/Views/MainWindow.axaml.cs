@@ -25,12 +25,30 @@ public partial class MainWindow : Window
         Closing += (_, _) => SaveLayout();
     }
 
-    private void RestoreLayout()
+    private string NamedLayoutPath()
     {
-        if (!File.Exists(_layoutPath)) return;
+        var name = (DataContext as MainWindowViewModel)?.SelectedLayout ?? "Standard";
+        return Path.Combine(Path.GetDirectoryName(_layoutPath)!, $"layout-{name.Replace(' ', '-')}.json");
+    }
+
+    private void SaveLayout_Click(object? sender, RoutedEventArgs e) => SaveLayout(NamedLayoutPath());
+    private void LoadLayout_Click(object? sender, RoutedEventArgs e) => RestoreLayout(NamedLayoutPath());
+    private void ResetLayout_Click(object? sender, RoutedEventArgs e)
+    {
+        var layout = _factory.CreateLayout();
+        _factory.InitLayout(layout);
+        WorkspaceDock.Layout = layout;
+        SaveLayout();
+    }
+
+    private void RestoreLayout() => RestoreLayout(_layoutPath);
+
+    private void RestoreLayout(string path)
+    {
+        if (!File.Exists(path)) return;
         try
         {
-            using var stream = File.OpenRead(_layoutPath);
+            using var stream = File.OpenRead(path);
             var layout = _serializer.Load<IDock?>(stream);
             if (layout is null) return;
             WorkspaceDock.Layout = layout;
@@ -43,15 +61,17 @@ public partial class MainWindow : Window
         }
     }
 
-    private void SaveLayout()
+    private void SaveLayout() => SaveLayout(_layoutPath);
+
+    private void SaveLayout(string path)
     {
         if (WorkspaceDock.Layout is not { } layout) return;
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_layoutPath)!);
-            var temporary = _layoutPath + ".tmp";
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var temporary = path + ".tmp";
             using (var stream = File.Create(temporary)) _serializer.Save(stream, layout);
-            File.Move(temporary, _layoutPath, true);
+            File.Move(temporary, path, true);
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
