@@ -4,10 +4,13 @@ using CommunityToolkit.Mvvm.Input;
 using Targit.Application;
 using Targit.Core;
 using Targit.Infrastructure;
+using Targit.Git;
 namespace Targit.Desktop.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly RepositorySessionManager _sessions;
+    private readonly GitWorkingTreeService _gitActions;
+    private readonly Dictionary<string, string> _changePaths = new(StringComparer.Ordinal);
     public ObservableCollection<string> CommitLines { get; } = [];
     [ObservableProperty] private string? selectedCommitLine;
     [ObservableProperty] private string? selectedChangeLine;
@@ -26,6 +29,7 @@ public partial class MainWindowViewModel : ObservableObject
     private long _repositorySelectionVersion;
     private long _settingsRevision;
     private long _refreshRevision;
+    private readonly SemaphoreSlim _gitMutationLock = new(1, 1);
     public ObservableCollection<RepositoryInfo> Repositories { get; } = [];
     public ObservableCollection<string> Tabs { get; } = ["History", "Changes", "Branches"];
     public IReadOnlyList<string> LayoutNames { get; } = ["Standard", "Review", "Merge Resolution"];
@@ -37,9 +41,13 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string status = "Ready";
     [ObservableProperty] private string repositoryPath = "";
     [ObservableProperty] private string newTab = "History";
-    public MainWindowViewModel(RepositorySessionManager sessions, JsonSettingsStore settings)
+    [ObservableProperty] private string stagingSummary = "No staged changes";
+    [ObservableProperty] private string commitMessage = "";
+    [ObservableProperty] private string authorName = "";
+    [ObservableProperty] private string authorEmail = "";
+    public MainWindowViewModel(RepositorySessionManager sessions, JsonSettingsStore settings, GitWorkingTreeService gitActions)
     {
-        _sessions = sessions; _settings = settings;
+        _sessions = sessions; _settings = settings; _gitActions = gitActions;
         Initialization = InitializeAsync();
     }
     private async Task InitializeAsync()
@@ -64,6 +72,10 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedRepositoryChanged(RepositoryInfo? value)
     {
         var version = Interlocked.Increment(ref _repositorySelectionVersion);
+        SelectedChangeLine = null;
+        _changePaths.Clear();
+        ChangeLines.Clear();
+        StagingSummary = "No staged changes";
         if (value is null)
         {
             CurrentBranch = "No repository";
@@ -122,8 +134,18 @@ public partial class MainWindowViewModel : ObservableObject
             foreach (var commit in overview.Commits)
                 CommitLines.Add($"{commit.Sha[..7]}  {commit.Message} — {commit.Author}");
             ChangeLines.Clear();
+            _changePaths.Clear();
             foreach (var change in overview.Changes)
-                ChangeLines.Add($"{change.State}  {change.Path}");
+            {
+                var line = $"{change.State}  {change.Path}";
+                ChangeLines.Add(line);
+                _changePaths[line] = change.Path;
+            }
+            var stagedCount = overview.Changes.Count(change =>
+                change.State.Contains("InIndex", StringComparison.Ordinal));
+            StagingSummary = stagedCount == 0
+                ? "No staged changes"
+                : stagedCount == 1 ? "1 staged file" : $"{stagedCount} staged files";
             BranchLines.Clear();
             foreach (var branch in overview.Branches) BranchLines.Add(branch);
             Status = $"{overview.Commits.Count} recent commits · {overview.Changes.Count} changed files";
@@ -179,5 +201,65 @@ public partial class MainWindowViewModel : ObservableObject
             await PersistAsync();
         }
         catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
+    }
+    [RelayCommand]
+    private async Task StageSelectedAsync()
+    {
+        await ChangeStageAsync(stage: true);
+    }
+
+    [RelayCommand]
+    private async Task UnstageSelectedAsync()
+    {
+        await ChangeStageAsync(stage: false);
+    }
+
+    private async Task ChangeStageAsync(bool stage)
+    {
+        if (SelectedRepository is not { } repo || SelectedChangeLine is not { } selected ||
+            !_changePaths.TryGetValue(selected, out var path)) return;
+        var selectionVersion = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (selectionVersion != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            if (stage) await _gitActions.StageAsync(repo.Path, path);
+            else await _gitActions.UnstageAsync(repo.Path, path);
+            if (SelectedRepository?.Path != repo.Path) return;
+            await RefreshAsync();
+            if (SelectedRepository?.Path == repo.Path) Status = stage ? $"Staged {path}" : $"Unstaged {path}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, stage ? "Stage file" : "Unstage file");
+            if (SelectedRepository?.Path == repo.Path) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CommitAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var message = CommitMessage;
+        var author = AuthorName;
+        var email = AuthorEmail;
+        var selectionVersion = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (selectionVersion != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _gitActions.CommitAsync(repo.Path, message, author, email);
+            if (SelectedRepository?.Path != repo.Path) return;
+            CommitMessage = "";
+            await RefreshAsync();
+            if (SelectedRepository?.Path == repo.Path) Status = $"Created commit {sha[..7]}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Create commit");
+            if (SelectedRepository?.Path == repo.Path) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
     }
 }
