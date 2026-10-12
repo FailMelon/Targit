@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 using Dock.Model.Core;
-using Dock.Serializer.Newtonsoft;
+using Dock.Serializer;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Targit.Desktop.Docking;
