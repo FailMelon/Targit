@@ -149,6 +149,10 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 current.TextWrapping = TextWrapping.Wrap;
                 current.Bind(TextBlock.TextProperty, new Binding(nameof(workspace.InspectorText)));
                 root.Children.Add(current);
+                root.Children.Add(new TextBlock { Text = "Effective Git identity", FontWeight = FontWeight.SemiBold });
+                var identity = new TextBlock { TextWrapping = TextWrapping.Wrap };
+                identity.Bind(TextBlock.TextProperty, new Binding(nameof(workspace.ConfiguredIdentity)));
+                root.Children.Add(identity);
                 break;
             case "output":
                 var status = new TextBlock { TextWrapping = TextWrapping.Wrap };
