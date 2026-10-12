@@ -11,6 +11,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly RepositorySessionManager _sessions;
     private readonly GitWorkingTreeService _gitActions;
     private readonly GitDiffService _diffs = new();
+    private readonly GitBranchService _branches = new();
+    [ObservableProperty] private string newBranchName = "";
     private long _diffRevision;
     [ObservableProperty] private string stagedDiffText = "";
     [ObservableProperty] private string unstagedDiffText = "";
@@ -231,6 +233,79 @@ public partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
     }
+    [RelayCommand]
+    private async Task CreateBranchAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var name = NewBranchName.Trim();
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _branches.CreateAsync(repo.Path, name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            NewBranchName = "";
+            await RefreshAsync();
+            Status = $"Created branch {name}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Create branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CheckoutBranchAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedBranchLine is not { } selected) return;
+        var name = selected.Trim();
+        if (name.StartsWith("* ", StringComparison.Ordinal)) name = name[2..];
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            var current = await _branches.CheckoutAsync(repo.Path, name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            CurrentBranch = current;
+            await RefreshAsync();
+            Status = $"Switched to {current}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Checkout branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task DeleteBranchAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedBranchLine is not { } selected) return;
+        var name = selected.Trim();
+        if (name.StartsWith("* ", StringComparison.Ordinal)) name = name[2..];
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _branches.DeleteAsync(repo.Path, name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await RefreshAsync();
+            Status = $"Deleted branch {name}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Delete branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
     [RelayCommand]
     private async Task StageSelectedAsync()
     {

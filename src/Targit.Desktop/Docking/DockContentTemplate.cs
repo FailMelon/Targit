@@ -75,6 +75,18 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "branches":
                 AddList(root, nameof(workspace.BranchLines), nameof(workspace.SelectedBranchLine));
+                var branchName = new TextBox { Watermark = "New local branch name" };
+                branchName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.NewBranchName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(branchName);
+                var createBranch = new Button { Content = "Create branch" };
+                createBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.CreateBranchCommand)));
+                root.Children.Add(createBranch);
+                var checkoutBranch = new Button { Content = "Switch to selected branch" };
+                checkoutBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.CheckoutBranchCommand)));
+                root.Children.Add(checkoutBranch);
+                var deleteBranch = new Button { Content = "Delete selected local branch" };
+                deleteBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.DeleteBranchCommand)));
+                root.Children.Add(deleteBranch);
                 break;
             case "inspector":
                 var current = new TextBlock();
