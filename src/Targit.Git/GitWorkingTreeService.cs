@@ -11,6 +11,7 @@ public sealed class GitWorkingTreeService
             ct.ThrowIfCancellationRequested();
             using var repo = new Repository(repositoryPath);
             if (repo.Info.IsBare) throw new InvalidOperationException("A bare repository has no working tree.");
+            ct.ThrowIfCancellationRequested();
             Commands.Stage(repo, filePath);
         }, ct);
 
@@ -20,6 +21,7 @@ public sealed class GitWorkingTreeService
             ct.ThrowIfCancellationRequested();
             using var repo = new Repository(repositoryPath);
             if (repo.Info.IsBare) throw new InvalidOperationException("A bare repository has no working tree.");
+            ct.ThrowIfCancellationRequested();
             Commands.Unstage(repo, filePath);
         }, ct);
 
@@ -38,6 +40,7 @@ public sealed class GitWorkingTreeService
                 FileStatus.DeletedFromIndex | FileStatus.RenamedInIndex | FileStatus.TypeChangeInIndex;
             if (!repo.RetrieveStatus().Any(entry => (entry.State & staged) != 0))
                 throw new InvalidOperationException("Stage at least one change before committing.");
+            ct.ThrowIfCancellationRequested();
             var signature = new Signature(authorName.Trim(), authorEmail.Trim(), DateTimeOffset.Now);
             return repo.Commit(message.Trim(), signature, signature).Sha;
         }, ct);
