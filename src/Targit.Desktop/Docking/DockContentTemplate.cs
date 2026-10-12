@@ -117,6 +117,14 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var pullRemote = new Button { Content = "Pull tracked branch (fast-forward only)" };
                 pullRemote.Bind(Button.CommandProperty, new Binding(nameof(workspace.PullFastForwardCommand)));
                 root.Children.Add(pullRemote);
+                root.Children.Add(new TextBlock { Text = "Fetched branches (select to track)", FontWeight = FontWeight.SemiBold });
+                var remoteBranches = new ListBox { MinHeight = 110 };
+                remoteBranches.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.RemoteBranches)));
+                remoteBranches.Bind(Avalonia.Controls.Primitives.SelectingItemsControl.SelectedItemProperty,
+                    new Binding(nameof(workspace.SelectedRemoteBranch)) { Mode = BindingMode.TwoWay });
+                remoteBranches.ItemTemplate = new FuncDataTemplate<Targit.Git.GitRemoteBranchInfo>((branch, _) =>
+                    new TextBlock { Text = branch is null ? "" : (branch.IsTrackedByCurrentBranch ? "✓ " : "") + branch.BranchName + "  " + branch.CommitSha[..7] });
+                root.Children.Add(remoteBranches);
                 var upstreamBranch = new TextBox { Watermark = "Remote branch to track (e.g. main)" };
                 upstreamBranch.Bind(TextBox.TextProperty, new Binding(nameof(workspace.UpstreamBranchName)) { Mode = BindingMode.TwoWay });
                 root.Children.Add(upstreamBranch);
