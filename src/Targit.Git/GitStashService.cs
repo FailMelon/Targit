@@ -32,4 +32,58 @@ public sealed class GitStashService
         repository.Stashes.Add(signature, message ?? string.Empty, StashModifiers.Default);
     }, cancellationToken);
 
+
+    /// <summary>Permanently removes a selected stash entry without applying it.</summary>
+    public Task DropAsync(string repositoryPath, int index,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        if (index < 0) throw new ArgumentOutOfRangeException(nameof(index));
+        using var repository = new Repository(repositoryPath);
+        if (index >= repository.Stashes.Count())
+            throw new ArgumentOutOfRangeException(nameof(index), "Stash does not exist.");
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Stashes.Remove(index);
+    }, cancellationToken);
+
+    /// <summary>Applies a saved stash without removing it.</summary>
+    public Task ApplyAsync(string repositoryPath, int index,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        if (index < 0) throw new ArgumentOutOfRangeException(nameof(index));
+        using var repository = new Repository(repositoryPath);
+        if (repository.Info.IsBare || repository.Head.Tip is null)
+            throw new InvalidOperationException("Stash application requires a working tree and an initial commit.");
+        if (repository.RetrieveStatus().IsDirty)
+            throw new InvalidOperationException("Commit or stash current changes before applying a stash.");
+        if (index >= repository.Stashes.Count())
+            throw new ArgumentOutOfRangeException(nameof(index));
+        cancellationToken.ThrowIfCancellationRequested();
+        var status = repository.Stashes.Apply(index);
+        if (status != StashApplyStatus.Applied)
+            throw new InvalidOperationException($"Stash application did not succeed: {status}.");
+    }, cancellationToken);
+
+    /// <summary>Applies and removes a stash only if application succeeds.</summary>
+    public Task PopAsync(string repositoryPath, int index,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        if (index < 0) throw new ArgumentOutOfRangeException(nameof(index));
+        using var repository = new Repository(repositoryPath);
+        if (repository.Info.IsBare || repository.Head.Tip is null)
+            throw new InvalidOperationException("Stash pop requires a working tree and an initial commit.");
+        if (repository.RetrieveStatus().IsDirty)
+            throw new InvalidOperationException("Commit or stash current changes before popping a stash.");
+        if (index >= repository.Stashes.Count())
+            throw new ArgumentOutOfRangeException(nameof(index));
+        cancellationToken.ThrowIfCancellationRequested();
+        var status = repository.Stashes.Pop(index);
+        if (status != StashApplyStatus.Applied)
+            throw new InvalidOperationException($"Stash pop did not succeed: {status}.");
+    }, cancellationToken);
 }
