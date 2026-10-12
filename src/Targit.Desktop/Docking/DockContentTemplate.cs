@@ -46,9 +46,17 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 root.Children.Add(createTag);
                 var tagList = new ListBox { MinHeight = 80 };
                 tagList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.Tags)));
+                tagList.Bind(Avalonia.Controls.Primitives.SelectingItemsControl.SelectedItemProperty, new Binding(nameof(workspace.SelectedTag)) { Mode = BindingMode.TwoWay });
                 tagList.ItemTemplate = new FuncDataTemplate<Targit.Git.GitTagInfo>((tag, _) =>
                     new TextBlock { Text = tag is null ? "" : tag.Name + "  " + tag.TargetSha[..7] + (tag.IsAnnotated ? " (annotated)" : "") });
                 root.Children.Add(tagList);
+                root.Children.Add(new TextBlock { Text = "Delete local tag: select a tag and type its exact name to confirm. Remote tags are unaffected.", TextWrapping = TextWrapping.Wrap });
+                var confirmTagDeletion = new TextBox { Watermark = "Exact tag name to confirm deletion" };
+                confirmTagDeletion.Bind(TextBox.TextProperty, new Binding(nameof(workspace.TagDeletionConfirmation)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(confirmTagDeletion);
+                var deleteTag = new Button { Content = "Delete selected local tag" };
+                deleteTag.Bind(Button.CommandProperty, new Binding(nameof(workspace.DeleteSelectedTagCommand)));
+                root.Children.Add(deleteTag);
                 break;
             case "changes":
                 AddList(root, nameof(workspace.ChangeLines), nameof(workspace.SelectedChangeLine));

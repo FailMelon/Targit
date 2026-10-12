@@ -15,6 +15,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitTagService _tags = new();
     public ObservableCollection<GitTagInfo> Tags { get; } = [];
     [ObservableProperty] private string newTagName = "";
+    [ObservableProperty] private GitTagInfo? selectedTag;
+    [ObservableProperty] private string tagDeletionConfirmation = "";
     private readonly GitCommitInspectionService _commitInspection = new();
     private readonly Dictionary<string, GitCommitSummary> _commitDetails = new(StringComparer.Ordinal);
     [ObservableProperty] private string configuredIdentity = "No repository selected";
@@ -131,6 +133,8 @@ public partial class MainWindowViewModel : ObservableObject
         _commitDetails.Clear();
         Remotes.Clear();
         Tags.Clear();
+        SelectedTag = null;
+        TagDeletionConfirmation = "";
         SelectedRemote = null;
         StagingSummary = "No staged changes";
         ConfiguredIdentity = value is null ? "No repository selected" : "Loading Git identity...";
@@ -234,8 +238,10 @@ public partial class MainWindowViewModel : ObservableObject
             await RefreshRemotesAsync(repo.Path, version, refreshVersion);
             var tags = await _tags.ListAsync(repo.Path);
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+            var previousTag = SelectedTag?.Name;
             Tags.Clear();
             foreach (var tag in tags) Tags.Add(tag);
+            SelectedTag = Tags.FirstOrDefault(tag => tag.Name == previousTag);
         }
         catch (Exception e) { FileLog.Error(e, "Refresh repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion) && refreshVersion == Interlocked.Read(ref _refreshRevision)) Status = e.Message; }
     }
@@ -508,6 +514,36 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Remove remote");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task DeleteSelectedTagAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedTag is not { } tag) return;
+        var tagName = tag.Name;
+        if (!string.Equals(TagDeletionConfirmation.Trim(), tagName, StringComparison.Ordinal))
+        {
+            Status = $"Type {tagName} to confirm local tag deletion.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _tags.DeleteAsync(repo.Path, tagName);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            SelectedTag = null;
+            TagDeletionConfirmation = "";
+            await RefreshAsync();
+            Status = $"Deleted local tag {tagName}; remote tags were not changed.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Delete local tag");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
