@@ -218,10 +218,11 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (SelectedRepository is not { } repo || SelectedChangeLine is not { } selected ||
             !_changePaths.TryGetValue(selected, out var path)) return;
+        var selectionVersion = Interlocked.Read(ref _repositorySelectionVersion);
         await _gitMutationLock.WaitAsync();
         try
         {
-            if (SelectedRepository?.Path != repo.Path) return;
+            if (selectionVersion != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
             if (stage) await _gitActions.StageAsync(repo.Path, path);
             else await _gitActions.UnstageAsync(repo.Path, path);
             if (SelectedRepository?.Path != repo.Path) return;
@@ -243,10 +244,11 @@ public partial class MainWindowViewModel : ObservableObject
         var message = CommitMessage;
         var author = AuthorName;
         var email = AuthorEmail;
+        var selectionVersion = Interlocked.Read(ref _repositorySelectionVersion);
         await _gitMutationLock.WaitAsync();
         try
         {
-            if (SelectedRepository?.Path != repo.Path) return;
+            if (selectionVersion != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
             var sha = await _gitActions.CommitAsync(repo.Path, message, author, email);
             if (SelectedRepository?.Path != repo.Path) return;
             CommitMessage = "";
