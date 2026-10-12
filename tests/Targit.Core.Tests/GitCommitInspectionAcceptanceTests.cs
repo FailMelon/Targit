@@ -32,7 +32,7 @@ public sealed class GitCommitInspectionAcceptanceTests
             {
                 Assert.Equal(40, c.Sha.Length);
                 Assert.Equal("Inspection Tester", c.Author);
-                Assert.Equal(signature.When, c.When);
+                Assert.Equal(signature.When.ToUnixTimeSeconds(), c.When.ToUnixTimeSeconds());
             });
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.ListRecentAsync(path, 0));
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.ListRecentAsync(path, 501));
