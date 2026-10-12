@@ -48,6 +48,9 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 actions.Children.Add(stage);
                 actions.Children.Add(unstage);
                 root.Children.Add(actions);
+                var stagedSummary = new TextBlock();
+                stagedSummary.Bind(TextBlock.TextProperty, new Binding(nameof(workspace.StagingSummary)));
+                root.Children.Add(stagedSummary);
                 root.Children.Add(new TextBlock { Text = "Commit staged changes", FontWeight = FontWeight.SemiBold });
                 var message = new TextBox { Watermark = "Commit message", AcceptsReturn = true, MinHeight = 60 };
                 message.Bind(TextBox.TextProperty, new Binding(nameof(workspace.CommitMessage)) { Mode = BindingMode.TwoWay });
