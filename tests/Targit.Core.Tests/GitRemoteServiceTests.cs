@@ -7,6 +7,34 @@ namespace Targit.Core.Tests;
 public sealed class GitRemoteServiceTests
 {
     [Fact]
+    public async Task PullRequiresTrackingBranch()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-pull-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            using (var repository = new Repository(path))
+            {
+                File.WriteAllText(Path.Combine(path, "readme.txt"), "initial\n");
+                Commands.Stage(repository, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                repository.Commit("Initial", signature, signature);
+            }
+            var service = new GitRemoteService();
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.PullFastForwardAsync(path));
+            Assert.Contains("upstream", error.Message);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task PushRejectsUnbornAndDetachedHead()
     {
         var root = Path.Combine(Path.GetTempPath(), "targit-push-invalid-" + Guid.NewGuid().ToString("N"));
