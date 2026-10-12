@@ -16,6 +16,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitStashService _stashes = new();
     private readonly GitCommitAmendService _commitAmend = new();
     private readonly GitCherryPickService _cherryPick = new();
+    private readonly GitRevertService _revert = new();
     [ObservableProperty] private string amendedCommitMessage = "";
     public ObservableCollection<GitStashInfo> Stashes { get; } = [];
     [ObservableProperty] private string stashMessage = "";
@@ -760,6 +761,37 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Save tracked stash");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task RevertSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select a commit in History to revert.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _revert.RevertAsync(repo.Path, commit.Sha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await RefreshAsync();
+            Status = $"Reverted {commit.Sha[..7]} with new commit {sha[..7]}.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Revert commit");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion))
+            {
+                await RefreshAsync();
+                Status = e.Message;
+            }
         }
         finally { _gitMutationLock.Release(); }
     }
