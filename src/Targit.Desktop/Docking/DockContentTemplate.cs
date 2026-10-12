@@ -37,6 +37,10 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Cherry-pick the selected non-merge commit onto the current branch. Requires a clean working tree; conflicts must be resolved manually.", TextWrapping = TextWrapping.Wrap });
+                var cherryPick = new Button { Content = "Cherry-pick selected commit" };
+                cherryPick.Bind(Button.CommandProperty, new Binding(nameof(workspace.CherryPickSelectedCommitCommand)));
+                root.Children.Add(cherryPick);
                 root.Children.Add(new TextBlock { Text = "Lightweight tags (current HEAD)", FontWeight = FontWeight.SemiBold });
                 var tagName = new TextBox { Watermark = "Tag name (e.g. v1.0.0)" };
                 tagName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.NewTagName)) { Mode = BindingMode.TwoWay });
