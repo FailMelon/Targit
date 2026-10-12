@@ -29,6 +29,7 @@ public partial class MainWindowViewModel : ObservableObject
     private long _repositorySelectionVersion;
     private long _settingsRevision;
     private long _refreshRevision;
+    private readonly SemaphoreSlim _gitMutationLock = new(1, 1);
     public ObservableCollection<RepositoryInfo> Repositories { get; } = [];
     public ObservableCollection<string> Tabs { get; } = ["History", "Changes", "Branches"];
     public IReadOnlyList<string> LayoutNames { get; } = ["Standard", "Review", "Merge Resolution"];
@@ -197,46 +198,59 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task StageSelectedAsync()
     {
-        if (SelectedRepository is not { } repo || SelectedChangeLine is not { } selected ||
-            !_changePaths.TryGetValue(selected, out var path)) return;
-        try
-        {
-            await _gitActions.StageAsync(repo.Path, path);
-            if (SelectedRepository?.Path != repo.Path) return;
-            await RefreshAsync();
-            if (SelectedRepository?.Path == repo.Path) Status = $"Staged {path}";
-        }
-        catch (Exception e) { FileLog.Error(e, "Stage file"); Status = e.Message; }
+        await ChangeStageAsync(stage: true);
     }
 
     [RelayCommand]
     private async Task UnstageSelectedAsync()
     {
+        await ChangeStageAsync(stage: false);
+    }
+
+    private async Task ChangeStageAsync(bool stage)
+    {
         if (SelectedRepository is not { } repo || SelectedChangeLine is not { } selected ||
             !_changePaths.TryGetValue(selected, out var path)) return;
+        await _gitMutationLock.WaitAsync();
         try
         {
-            await _gitActions.UnstageAsync(repo.Path, path);
+            if (SelectedRepository?.Path != repo.Path) return;
+            if (stage) await _gitActions.StageAsync(repo.Path, path);
+            else await _gitActions.UnstageAsync(repo.Path, path);
             if (SelectedRepository?.Path != repo.Path) return;
             await RefreshAsync();
-            if (SelectedRepository?.Path == repo.Path) Status = $"Unstaged {path}";
+            if (SelectedRepository?.Path == repo.Path) Status = stage ? $"Staged {path}" : $"Unstaged {path}";
         }
-        catch (Exception e) { FileLog.Error(e, "Unstage file"); Status = e.Message; }
+        catch (Exception e)
+        {
+            FileLog.Error(e, stage ? "Stage file" : "Unstage file");
+            if (SelectedRepository?.Path == repo.Path) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
     }
 
     [RelayCommand]
     private async Task CommitAsync()
     {
         if (SelectedRepository is not { } repo) return;
+        var message = CommitMessage;
+        var author = AuthorName;
+        var email = AuthorEmail;
+        await _gitMutationLock.WaitAsync();
         try
         {
-            var sha = await _gitActions.CommitAsync(repo.Path, CommitMessage, AuthorName, AuthorEmail);
+            if (SelectedRepository?.Path != repo.Path) return;
+            var sha = await _gitActions.CommitAsync(repo.Path, message, author, email);
             if (SelectedRepository?.Path != repo.Path) return;
             CommitMessage = "";
             await RefreshAsync();
             if (SelectedRepository?.Path == repo.Path) Status = $"Created commit {sha[..7]}";
         }
-        catch (Exception e) { FileLog.Error(e, "Create commit"); Status = e.Message; }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Create commit");
+            if (SelectedRepository?.Path == repo.Path) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
     }
-
 }
