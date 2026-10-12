@@ -14,6 +14,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitIdentityService _identity = new();
     private readonly GitTagService _tags = new();
     private readonly GitStashService _stashes = new();
+    private readonly GitCommitAmendService _commitAmend = new();
+    [ObservableProperty] private string amendedCommitMessage = "";
     public ObservableCollection<GitStashInfo> Stashes { get; } = [];
     [ObservableProperty] private string stashMessage = "";
     [ObservableProperty] private GitStashInfo? selectedStash;
@@ -756,6 +758,35 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Save tracked stash");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task AmendLatestCommitMessageAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var message = AmendedCommitMessage.Trim();
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            Status = "Enter a replacement commit message.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _commitAmend.AmendLatestMessageAsync(repo.Path, message);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            AmendedCommitMessage = "";
+            await RefreshAsync();
+            Status = $"Amended latest unpublished commit message: {sha[..7]}.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Amend commit message");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
