@@ -47,6 +47,23 @@ public sealed class GitBranchService
         return repository.Head.FriendlyName;
     }, cancellationToken);
 
+    public Task DeleteAsync(string repositoryPath, string branchName,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(branchName);
+        using var repository = new Repository(repositoryPath);
+        if (repository.Info.IsBare) throw new InvalidOperationException("Branch operations require a working tree.");
+        var branch = repository.Branches[branchName]
+            ?? throw new InvalidOperationException("Branch does not exist.");
+        if (branch.IsRemote) throw new InvalidOperationException("Cannot delete a remote branch.");
+        if (string.Equals(repository.Head.FriendlyName, branch.FriendlyName, StringComparison.Ordinal))
+            throw new InvalidOperationException("Cannot delete the checked-out branch.");
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Branches.Remove(branch);
+    }, cancellationToken);
+
     private static bool BranchNameIsValid(string name) =>
         !string.IsNullOrWhiteSpace(name) && !name.StartsWith('-') &&
         !name.StartsWith('/') && !name.EndsWith('/') &&
