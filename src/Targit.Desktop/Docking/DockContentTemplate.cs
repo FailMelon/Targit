@@ -37,6 +37,13 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Phase 41 inspection", FontWeight = FontWeight.SemiBold });
+                var action41 = new Button { Content = "Inspect Tags" };
+                action41.Bind(Button.CommandProperty, new Binding(nameof(workspace.InspectTagsCommand)));
+                root.Children.Add(action41);
+                var result41 = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 100, TextWrapping = TextWrapping.Wrap };
+                result41.Bind(TextBox.TextProperty, new Binding(nameof(workspace.TagInspectionSummary)));
+                root.Children.Add(result41);
                 root.Children.Add(new TextBlock { Text = "Commit graph (parents and refs)", FontWeight = FontWeight.SemiBold });
                 var loadGraph = new Button { Content = "Load commit graph" };
                 loadGraph.Bind(Button.CommandProperty, new Binding(nameof(workspace.LoadCommitGraphCommand)));
