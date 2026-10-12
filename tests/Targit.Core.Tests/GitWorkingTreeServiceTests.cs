@@ -59,6 +59,55 @@ public sealed class GitWorkingTreeServiceTests
     }
 
     [Fact]
+    public async Task StagedSnapshotDoesNotIncludeLaterWorkingTreeEdits()
+    {
+        var path = NewRepository();
+        try
+        {
+            var git = new GitWorkingTreeService();
+            var file = Path.Combine(path, "file.txt");
+            File.WriteAllText(file, "original");
+            await git.StageAsync(path, "file.txt");
+            await git.CommitAsync(path, "Initial", "Test", "test@example.com");
+
+            File.WriteAllText(file, "staged version");
+            await git.StageAsync(path, "file.txt");
+            File.WriteAllText(file, "later working tree version");
+            await git.CommitAsync(path, "Staged only", "Test", "test@example.com");
+
+            using var repo = new Repository(path);
+            var blob = (Blob)repo.Head.Tip["file.txt"].Target;
+            Assert.Equal("staged version", blob.GetContentText());
+            Assert.Equal("later working tree version", File.ReadAllText(file));
+            Assert.Contains(repo.RetrieveStatus(), entry => entry.FilePath == "file.txt" &&
+                (entry.State & FileStatus.ModifiedInWorkdir) != 0);
+        }
+        finally { Cleanup(path); }
+    }
+
+    [Fact]
+    public async Task TrackedDeletionCanBeStagedAndCommitted()
+    {
+        var path = NewRepository();
+        try
+        {
+            var git = new GitWorkingTreeService();
+            var file = Path.Combine(path, "removed.txt");
+            File.WriteAllText(file, "to delete");
+            await git.StageAsync(path, "removed.txt");
+            await git.CommitAsync(path, "Initial", "Test", "test@example.com");
+
+            File.Delete(file);
+            await git.StageAsync(path, "removed.txt");
+            await git.CommitAsync(path, "Remove file", "Test", "test@example.com");
+            using var repo = new Repository(path);
+            Assert.Null(repo.Head.Tip["removed.txt"]);
+            Assert.Empty(repo.RetrieveStatus());
+        }
+        finally { Cleanup(path); }
+    }
+
+    [Fact]
     public async Task CommitRequiresAuthorAndMessage()
     {
         var path = NewRepository();
