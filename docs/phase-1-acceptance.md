@@ -18,6 +18,8 @@ Perform on Windows, macOS and Linux:
 - [ ] Launch Targit and confirm charcoal backgrounds and readable text.
 - [ ] Use **Open folder...** to select an existing Git repository.
 - [ ] Confirm current branch, recent commits, changes and branches load.
+- [ ] Open an empty repository, a repository with commits, and a bare repository without crashes.
+- [ ] Open/close History, Changes, and Branches document tabs; verify selection and content remain in sync.
 - [ ] Switch between two repositories; confirm content refreshes.
 - [ ] Favorite a repository and restart; confirm it remains saved.
 - [ ] Drag a tool tab to another dock and back.
@@ -28,6 +30,7 @@ Perform on Windows, macOS and Linux:
 - [ ] Close and reopen Targit; verify recent repositories remain.
 - [ ] Select a non-repository folder and confirm a visible, nonfatal error.
 - [ ] Corrupt the workspace JSON and verify the application opens with a default layout.
+- [ ] Switch repositories quickly during a refresh and verify old repository data does not overwrite the new selection.
 - [ ] Inspect the app-data `Targit/targit.log` file for recorded errors.
 
 ## Scope notes
