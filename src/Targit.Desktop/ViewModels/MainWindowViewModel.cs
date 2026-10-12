@@ -52,7 +52,6 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string commitSearchSummary = "Select an action to inspect.";
     [ObservableProperty] private string commitSearchQuery = "";
 
-    [ObservableProperty] private string graphLaneSummary = "Select an action to inspect.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
