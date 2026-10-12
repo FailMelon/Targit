@@ -24,6 +24,15 @@ public sealed class RepositorySessionTests
     }
 
     [Fact]
+    public void DifferentRepositoriesHaveIndependentSessions()
+    {
+        using var manager = new RepositorySessionManager(new FakeReader(), new FakeOverview());
+        var one = manager.GetSession(Path.Combine(Path.GetTempPath(), "targit-one"));
+        var two = manager.GetSession(Path.Combine(Path.GetTempPath(), "targit-two"));
+        Assert.NotSame(one, two);
+    }
+
+    [Fact]
     public async Task SameRepositoryUsesSameSession()
     {
         var overview = new FakeOverview();
