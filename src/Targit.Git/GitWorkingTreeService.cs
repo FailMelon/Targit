@@ -9,6 +9,7 @@ public sealed class GitWorkingTreeService
         Task.Run(() =>
         {
             ct.ThrowIfCancellationRequested();
+            ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
             using var repo = new Repository(repositoryPath);
             if (repo.Info.IsBare) throw new InvalidOperationException("A bare repository has no working tree.");
             ct.ThrowIfCancellationRequested();
