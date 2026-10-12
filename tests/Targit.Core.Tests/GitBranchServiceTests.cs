@@ -7,6 +7,48 @@ namespace Targit.Core.Tests;
 public sealed class GitBranchServiceTests
 {
     [Fact]
+    public async Task CheckoutFetchedRemoteBranchCreatesTrackingLocalBranch()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "targit-remote-checkout-" + Guid.NewGuid().ToString("N"));
+        var sourcePath = Path.Combine(root, "source");
+        var localPath = Path.Combine(root, "local");
+        Directory.CreateDirectory(sourcePath);
+        try
+        {
+            Repository.Init(sourcePath);
+            using (var source = new Repository(sourcePath))
+            {
+                File.WriteAllText(Path.Combine(sourcePath, "readme.txt"), "initial\n");
+                Commands.Stage(source, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                source.Commit("Initial", signature, signature);
+                source.CreateBranch("feature/remote");
+            }
+            Repository.Clone(sourcePath, localPath);
+            var service = new GitBranchService();
+            Assert.Equal("feature/remote", await service.CheckoutRemoteBranchAsync(
+                localPath, "origin", "feature/remote", "feature/remote"));
+            using (var local = new Repository(localPath))
+            {
+                Assert.Equal("feature/remote", local.Head.FriendlyName);
+                Assert.True(local.Head.IsTracking);
+                Assert.Equal("origin", local.Head.RemoteName);
+                Assert.Equal("refs/remotes/origin/feature/remote", local.Head.TrackedBranch?.CanonicalName);
+            }
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.CheckoutRemoteBranchAsync(localPath, "origin", "feature/remote", "feature/remote"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.CheckoutRemoteBranchAsync(localPath, "origin", "missing", "missing"));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public async Task CreatesAndChecksOutLocalBranch()
     {
         var path = Path.Combine(Path.GetTempPath(), "targit-branch-" + Guid.NewGuid().ToString("N"));

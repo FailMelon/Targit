@@ -47,6 +47,50 @@ public sealed class GitBranchService
         return repository.Head.FriendlyName;
     }, cancellationToken);
 
+    /// <summary>Creates a local branch from a fetched remote branch, sets upstream and checks it out.</summary>
+    public Task<string> CheckoutRemoteBranchAsync(string repositoryPath, string remoteName,
+        string remoteBranchName, string localBranchName, CancellationToken cancellationToken = default) =>
+        Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(remoteName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(remoteBranchName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(localBranchName);
+        using var repository = new Repository(repositoryPath);
+        if (repository.Info.IsBare) throw new InvalidOperationException("Checkout requires a working tree.");
+        if (!BranchNameIsValid(localBranchName))
+            throw new ArgumentException("Invalid local branch name.", nameof(localBranchName));
+        if (repository.Network.Remotes[remoteName] is null)
+            throw new InvalidOperationException($"Remote '{remoteName}' does not exist.");
+        var remote = repository.Branches[$"refs/remotes/{remoteName}/{remoteBranchName}"];
+        if (remote is null || !remote.IsRemote || remote.Tip is null ||
+            string.Equals(remoteBranchName, "HEAD", StringComparison.Ordinal))
+            throw new InvalidOperationException("Fetch the remote branch before checking it out.");
+        if (repository.Branches[$"refs/heads/{localBranchName}"] is not null)
+            throw new InvalidOperationException($"Local branch '{localBranchName}' already exists.");
+        if (repository.RetrieveStatus().IsDirty)
+            throw new InvalidOperationException("Commit or stash local changes before checking out a remote branch.");
+        cancellationToken.ThrowIfCancellationRequested();
+        var local = repository.CreateBranch(localBranchName, remote.Tip);
+        try
+        {
+            repository.Branches.Update(local, updater => updater.TrackedBranch = remote.CanonicalName);
+            cancellationToken.ThrowIfCancellationRequested();
+            Commands.Checkout(repository, local, new CheckoutOptions
+            {
+                CheckoutModifiers = CheckoutModifiers.None
+            });
+            return repository.Head.FriendlyName;
+        }
+        catch
+        {
+            if (repository.Head.CanonicalName != local.CanonicalName)
+                repository.Branches.Remove(local);
+            throw;
+        }
+    }, cancellationToken);
+
     public Task DeleteAsync(string repositoryPath, string branchName,
         CancellationToken cancellationToken = default) => Task.Run(() =>
     {
