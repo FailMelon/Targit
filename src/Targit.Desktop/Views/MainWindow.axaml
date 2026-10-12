@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:dock="clr-namespace:Dock.Avalonia.Controls;assembly=Dock.Avalonia"
+        x:Class="Targit.Desktop.Views.MainWindow"
+        Title="Targit" Width="1440" Height="900" MinWidth="900" MinHeight="600">
+  <DockPanel Background="#1F1F1F">
+    <Border DockPanel.Dock="Top" Background="#252526" Padding="10">
+      <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="6">
+        <TextBlock Text="Targit" FontWeight="Bold" VerticalAlignment="Center"/>
+        <TextBlock Text="Repository" VerticalAlignment="Center"/>
+        <ComboBox Width="210" ItemsSource="{Binding Repositories}" SelectedItem="{Binding SelectedRepository}">
+          <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}"/></DataTemplate></ComboBox.ItemTemplate>
+        </ComboBox>
+        <Button Content="Open folder..." Click="OpenFolder_Click"/>
+        <TextBox Width="250" Watermark="Repository path" Text="{Binding RepositoryPath}"/>
+        <Button Content="Open path" Command="{Binding AddRepositoryCommand}"/>
+        <TextBlock Text="Branch:" VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding CurrentBranch}" VerticalAlignment="Center"/>
+        <Button Content="Favorite" Command="{Binding ToggleFavoriteCommand}"/>
+        <Button Content="Remove recent" Command="{Binding RemoveRepositoryCommand}"/><Button Content="Refresh" Command="{Binding RefreshCommand}"/>
+        <ComboBox Width="125" ItemsSource="{Binding AvailableTabs}" SelectedItem="{Binding NewTab}"/>
+        <Button Content="Open tab" Click="OpenTab_Click"/>
+        <Button Content="Close tab" Click="CloseTab_Click"/>
+        <ComboBox Width="145" ItemsSource="{Binding LayoutNames}" SelectedItem="{Binding SelectedLayout}"/>
+        <Button Content="Save layout" Click="SaveLayout_Click"/>
+        <Button Content="Load layout" Click="LoadLayout_Click"/>
+        <Button Content="Reset" Click="ResetLayout_Click"/>
+      </WrapPanel>
+    </Border>
+    <Border DockPanel.Dock="Bottom" Background="#252526" Padding="7">
+      <TextBlock Text="{Binding Status}"/>
+    </Border>
+    <dock:DockControl x:Name="WorkspaceDock"/>
+  </DockPanel>
+</Window>
