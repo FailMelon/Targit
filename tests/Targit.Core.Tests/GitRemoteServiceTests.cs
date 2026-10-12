@@ -6,6 +6,77 @@ namespace Targit.Core.Tests;
 
 public sealed class GitRemoteServiceTests
 {
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task PullFastForwardsAndProtectsLocalWork(bool dirty, bool divergent)
+    {
+        var root = Path.Combine(Path.GetTempPath(), "targit-pull-ff-" + Guid.NewGuid().ToString("N"));
+        var sourcePath = Path.Combine(root, "source");
+        var clonePath = Path.Combine(root, "clone");
+        Directory.CreateDirectory(sourcePath);
+        try
+        {
+            Repository.Init(sourcePath);
+            var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+            using (var source = new Repository(sourcePath))
+            {
+                File.WriteAllText(Path.Combine(sourcePath, "readme.txt"), "initial\n");
+                Commands.Stage(source, "readme.txt");
+                source.Commit("Initial", signature, signature);
+            }
+            Repository.Clone(sourcePath, clonePath);
+            string initialSha;
+            using (var clone = new Repository(clonePath))
+            {
+                initialSha = clone.Head.Tip!.Sha;
+                if (divergent)
+                {
+                    File.WriteAllText(Path.Combine(clonePath, "local.txt"), "local\n");
+                    Commands.Stage(clone, "local.txt");
+                    clone.Commit("Local", signature, signature);
+                }
+            }
+            string remoteSha;
+            using (var source = new Repository(sourcePath))
+            {
+                File.WriteAllText(Path.Combine(sourcePath, "remote.txt"), "remote\n");
+                Commands.Stage(source, "remote.txt");
+                remoteSha = source.Commit("Remote", signature, signature).Sha;
+            }
+            if (dirty)
+                File.WriteAllText(Path.Combine(clonePath, "dirty.txt"), "uncommitted\n");
+            var service = new GitRemoteService();
+            if (dirty)
+            {
+                await Assert.ThrowsAsync<InvalidOperationException>(() => service.PullFastForwardAsync(clonePath));
+            }
+            else if (divergent)
+            {
+                await Assert.ThrowsAnyAsync<Exception>(() => service.PullFastForwardAsync(clonePath));
+            }
+            else
+            {
+                await service.PullFastForwardAsync(clonePath);
+            }
+            using var result = new Repository(clonePath);
+            if (dirty) Assert.Equal(initialSha, result.Head.Tip!.Sha);
+            else if (divergent) Assert.NotEqual(remoteSha, result.Head.Tip!.Sha);
+            else
+            {
+                Assert.Equal(remoteSha, result.Head.Tip!.Sha);
+                Assert.True(File.Exists(Path.Combine(clonePath, "remote.txt")));
+            }
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(root, true);
+        }
+    }
+
     [Fact]
     public async Task PullRequiresTrackingBranch()
     {
