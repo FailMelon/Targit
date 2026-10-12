@@ -4,10 +4,13 @@ using CommunityToolkit.Mvvm.Input;
 using Targit.Application;
 using Targit.Core;
 using Targit.Infrastructure;
+using Targit.Git;
 namespace Targit.Desktop.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly RepositorySessionManager _sessions;
+    private readonly GitWorkingTreeService _gitActions;
+    private readonly Dictionary<string, string> _changePaths = new(StringComparer.Ordinal);
     public ObservableCollection<string> CommitLines { get; } = [];
     [ObservableProperty] private string? selectedCommitLine;
     [ObservableProperty] private string? selectedChangeLine;
@@ -37,9 +40,12 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string status = "Ready";
     [ObservableProperty] private string repositoryPath = "";
     [ObservableProperty] private string newTab = "History";
-    public MainWindowViewModel(RepositorySessionManager sessions, JsonSettingsStore settings)
+    [ObservableProperty] private string commitMessage = "";
+    [ObservableProperty] private string authorName = "";
+    [ObservableProperty] private string authorEmail = "";
+    public MainWindowViewModel(RepositorySessionManager sessions, JsonSettingsStore settings, GitWorkingTreeService gitActions)
     {
-        _sessions = sessions; _settings = settings;
+        _sessions = sessions; _settings = settings; _gitActions = gitActions;
         Initialization = InitializeAsync();
     }
     private async Task InitializeAsync()
@@ -122,8 +128,13 @@ public partial class MainWindowViewModel : ObservableObject
             foreach (var commit in overview.Commits)
                 CommitLines.Add($"{commit.Sha[..7]}  {commit.Message} — {commit.Author}");
             ChangeLines.Clear();
+            _changePaths.Clear();
             foreach (var change in overview.Changes)
-                ChangeLines.Add($"{change.State}  {change.Path}");
+            {
+                var line = $"{change.State}  {change.Path}";
+                ChangeLines.Add(line);
+                _changePaths[line] = change.Path;
+            }
             BranchLines.Clear();
             foreach (var branch in overview.Branches) BranchLines.Add(branch);
             Status = $"{overview.Commits.Count} recent commits · {overview.Changes.Count} changed files";
@@ -180,4 +191,46 @@ public partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
     }
+    [RelayCommand]
+    private async Task StageSelectedAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedChangeLine is not { } selected ||
+            !_changePaths.TryGetValue(selected, out var path)) return;
+        try
+        {
+            await _gitActions.StageAsync(repo.Path, path);
+            await RefreshAsync();
+            Status = $"Staged {path}";
+        }
+        catch (Exception e) { FileLog.Error(e, "Stage file"); Status = e.Message; }
+    }
+
+    [RelayCommand]
+    private async Task UnstageSelectedAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedChangeLine is not { } selected ||
+            !_changePaths.TryGetValue(selected, out var path)) return;
+        try
+        {
+            await _gitActions.UnstageAsync(repo.Path, path);
+            await RefreshAsync();
+            Status = $"Unstaged {path}";
+        }
+        catch (Exception e) { FileLog.Error(e, "Unstage file"); Status = e.Message; }
+    }
+
+    [RelayCommand]
+    private async Task CommitAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        try
+        {
+            var sha = await _gitActions.CommitAsync(repo.Path, CommitMessage, AuthorName, AuthorEmail);
+            CommitMessage = "";
+            await RefreshAsync();
+            Status = $"Created commit {sha[..7]}";
+        }
+        catch (Exception e) { FileLog.Error(e, "Create commit"); Status = e.Message; }
+    }
+
 }
