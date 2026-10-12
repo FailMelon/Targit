@@ -19,4 +19,25 @@ public sealed class GitTagService
             .OrderBy(tag => tag.Name, StringComparer.Ordinal)
             .ToArray();
     }, cancellationToken);
+    /// <summary>Creates a non-overwriting annotated tag on the current commit.</summary>
+    public Task CreateAnnotatedAsync(string repositoryPath, string tagName, string message,
+        string authorName, string authorEmail, CancellationToken cancellationToken = default) =>
+        Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(message);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(authorEmail);
+        using var repository = new Repository(repositoryPath);
+        if (repository.Head.Tip is null)
+            throw new InvalidOperationException("An existing commit is required to create a tag.");
+        if (repository.Tags[tagName] is not null)
+            throw new InvalidOperationException($"Tag '{tagName}' already exists.");
+        var signature = new Signature(authorName, authorEmail, DateTimeOffset.UtcNow);
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Tags.Add(tagName, repository.Head.Tip, signature, message, false);
+    }, cancellationToken);
+
 }
