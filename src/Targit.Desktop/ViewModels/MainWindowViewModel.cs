@@ -9,6 +9,13 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private readonly RepositorySessionManager _sessions;
     public ObservableCollection<string> CommitLines { get; } = [];
+    [ObservableProperty] private string? selectedCommitLine;
+    [ObservableProperty] private string? selectedChangeLine;
+    [ObservableProperty] private string? selectedBranchLine;
+    [ObservableProperty] private string inspectorText = "Select a commit, changed file or branch to inspect it.";
+    partial void OnSelectedCommitLineChanged(string? value) { if (value is not null) InspectorText = value; }
+    partial void OnSelectedChangeLineChanged(string? value) { if (value is not null) InspectorText = value; }
+    partial void OnSelectedBranchLineChanged(string? value) { if (value is not null) InspectorText = "Branch: " + value; }
     public ObservableCollection<string> ChangeLines { get; } = [];
     public ObservableCollection<string> BranchLines { get; } = [];
     private readonly JsonSettingsStore _settings;
@@ -87,6 +94,10 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var overview = await _sessions.GetSession(repo.Path).RefreshAsync();
             if (SelectedRepository != repo) return;
+            SelectedCommitLine = null;
+            SelectedChangeLine = null;
+            SelectedBranchLine = null;
+            InspectorText = $"Repository: {repo.Name} · Branch: {CurrentBranch}";
             CommitLines.Clear();
             foreach (var commit in overview.Commits)
                 CommitLines.Add($"{commit.Sha[..7]}  {commit.Message} — {commit.Author}");
