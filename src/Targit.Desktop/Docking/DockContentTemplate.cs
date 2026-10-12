@@ -125,6 +125,9 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 remoteBranches.ItemTemplate = new FuncDataTemplate<Targit.Git.GitRemoteBranchInfo>((branch, _) =>
                     new TextBlock { Text = branch is null ? "" : (branch.IsTrackedByCurrentBranch ? "✓ " : "") + branch.BranchName + "  " + branch.CommitSha[..7] });
                 root.Children.Add(remoteBranches);
+                var checkoutRemoteBranch = new Button { Content = "Checkout selected remote branch as local" };
+                checkoutRemoteBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.CheckoutRemoteBranchCommand)));
+                root.Children.Add(checkoutRemoteBranch);
                 var upstreamBranch = new TextBox { Watermark = "Remote branch to track (e.g. main)" };
                 upstreamBranch.Bind(TextBox.TextProperty, new Binding(nameof(workspace.UpstreamBranchName)) { Mode = BindingMode.TwoWay });
                 root.Children.Add(upstreamBranch);
