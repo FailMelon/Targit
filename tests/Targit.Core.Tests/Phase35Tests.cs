@@ -20,4 +20,16 @@ public sealed class Phase35Tests
         }
         finally { Cleanup(path); }
     }
+    [Fact]
+    public async Task RejectsBareRepository()
+    {
+        var path = NewPath();
+        try
+        {
+            Repository.Init(path, true);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => new GitRebaseConflictService().InspectAsync(path));
+        }
+        finally { Cleanup(path); }
+    }
+
 }
