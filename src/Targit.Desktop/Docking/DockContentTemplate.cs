@@ -147,6 +147,13 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var commit = new Button { Content = "Commit staged" };
                 commit.Bind(Button.CommandProperty, new Binding(nameof(workspace.CommitCommand)));
                 root.Children.Add(commit);
+                root.Children.Add(new TextBlock { Text = "Amend latest unpublished commit message (rewrites HEAD SHA; requires clean working tree and refuses commits in remote-tracking history)", TextWrapping = TextWrapping.Wrap });
+                var amendedMessage = new TextBox { Watermark = "Replacement message for latest commit", AcceptsReturn = true, MinHeight = 60 };
+                amendedMessage.Bind(TextBox.TextProperty, new Binding(nameof(workspace.AmendedCommitMessage)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(amendedMessage);
+                var amendCommit = new Button { Content = "Amend latest unpublished commit message" };
+                amendCommit.Bind(Button.CommandProperty, new Binding(nameof(workspace.AmendLatestCommitMessageCommand)));
+                root.Children.Add(amendCommit);
                 break;
             case "branches":
                 AddList(root, nameof(workspace.BranchLines), nameof(workspace.SelectedBranchLine));
