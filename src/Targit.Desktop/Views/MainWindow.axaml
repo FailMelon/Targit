@@ -5,7 +5,7 @@
         Title="Targit" Width="1440" Height="900" MinWidth="900" MinHeight="600">
   <DockPanel Background="#1F1F1F">
     <Border DockPanel.Dock="Top" Background="#252526" Padding="10">
-      <StackPanel Orientation="Horizontal" Spacing="12">
+      <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="6">
         <TextBlock Text="Targit" FontWeight="Bold" VerticalAlignment="Center"/>
         <TextBlock Text="Repository" VerticalAlignment="Center"/>
         <ComboBox Width="210" ItemsSource="{Binding Repositories}" SelectedItem="{Binding SelectedRepository}">
@@ -22,7 +22,7 @@
         <Button Content="Save layout" Click="SaveLayout_Click"/>
         <Button Content="Load layout" Click="LoadLayout_Click"/>
         <Button Content="Reset" Click="ResetLayout_Click"/>
-      </StackPanel>
+      </WrapPanel>
     </Border>
     <Border DockPanel.Dock="Bottom" Background="#252526" Padding="7">
       <TextBlock Text="{Binding Status}"/>
