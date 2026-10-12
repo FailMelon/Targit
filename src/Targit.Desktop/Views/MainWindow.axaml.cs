@@ -47,6 +47,21 @@ public partial class MainWindow : Window
         return null;
     }
 
+    private void SynchronizeDocumentTabs()
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        var documents = FindDocuments();
+        if (documents?.VisibleDockables is not { } visible) return;
+        var names = visible.OfType<Document>()
+            .Select(d => d.Title)
+            .Where(title => !string.IsNullOrWhiteSpace(title))
+            .Select(title => title!)
+            .ToArray();
+        vm.Tabs.Clear();
+        foreach (var name in names) vm.Tabs.Add(name);
+        vm.SelectedTab = documents.ActiveDockable?.Title ?? names.FirstOrDefault() ?? "History";
+    }
+
     private void OpenTab_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
@@ -91,6 +106,7 @@ public partial class MainWindow : Window
         var layout = _factory.CreateLayout();
         _factory.InitLayout(layout);
         WorkspaceDock.Layout = layout;
+        SynchronizeDocumentTabs();
         SaveLayout();
     }
 
@@ -106,6 +122,7 @@ public partial class MainWindow : Window
             if (layout is null) return;
             _factory.InitLayout(layout);
             WorkspaceDock.Layout = layout;
+            SynchronizeDocumentTabs();
         }
         catch (Exception e)
         {
