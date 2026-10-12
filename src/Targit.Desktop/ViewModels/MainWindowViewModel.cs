@@ -18,6 +18,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitCherryPickService _cherryPick = new();
     private readonly GitRevertService _revert = new();
     private readonly GitSoftResetService _softReset = new();
+    private readonly GitMixedResetService _mixedReset = new();
+    [ObservableProperty] private string mixedResetConfirmation = "";
     [ObservableProperty] private string softResetConfirmation = "";
     [ObservableProperty] private string amendedCommitMessage = "";
     public ObservableCollection<GitStashInfo> Stashes { get; } = [];
@@ -762,6 +764,40 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Save tracked stash");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task MixedResetToSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select an ancestor commit in History.";
+            return;
+        }
+        var expected = $"MIXED {commit.Sha[..7]}";
+        if (!string.Equals(MixedResetConfirmation.Trim(), expected, StringComparison.Ordinal))
+        {
+            Status = $"Type {expected} to confirm moving HEAD and unstaging changes.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _mixedReset.ResetToAncestorAsync(repo.Path, commit.Sha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            MixedResetConfirmation = "";
+            await RefreshAsync();
+            Status = $"Mixed reset HEAD to {sha[..7]}; index reset, working files preserved.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Mixed reset");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
