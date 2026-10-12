@@ -49,6 +49,46 @@ public sealed class GitBranchServiceTests
     }
 
     [Fact]
+    public async Task RenameLocalBranchPreservesHistoryAndRejectsOverwrite()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-rename-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            string initialBranch;
+            string initialSha;
+            using (var repository = new Repository(path))
+            {
+                File.WriteAllText(Path.Combine(path, "readme.txt"), "initial\n");
+                Commands.Stage(repository, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                initialSha = repository.Commit("Initial", signature, signature).Sha;
+                initialBranch = repository.Head.FriendlyName;
+            }
+            var service = new GitBranchService();
+            Assert.Equal("renamed", await service.RenameAsync(path, initialBranch, "renamed"));
+            using (var repository = new Repository(path))
+            {
+                Assert.Equal("renamed", repository.Head.FriendlyName);
+                Assert.Equal(initialSha, repository.Head.Tip?.Sha);
+                Assert.Null(repository.Branches[$"refs/heads/{initialBranch}"]);
+                Assert.NotNull(repository.Branches["refs/heads/renamed"]);
+            }
+            await service.CreateAsync(path, "existing");
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.RenameAsync(path, "renamed", "existing"));
+            await Assert.ThrowsAsync<ArgumentException>(() => service.RenameAsync(path, "renamed", "invalid name"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.RenameAsync(path, "missing", "new-name"));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task CreatesAndChecksOutLocalBranch()
     {
         var path = Path.Combine(Path.GetTempPath(), "targit-branch-" + Guid.NewGuid().ToString("N"));
