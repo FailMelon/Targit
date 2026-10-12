@@ -32,7 +32,7 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 repositories.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.Repositories)));
                 repositories.Bind(Avalonia.Controls.Primitives.SelectingItemsControl.SelectedItemProperty, new Binding(nameof(workspace.SelectedRepository)) { Mode = BindingMode.TwoWay });
                 repositories.ItemTemplate = new FuncDataTemplate<Targit.Core.RepositoryInfo>((repo, _) =>
-                    new TextBlock { Text = repo?.Name ?? "" });
+                    new TextBlock { Text = repo is null ? "" : (repo.IsFavorite ? "★  " : "    ") + repo.Name });
                 root.Children.Add(repositories);
                 break;
             case "history":
