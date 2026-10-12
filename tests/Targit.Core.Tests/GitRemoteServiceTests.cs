@@ -7,6 +7,75 @@ namespace Targit.Core.Tests;
 public sealed class GitRemoteServiceTests
 {
     [Fact]
+    public async Task PushRejectsUnbornAndDetachedHead()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "targit-push-invalid-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            Repository.Init(root);
+            var service = new GitRemoteService();
+            await service.AddAsync(root, "origin", Path.Combine(root, "nonexistent.git"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.PushCurrentBranchAsync(root, "origin"));
+
+            using (var repository = new Repository(root))
+            {
+                File.WriteAllText(Path.Combine(root, "readme.txt"), "initial\n");
+                Commands.Stage(repository, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                var commit = repository.Commit("Initial", signature, signature);
+                Commands.Checkout(repository, commit);
+            }
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.PushCurrentBranchAsync(root, "origin"));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
+    public async Task PushCurrentBranchToBareRemote()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "targit-push-" + Guid.NewGuid().ToString("N"));
+        var localPath = Path.Combine(root, "local");
+        var remotePath = Path.Combine(root, "remote.git");
+        Directory.CreateDirectory(localPath);
+        Directory.CreateDirectory(remotePath);
+        try
+        {
+            Repository.Init(localPath);
+            Repository.Init(remotePath, isBare: true);
+            string branchName;
+            string commitSha;
+            using (var local = new Repository(localPath))
+            {
+                File.WriteAllText(Path.Combine(localPath, "readme.txt"), "initial\n");
+                Commands.Stage(local, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                var commit = local.Commit("Initial", signature, signature);
+                commitSha = commit.Sha;
+                branchName = local.Head.FriendlyName;
+            }
+            var service = new GitRemoteService();
+            await service.AddAsync(localPath, "origin", remotePath);
+            Assert.Equal(branchName, await service.PushCurrentBranchAsync(localPath, "origin"));
+            using var remote = new Repository(remotePath);
+            Assert.Equal(commitSha, remote.Branches[branchName]?.Tip?.Sha);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public async Task FetchFromLocalRemoteUpdatesTrackingBranch()
     {
         var root = Path.Combine(Path.GetTempPath(), "targit-fetch-" + Guid.NewGuid().ToString("N"));
