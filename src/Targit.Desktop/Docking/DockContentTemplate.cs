@@ -60,6 +60,18 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "changes":
                 AddList(root, nameof(workspace.ChangeLines), nameof(workspace.SelectedChangeLine));
+                root.Children.Add(new TextBlock { Text = "Stash tracked changes (untracked files are excluded)", FontWeight = FontWeight.SemiBold });
+                var stashMessage = new TextBox { Watermark = "Optional stash message" };
+                stashMessage.Bind(TextBox.TextProperty, new Binding(nameof(workspace.StashMessage)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(stashMessage);
+                var saveStash = new Button { Content = "Stash tracked changes" };
+                saveStash.Bind(Button.CommandProperty, new Binding(nameof(workspace.SaveTrackedStashCommand)));
+                root.Children.Add(saveStash);
+                var stashList = new ListBox { MinHeight = 70 };
+                stashList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.Stashes)));
+                stashList.ItemTemplate = new FuncDataTemplate<Targit.Git.GitStashInfo>((stash, _) =>
+                    new TextBlock { Text = stash is null ? "" : $"stash@{{{stash.Index}}}: {stash.Message}" });
+                root.Children.Add(stashList);
                 var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
                 var stage = new Button { Content = "Stage selected" };
                 stage.Bind(Button.CommandProperty, new Binding(nameof(workspace.StageSelectedCommand)));
