@@ -87,6 +87,12 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var deleteBranch = new Button { Content = "Delete selected local branch" };
                 deleteBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.DeleteBranchCommand)));
                 root.Children.Add(deleteBranch);
+                var renameBranchName = new TextBox { Watermark = "New name for selected local branch" };
+                renameBranchName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RenameBranchName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(renameBranchName);
+                var renameBranch = new Button { Content = "Rename selected local branch" };
+                renameBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.RenameBranchCommand)));
+                root.Children.Add(renameBranch);
                 break;
             case "remotes":
                 var remoteList = new ListBox { MinHeight = 150 };
