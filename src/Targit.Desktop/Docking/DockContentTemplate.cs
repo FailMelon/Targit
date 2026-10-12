@@ -193,6 +193,16 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var identity = new TextBlock { TextWrapping = TextWrapping.Wrap };
                 identity.Bind(TextBlock.TextProperty, new Binding(nameof(workspace.ConfiguredIdentity)));
                 root.Children.Add(identity);
+                root.Children.Add(new TextBlock { Text = "Repository-local identity (does not modify global Git settings)" });
+                var localName = new TextBox { Watermark = "Git author name" };
+                localName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.LocalIdentityName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(localName);
+                var localEmail = new TextBox { Watermark = "Git author email" };
+                localEmail.Bind(TextBox.TextProperty, new Binding(nameof(workspace.LocalIdentityEmail)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(localEmail);
+                var saveLocalIdentity = new Button { Content = "Save local Git identity" };
+                saveLocalIdentity.Bind(Button.CommandProperty, new Binding(nameof(workspace.SaveLocalIdentityCommand)));
+                root.Children.Add(saveLocalIdentity);
                 break;
             case "output":
                 var status = new TextBlock { TextWrapping = TextWrapping.Wrap };
