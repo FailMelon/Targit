@@ -51,6 +51,14 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var stagedSummary = new TextBlock();
                 stagedSummary.Bind(TextBlock.TextProperty, new Binding(nameof(workspace.StagingSummary)));
                 root.Children.Add(stagedSummary);
+                root.Children.Add(new TextBlock { Text = "Staged diff", FontWeight = FontWeight.SemiBold });
+                var stagedPatch = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap, MinHeight = 110, FontFamily = FontFamily.Parse("Consolas, Menlo, monospace") };
+                stagedPatch.Bind(TextBox.TextProperty, new Binding(nameof(workspace.StagedDiffText)));
+                root.Children.Add(stagedPatch);
+                root.Children.Add(new TextBlock { Text = "Unstaged diff", FontWeight = FontWeight.SemiBold });
+                var unstagedPatch = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap, MinHeight = 110, FontFamily = FontFamily.Parse("Consolas, Menlo, monospace") };
+                unstagedPatch.Bind(TextBox.TextProperty, new Binding(nameof(workspace.UnstagedDiffText)));
+                root.Children.Add(unstagedPatch);
                 root.Children.Add(new TextBlock { Text = "Commit staged changes", FontWeight = FontWeight.SemiBold });
                 var message = new TextBox { Watermark = "Commit message", AcceptsReturn = true, MinHeight = 60 };
                 message.Bind(TextBox.TextProperty, new Binding(nameof(workspace.CommitMessage)) { Mode = BindingMode.TwoWay });
