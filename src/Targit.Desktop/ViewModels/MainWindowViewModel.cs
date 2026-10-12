@@ -25,6 +25,7 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _loadingSettings = true;
     private long _repositorySelectionVersion;
     private long _settingsRevision;
+    private long _refreshRevision;
     public ObservableCollection<RepositoryInfo> Repositories { get; } = [];
     public ObservableCollection<string> Tabs { get; } = ["History", "Changes", "Branches"];
     public IReadOnlyList<string> LayoutNames { get; } = ["Standard", "Review", "Merge Resolution"];
@@ -107,10 +108,11 @@ public partial class MainWindowViewModel : ObservableObject
         var repo = SelectedRepository;
         if (repo is null) return;
         var version = Interlocked.Read(ref _repositorySelectionVersion);
+        var refreshVersion = Interlocked.Increment(ref _refreshRevision);
         try
         {
             var overview = await _sessions.GetSession(repo.Path).RefreshAsync();
-            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
             SelectedCommitLine = null;
             SelectedChangeLine = null;
             SelectedBranchLine = null;
@@ -125,7 +127,7 @@ public partial class MainWindowViewModel : ObservableObject
             foreach (var branch in overview.Branches) BranchLines.Add(branch);
             Status = $"{overview.Commits.Count} recent commits · {overview.Changes.Count} changed files";
         }
-        catch (Exception e) { FileLog.Error(e, "Refresh repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message; }
+        catch (Exception e) { FileLog.Error(e, "Refresh repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion) && refreshVersion == Interlocked.Read(ref _refreshRevision)) Status = e.Message; }
     }
 
     [RelayCommand]
