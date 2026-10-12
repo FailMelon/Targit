@@ -91,6 +91,31 @@ public sealed class GitBranchService
         }
     }, cancellationToken);
 
+    /// <summary>Renames an existing local branch without overwriting another branch.</summary>
+    public Task<string> RenameAsync(string repositoryPath, string currentName, string newName,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(currentName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newName);
+        if (!BranchNameIsValid(newName))
+            throw new ArgumentException("Invalid new branch name.", nameof(newName));
+        using var repository = new Repository(repositoryPath);
+        if (repository.Info.IsBare)
+            throw new InvalidOperationException("Renaming branches requires a working tree.");
+        var existing = repository.Branches[$"refs/heads/{currentName}"]
+            ?? throw new InvalidOperationException($"Local branch '{currentName}' does not exist.");
+        if (existing.IsRemote)
+            throw new InvalidOperationException("Cannot rename a remote branch.");
+        if (string.Equals(currentName, newName, StringComparison.Ordinal))
+            return existing.FriendlyName;
+        if (repository.Branches[$"refs/heads/{newName}"] is not null)
+            throw new InvalidOperationException($"Local branch '{newName}' already exists.");
+        cancellationToken.ThrowIfCancellationRequested();
+        return repository.Branches.Rename(existing, newName, false).FriendlyName;
+    }, cancellationToken);
+
     public Task DeleteAsync(string repositoryPath, string branchName,
         CancellationToken cancellationToken = default) => Task.Run(() =>
     {
