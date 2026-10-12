@@ -31,4 +31,22 @@ public sealed class Phase39Tests
             Directory.Delete(path, true);
         }
     }
+    [Fact]
+    public async Task ValidatesEdgeCases()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-39-edge-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            var service = new GitFileBlameService(); await Assert.ThrowsAsync<ArgumentException>(() => service.GetAsync(path, "../outside.txt")); await Assert.ThrowsAsync<ArgumentException>(() => service.GetAsync(path, " "));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
 }
