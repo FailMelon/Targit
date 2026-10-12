@@ -17,6 +17,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private GitRemoteInfo? selectedRemote;
     [ObservableProperty] private string newRemoteName = "";
     [ObservableProperty] private string newRemoteUrl = "";
+    [ObservableProperty] private string upstreamBranchName = "";
     [ObservableProperty] private string newBranchName = "";
     private long _diffRevision;
     [ObservableProperty] private string stagedDiffText = "";
@@ -317,6 +318,50 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Push remote");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task SetUpstreamAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedRemote is not { } remote) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _remotes.SetCurrentBranchUpstreamAsync(repo.Path, remote.Name, UpstreamBranchName.Trim());
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await RefreshAsync();
+            Status = $"Tracking {remote.Name}/{UpstreamBranchName.Trim()}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Set upstream");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task ClearUpstreamAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _remotes.ClearCurrentBranchUpstreamAsync(repo.Path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await RefreshAsync();
+            Status = "Current branch upstream cleared";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Clear upstream");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
