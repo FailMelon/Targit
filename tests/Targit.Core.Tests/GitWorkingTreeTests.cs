@@ -142,6 +142,28 @@ public sealed class GitWorkingTreeTests
     }
 
     [Fact]
+    public async Task BareRepositoryRejectsWorkingTreeMutations()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-bare-mutation-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path, isBare: true);
+            var service = new GitWorkingTreeService();
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.StageAsync(path, "file.txt"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.UnstageAsync(path, "file.txt"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.CommitAsync(path, "Message", "Test", "test@example.com"));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task CommitRequiresValidInputs()
     {
         var service = new GitWorkingTreeService();
