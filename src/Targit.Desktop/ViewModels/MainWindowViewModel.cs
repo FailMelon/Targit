@@ -7,8 +7,7 @@ using Targit.Infrastructure;
 namespace Targit.Desktop.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
-    private readonly RepositoryWorkspace _workspace;
-    private readonly IRepositoryOverviewReader _overview;
+    private readonly RepositorySessionManager _sessions;
     public ObservableCollection<string> CommitLines { get; } = [];
     public ObservableCollection<string> ChangeLines { get; } = [];
     public ObservableCollection<string> BranchLines { get; } = [];
@@ -27,9 +26,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string newTab = "History";
     [ObservableProperty] private bool showLeftPanel = true;
     [ObservableProperty] private bool showRightPanel = true;
-    public MainWindowViewModel(RepositoryWorkspace workspace, IRepositoryOverviewReader overview, JsonSettingsStore settings)
+    public MainWindowViewModel(RepositorySessionManager sessions, JsonSettingsStore settings)
     {
-        _workspace = workspace; _overview = overview; _settings = settings;
+        _sessions = sessions; _settings = settings;
         _ = InitializeAsync();
     }
     private async Task InitializeAsync()
@@ -54,7 +53,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (repository is null) return;
         try
         {
-            var snapshot = await _workspace.OpenAsync(repository.Path);
+            var snapshot = await _sessions.GetSession(repository.Path).OpenAsync();
             if (SelectedRepository != repository) return;
             CurrentBranch = snapshot.Branch ?? "Detached HEAD";
             Status = $"Opened {repository.Name}";
@@ -78,7 +77,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (repo is null) return;
         try
         {
-            var overview = await _overview.ReadOverviewAsync(repo.Path);
+            var overview = await _sessions.GetSession(repo.Path).RefreshAsync();
             if (SelectedRepository != repo) return;
             CommitLines.Clear();
             foreach (var commit in overview.Commits)
@@ -111,7 +110,7 @@ public partial class MainWindowViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(RepositoryPath)) return;
         try
         {
-            var snapshot = await _workspace.OpenAsync(RepositoryPath);
+            var snapshot = await _sessions.GetSession(RepositoryPath).OpenAsync();
             var existing = Repositories.FirstOrDefault(r => string.Equals(r.Path, snapshot.Path, StringComparison.OrdinalIgnoreCase));
             if (existing is null)
             {
