@@ -27,7 +27,23 @@ public sealed class GitDiffService
                 DiffTargets.Index, DiffTargets.WorkingDirectory, paths, null, options);
 
             cancellationToken.ThrowIfCancellationRequested();
-            return new GitFileDiff(relativePath, staged.Content, unstaged.Content);
+            var unstagedContent = unstaged.Content;
+            // Index-to-working-directory comparisons omit untracked files.
+            if ((repository.RetrieveStatus(relativePath) & FileStatus.NewInWorkdir) != 0)
+            {
+                var root = Path.GetFullPath(repository.Info.WorkingDirectory);
+                var fullPath = Path.GetFullPath(Path.Combine(root, relativePath));
+                if (!fullPath.StartsWith(Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar,
+                        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                    throw new ArgumentException("The selected path must be inside the repository.", nameof(relativePath));
+                if (File.Exists(fullPath))
+                {
+                    var lines = File.ReadAllLines(fullPath);
+                    unstagedContent = $"--- /dev/null\n+++ b/{relativePath}\n@@ -0,0 +1,{lines.Length} @@\n" +
+                                      string.Concat(lines.Select(line => "+" + line + "\n"));
+                }
+            }
+            return new GitFileDiff(relativePath, staged.Content, unstagedContent);
         }, cancellationToken);
 }
 
