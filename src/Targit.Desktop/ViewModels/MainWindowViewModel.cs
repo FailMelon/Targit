@@ -11,6 +11,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly RepositorySessionManager _sessions;
     private readonly GitWorkingTreeService _gitActions;
     private readonly GitDiffService _diffs = new();
+    private readonly GitIdentityService _identity = new();
+    [ObservableProperty] private string configuredIdentity = "No repository selected";
     private readonly GitBranchService _branches = new();
     private readonly GitRemoteService _remotes = new();
     public ObservableCollection<GitRemoteInfo> Remotes { get; } = [];
@@ -119,6 +121,7 @@ public partial class MainWindowViewModel : ObservableObject
         Remotes.Clear();
         SelectedRemote = null;
         StagingSummary = "No staged changes";
+        ConfiguredIdentity = value is null ? "No repository selected" : "Loading Git identity...";
         if (value is null)
         {
             CurrentBranch = "No repository";
@@ -138,9 +141,26 @@ public partial class MainWindowViewModel : ObservableObject
             CurrentBranch = snapshot.Branch ?? "Detached HEAD";
             Status = $"Opened {repository.Name}";
             await RefreshAsync();
+            await LoadIdentityAsync(repository.Path, version);
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) await PersistAsync();
         }
         catch (Exception e) { FileLog.Error(e, "Open repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message; }
+    }
+    private async Task LoadIdentityAsync(string path, long version)
+    {
+        try
+        {
+            var identity = await _identity.ReadAsync(path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != path) return;
+            ConfiguredIdentity = string.IsNullOrWhiteSpace(identity.Name) && string.IsNullOrWhiteSpace(identity.Email)
+                ? "No Git identity configured"
+                : $"{identity.Name ?? "(no name)"} <{identity.Email ?? "no email"}>";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Read Git identity");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) ConfiguredIdentity = "Unable to read Git identity: " + e.Message;
+        }
     }
     partial void OnSelectedLayoutChanged(string value) { if (!_loadingSettings) _ = PersistAsync(); }
     partial void OnSelectedTabChanged(string value) { if (!_loadingSettings) _ = PersistAsync(); }
