@@ -19,6 +19,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitRevertService _revert = new();
     private readonly GitSoftResetService _softReset = new();
     private readonly GitMixedResetService _mixedReset = new();
+    private readonly GitHardResetService _hardReset = new();
+    [ObservableProperty] private string hardResetConfirmation = "";
     [ObservableProperty] private string mixedResetConfirmation = "";
     [ObservableProperty] private string softResetConfirmation = "";
     [ObservableProperty] private string amendedCommitMessage = "";
@@ -764,6 +766,40 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Save tracked stash");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task HardResetToSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select an ancestor commit in History.";
+            return;
+        }
+        var expected = $"HARD RESET {commit.Sha[..7]}";
+        if (!string.Equals(HardResetConfirmation.Trim(), expected, StringComparison.Ordinal))
+        {
+            Status = $"Type {expected} to confirm discarding commits and resetting tracked files.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _hardReset.ResetToAncestorAsync(repo.Path, commit.Sha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            HardResetConfirmation = "";
+            await RefreshAsync();
+            Status = $"Hard reset to {sha[..7]}; tracked files and index reset to target.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Hard reset");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
