@@ -3,6 +3,7 @@ using LibGit2Sharp;
 namespace Targit.Git;
 
 public sealed record GitRemoteInfo(string Name, string Url, string PushUrl);
+public sealed record GitRemoteBranchInfo(string RemoteName, string BranchName, string CommitSha, bool IsTrackedByCurrentBranch);
 
 /// <summary>Manages Git remote configuration using LibGit2Sharp.</summary>
 public sealed class GitRemoteService
@@ -16,6 +17,29 @@ public sealed class GitRemoteService
         return repository.Network.Remotes
             .Select(remote => new GitRemoteInfo(remote.Name, remote.Url, remote.PushUrl ?? remote.Url))
             .OrderBy(remote => remote.Name, StringComparer.Ordinal)
+            .ToArray();
+    }, cancellationToken);
+
+    /// <summary>Lists locally fetched remote-tracking branches without network access.</summary>
+    public Task<IReadOnlyList<GitRemoteBranchInfo>> ListRemoteBranchesAsync(string repositoryPath,
+        string remoteName, CancellationToken cancellationToken = default) =>
+        Task.Run<IReadOnlyList<GitRemoteBranchInfo>>(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(remoteName);
+        using var repository = new Repository(repositoryPath);
+        if (repository.Network.Remotes[remoteName] is null)
+            throw new InvalidOperationException($"Remote '{remoteName}' does not exist.");
+        var prefix = $"refs/remotes/{remoteName}/";
+        var trackedCanonicalName = repository.Head.TrackedBranch?.CanonicalName;
+        return repository.Branches
+            .Where(branch => branch.IsRemote && branch.CanonicalName.StartsWith(prefix, StringComparison.Ordinal)
+                && branch.Tip is not null)
+            .Select(branch => new GitRemoteBranchInfo(remoteName,
+                branch.CanonicalName[prefix.Length..], branch.Tip!.Sha,
+                branch.CanonicalName == trackedCanonicalName))
+            .OrderBy(branch => branch.BranchName, StringComparer.Ordinal)
             .ToArray();
     }, cancellationToken);
 
