@@ -13,6 +13,8 @@ The GitHub Actions workflow runs these checks on Windows, Linux and macOS.
 
 ## Manual smoke test (required before merging)
 
+Automated CI passing confirms compilation and unit/integration tests, **not** interactive desktop behavior. Leave the PR in draft until the boxes below are checked on actual desktop sessions.
+
 Perform on Windows, macOS and Linux:
 
 - [ ] Launch Targit and confirm charcoal backgrounds and readable text.
@@ -28,6 +30,8 @@ Perform on Windows, macOS and Linux:
 - [ ] Save a named layout, change the arrangement, load it and confirm restoration.
 - [ ] Reset to the default layout.
 - [ ] Close and reopen Targit; verify recent repositories remain.
+- [ ] Close and reopen Targit after opening/closing document tabs; verify tab visibility and active tab persist.
+- [ ] Corrupt the settings JSON and verify Targit starts, retains a diagnostic backup, and saves fresh settings.
 - [ ] Select a non-repository folder and confirm a visible, nonfatal error.
 - [ ] Corrupt the workspace JSON and verify the application opens with a default layout.
 - [ ] Switch repositories quickly during a refresh and verify old repository data does not overwrite the new selection.
