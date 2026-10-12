@@ -52,6 +52,13 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var softReset = new Button { Content = "Soft reset to selected ancestor" };
                 softReset.Bind(Button.CommandProperty, new Binding(nameof(workspace.SoftResetToSelectedCommitCommand)));
                 root.Children.Add(softReset);
+                root.Children.Add(new TextBlock { Text = "Mixed reset to a selected ancestor: moves local HEAD and unstages changes, but preserves working files. Published HEAD commits are blocked. Type MIXED followed by the selected 7-character SHA to confirm.", TextWrapping = TextWrapping.Wrap });
+                var mixedResetConfirmation = new TextBox { Watermark = "MIXED abc1234" };
+                mixedResetConfirmation.Bind(TextBox.TextProperty, new Binding(nameof(workspace.MixedResetConfirmation)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(mixedResetConfirmation);
+                var mixedReset = new Button { Content = "Mixed reset to selected ancestor" };
+                mixedReset.Bind(Button.CommandProperty, new Binding(nameof(workspace.MixedResetToSelectedCommitCommand)));
+                root.Children.Add(mixedReset);
                 root.Children.Add(new TextBlock { Text = "Lightweight tags (current HEAD)", FontWeight = FontWeight.SemiBold });
                 var tagName = new TextBox { Watermark = "Tag name (e.g. v1.0.0)" };
                 tagName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.NewTagName)) { Mode = BindingMode.TwoWay });
