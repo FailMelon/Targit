@@ -41,6 +41,10 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var cherryPick = new Button { Content = "Cherry-pick selected commit" };
                 cherryPick.Bind(Button.CommandProperty, new Binding(nameof(workspace.CherryPickSelectedCommitCommand)));
                 root.Children.Add(cherryPick);
+                root.Children.Add(new TextBlock { Text = "Revert the selected non-merge commit by creating a new inverse commit on the current branch. Requires a clean working tree; conflicts must be resolved manually.", TextWrapping = TextWrapping.Wrap });
+                var revertCommit = new Button { Content = "Revert selected commit" };
+                revertCommit.Bind(Button.CommandProperty, new Binding(nameof(workspace.RevertSelectedCommitCommand)));
+                root.Children.Add(revertCommit);
                 root.Children.Add(new TextBlock { Text = "Lightweight tags (current HEAD)", FontWeight = FontWeight.SemiBold });
                 var tagName = new TextBox { Watermark = "Tag name (e.g. v1.0.0)" };
                 tagName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.NewTagName)) { Mode = BindingMode.TwoWay });
