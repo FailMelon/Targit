@@ -61,8 +61,8 @@ public partial class MainWindow : Window
             tabs.Add(existing);
         }
         documents.ActiveDockable = existing;
-        vm.SelectedTab = title;
         if (!vm.Tabs.Contains(title)) vm.Tabs.Add(title);
+        vm.SelectedTab = title;
     }
 
     private void CloseTab_Click(object? sender, RoutedEventArgs e)
