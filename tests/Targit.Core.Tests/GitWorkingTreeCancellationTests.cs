@@ -43,6 +43,25 @@ public sealed class GitWorkingTreeCancellationTests
         finally { DeleteRepository(path); }
     }
 
+    [Fact]
+    public async Task CancelledUnstagePreservesStagedFile()
+    {
+        var path = CreateRepository();
+        try
+        {
+            File.WriteAllText(Path.Combine(path, "pending.txt"), "pending");
+            var service = new GitWorkingTreeService();
+            await service.StageAsync(path, "pending.txt");
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                service.UnstageAsync(path, "pending.txt", cancellation.Token));
+            using var repository = new Repository(path);
+            Assert.True((repository.RetrieveStatus("pending.txt") & FileStatus.NewInIndex) != 0);
+        }
+        finally { DeleteRepository(path); }
+    }
+
     private static string CreateRepository()
     {
         var path = Path.Combine(Path.GetTempPath(), "targit-cancellation-" + Guid.NewGuid().ToString("N"));
