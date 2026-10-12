@@ -78,6 +78,35 @@ public sealed class GitRemoteServiceTests
     }
 
     [Fact]
+    public async Task PullRejectsDetachedHeadBeforeNetworkAccess()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-pull-detached-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            using (var repository = new Repository(path))
+            {
+                File.WriteAllText(Path.Combine(path, "readme.txt"), "initial\n");
+                Commands.Stage(repository, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                var commit = repository.Commit("Initial", signature, signature);
+                Commands.Checkout(repository, commit);
+            }
+            var service = new GitRemoteService();
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.PullFastForwardAsync(path));
+            Assert.Contains("checked-out branch", error.Message);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task PullRequiresTrackingBranch()
     {
         var path = Path.Combine(Path.GetTempPath(), "targit-pull-" + Guid.NewGuid().ToString("N"));
