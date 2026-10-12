@@ -70,4 +70,37 @@ public sealed class GitTagService
         cancellationToken.ThrowIfCancellationRequested();
         repository.Tags.Add(tagName, repository.Head.Tip, signature, message, false);
     }, cancellationToken);
+
+    /// <summary>Pushes one existing local tag to the selected remote without forcing.</summary>
+    public Task PushAsync(string repositoryPath, string remoteName, string tagName,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(remoteName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+        using var repository = new Repository(repositoryPath);
+        var remote = repository.Network.Remotes[remoteName]
+            ?? throw new InvalidOperationException($"Remote '{remoteName}' does not exist.");
+        var tag = repository.Tags[tagName]
+            ?? throw new InvalidOperationException($"Tag '{tagName}' does not exist.");
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Network.Push(remote, $"refs/tags/{tag.FriendlyName}:refs/tags/{tag.FriendlyName}",
+            new PushOptions());
+    }, cancellationToken);
+
+    /// <summary>Deletes one tag on the remote without deleting the local tag.</summary>
+    public Task DeleteRemoteAsync(string repositoryPath, string remoteName, string tagName,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(remoteName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+        using var repository = new Repository(repositoryPath);
+        var remote = repository.Network.Remotes[remoteName]
+            ?? throw new InvalidOperationException($"Remote '{remoteName}' does not exist.");
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Network.Push(remote, $":refs/tags/{tagName}", new PushOptions());
+    }, cancellationToken);
 }
