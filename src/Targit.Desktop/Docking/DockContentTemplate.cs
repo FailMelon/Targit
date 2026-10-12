@@ -108,6 +108,9 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var removeRemote = new Button { Content = "Remove selected remote" };
                 removeRemote.Bind(Button.CommandProperty, new Binding(nameof(workspace.RemoveRemoteCommand)));
                 root.Children.Add(removeRemote);
+                var fetchRemote = new Button { Content = "Fetch selected remote" };
+                fetchRemote.Bind(Button.CommandProperty, new Binding(nameof(workspace.FetchRemoteCommand)));
+                root.Children.Add(fetchRemote);
                 break;
             case "inspector":
                 var current = new TextBlock();
