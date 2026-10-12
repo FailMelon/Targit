@@ -199,8 +199,9 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             await _gitActions.StageAsync(repo.Path, path);
+            if (SelectedRepository?.Path != repo.Path) return;
             await RefreshAsync();
-            Status = $"Staged {path}";
+            if (SelectedRepository?.Path == repo.Path) Status = $"Staged {path}";
         }
         catch (Exception e) { FileLog.Error(e, "Stage file"); Status = e.Message; }
     }
@@ -213,8 +214,9 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             await _gitActions.UnstageAsync(repo.Path, path);
+            if (SelectedRepository?.Path != repo.Path) return;
             await RefreshAsync();
-            Status = $"Unstaged {path}";
+            if (SelectedRepository?.Path == repo.Path) Status = $"Unstaged {path}";
         }
         catch (Exception e) { FileLog.Error(e, "Unstage file"); Status = e.Message; }
     }
@@ -226,9 +228,10 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             var sha = await _gitActions.CommitAsync(repo.Path, CommitMessage, AuthorName, AuthorEmail);
+            if (SelectedRepository?.Path != repo.Path) return;
             CommitMessage = "";
             await RefreshAsync();
-            Status = $"Created commit {sha[..7]}";
+            if (SelectedRepository?.Path == repo.Path) Status = $"Created commit {sha[..7]}";
         }
         catch (Exception e) { FileLog.Error(e, "Create commit"); Status = e.Message; }
     }
