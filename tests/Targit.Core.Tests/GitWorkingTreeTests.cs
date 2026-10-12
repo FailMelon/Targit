@@ -52,6 +52,34 @@ public sealed class GitWorkingTreeTests
     }
 
     [Fact]
+    public async Task CommitUsesStagedSnapshotNotLaterWorkingTreeEdits()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-snapshot-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            var service = new GitWorkingTreeService();
+            var file = Path.Combine(path, "example.txt");
+            File.WriteAllText(file, "staged");
+            await service.StageAsync(path, "example.txt");
+            File.WriteAllText(file, "later working tree edit");
+            await service.CommitAsync(path, "Snapshot", "Test", "test@example.com");
+            using var repo = new Repository(path);
+            var blob = (Blob)repo.Head.Tip["example.txt"].Target;
+            Assert.Equal("staged", blob.GetContentText());
+            Assert.Equal("later working tree edit", File.ReadAllText(file));
+            Assert.True((repo.RetrieveStatus("example.txt") & FileStatus.ModifiedInWorkdir) != 0);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task CommitRequiresValidInputs()
     {
         var service = new GitWorkingTreeService();
