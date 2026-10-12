@@ -2,12 +2,12 @@ using LibGit2Sharp;
 using Targit.Git;
 using Xunit;
 namespace Targit.Core.Tests;
-public sealed class Phase41Tests
+public sealed class Phase38Tests
 {
     [Fact]
     public async Task RepositoryIntegration()
     {
-        var path = Path.Combine(Path.GetTempPath(), "targit-41-" + Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(Path.GetTempPath(), "targit-38-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         try
         {
@@ -22,7 +22,7 @@ public sealed class Phase41Tests
                 Commands.Stage(repo, "file.txt");
                 repo.Commit("second", sig, sig);
             }
-            using (var repo = new Repository(path)) repo.Tags.Add("v1", repo.Head.Tip); var tags = await new GitTagInspectionService().GetAsync(path); Assert.Equal("v1", Assert.Single(tags).Name);
+            var hits = await new GitCommitSearchService().SearchAsync(path, "second"); Assert.Equal("second", Assert.Single(hits).Subject); Assert.Empty(await new GitCommitSearchService().SearchAsync(path, "absent"));
         }
         finally
         {
@@ -34,12 +34,12 @@ public sealed class Phase41Tests
     [Fact]
     public async Task ValidatesEdgeCases()
     {
-        var path = Path.Combine(Path.GetTempPath(), "targit-41-edge-" + Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(Path.GetTempPath(), "targit-38-edge-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         try
         {
             Repository.Init(path);
-            var service = new GitTagInspectionService(); Assert.Empty(await service.GetAsync(path)); using var cancelled = new CancellationTokenSource(); cancelled.Cancel(); await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.GetAsync(path, cancelled.Token));
+            var service = new GitCommitSearchService(); await Assert.ThrowsAsync<ArgumentException>(() => service.SearchAsync(path, " ")); await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.SearchAsync(path, "test", 0)); Assert.Empty(await service.SearchAsync(path, "missing"));
         }
         finally
         {
