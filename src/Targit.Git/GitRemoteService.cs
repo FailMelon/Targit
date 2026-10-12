@@ -35,7 +35,7 @@ public sealed class GitRemoteService
         var trackedCanonicalName = repository.Head.TrackedBranch?.CanonicalName;
         return repository.Branches
             .Where(branch => branch.IsRemote && branch.CanonicalName.StartsWith(prefix, StringComparison.Ordinal)
-                && branch.Tip is not null)
+                && branch.CanonicalName != prefix + "HEAD" && branch.Tip is not null)
             .Select(branch => new GitRemoteBranchInfo(remoteName,
                 branch.CanonicalName[prefix.Length..], branch.Tip!.Sha,
                 branch.CanonicalName == trackedCanonicalName))
