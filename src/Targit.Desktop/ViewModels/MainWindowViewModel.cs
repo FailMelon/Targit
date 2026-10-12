@@ -45,6 +45,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string localIdentityName = "";
     [ObservableProperty] private string localIdentityEmail = "";
     private readonly GitBranchService _branches = new();
+    private readonly GitRebasePlanService _rebasePlanner = new();
+    [ObservableProperty] private string rebaseUpstreamSha = "";
+    [ObservableProperty] private string rebasePlanPreview = "Enter an ancestor SHA to preview commits. No history will be rewritten.";
     private readonly GitRemoteService _remotes = new();
     public ObservableCollection<GitRemoteInfo> Remotes { get; } = [];
     public ObservableCollection<GitRemoteBranchInfo> RemoteBranches { get; } = [];
@@ -1056,6 +1059,31 @@ public partial class MainWindowViewModel : ObservableObject
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task PreviewRebasePlanAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var steps = await _rebasePlanner.PlanAsync(repo.Path, RebaseUpstreamSha.Trim());
+            GitRebasePlanService.ValidatePlan(steps);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            RebasePlanPreview = steps.Count == 0 ? "No commits to rebase." :
+                string.Join(Environment.NewLine, steps.Select(step => $"pick {step.CommitSha[..7]} {step.Subject}"));
+            Status = $"Previewed {steps.Count} rebase steps. No commits were modified.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Preview rebase plan");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion))
+            {
+                RebasePlanPreview = e.Message;
+                Status = e.Message;
+            }
+        }
     }
 
     [RelayCommand]
