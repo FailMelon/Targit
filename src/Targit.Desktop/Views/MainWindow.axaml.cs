@@ -23,8 +23,16 @@ public partial class MainWindow : Window
         _factory.InitLayout(layout);
         WorkspaceDock.Factory = _factory;
         WorkspaceDock.Layout = layout;
-        Opened += (_, _) => { RestoreLayout(); SynchronizeDocumentTabs(); };
+        Opened += OnOpened;
         Closing += (_, _) => SaveLayout();
+    }
+
+    private async void OnOpened(object? sender, EventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm)
+            await vm.Initialization;
+        RestoreLayout();
+        SynchronizeDocumentTabs();
     }
 
     private DocumentDock? FindDocuments()
