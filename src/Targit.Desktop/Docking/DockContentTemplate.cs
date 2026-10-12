@@ -37,6 +37,16 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Reset local HEAD to the selected ancestor. Soft preserves index and files; Mixed unstages changes; Hard restores tracked files. Requires clean working tree and unpublished HEAD.", TextWrapping = TextWrapping.Wrap });
+                var resetMode = new ComboBox { ItemsSource = new[] { "Soft", "Mixed", "Hard" }, SelectedIndex = 0 };
+                resetMode.Bind(Avalonia.Controls.Primitives.SelectingItemsControl.SelectedItemProperty, new Binding(nameof(workspace.ResetModeName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(resetMode);
+                var resetConfirmation = new TextBox { Watermark = "Type RESET SOFT abc1234 (or MIXED/HARD)" };
+                resetConfirmation.Bind(TextBox.TextProperty, new Binding(nameof(workspace.ResetConfirmation)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(resetConfirmation);
+                var resetButton = new Button { Content = "Reset to selected ancestor (Hard is destructive)" };
+                resetButton.Bind(Button.CommandProperty, new Binding(nameof(workspace.ResetToSelectedCommitCommand)));
+                root.Children.Add(resetButton);
                 break;
             case "changes":
                 AddList(root, nameof(workspace.ChangeLines), nameof(workspace.SelectedChangeLine));
