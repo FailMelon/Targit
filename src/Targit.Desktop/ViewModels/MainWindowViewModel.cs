@@ -20,6 +20,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitSoftResetService _softReset = new();
     private readonly GitMixedResetService _mixedReset = new();
     private readonly GitHardResetService _hardReset = new();
+    private readonly GitBranchFromCommitService _branchFromCommit = new();
+    [ObservableProperty] private string branchFromCommitName = "";
     [ObservableProperty] private string hardResetConfirmation = "";
     [ObservableProperty] private string mixedResetConfirmation = "";
     [ObservableProperty] private string softResetConfirmation = "";
@@ -766,6 +768,40 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Save tracked stash");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CreateBranchFromSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select a commit in History to create a branch from.";
+            return;
+        }
+        var name = BranchFromCommitName.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            Status = "Enter a name for the new branch.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var created = await _branchFromCommit.CreateAsync(repo.Path, commit.Sha, name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            BranchFromCommitName = "";
+            await RefreshAsync();
+            Status = $"Created branch {created} at {commit.Sha[..7]} without switching branches.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Create branch from commit");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
