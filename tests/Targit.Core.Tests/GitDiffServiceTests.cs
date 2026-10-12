@@ -43,7 +43,7 @@ public sealed class GitDiffServiceTests
         try
         {
             Repository.Init(path);
-            File.WriteAllText(Path.Combine(path, "new.txt"), "first line\\nsecond line\\n");
+            File.WriteAllText(Path.Combine(path, "new.txt"), "first line\nsecond line\n");
             var result = await new GitDiffService().GetFileDiffAsync(path, "new.txt");
             Assert.Empty(result.StagedPatch);
             Assert.Contains("+first line", result.UnstagedPatch);
