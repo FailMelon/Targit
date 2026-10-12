@@ -73,6 +73,37 @@ public sealed class GitRemoteService
         return branch.FriendlyName;
     }, cancellationToken);
 
+    /// <summary>Fetches and updates the tracked branch only when a fast-forward is possible.</summary>
+    public Task PullFastForwardAsync(string repositoryPath,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        using var repository = new Repository(repositoryPath);
+        if (repository.Info.IsBare || repository.Info.IsHeadDetached || repository.Head.Tip is null)
+            throw new InvalidOperationException("Pull requires a checked-out branch with a commit.");
+        if (!repository.Head.IsTracking || repository.Head.RemoteName is null)
+            throw new InvalidOperationException("Set an upstream tracking branch before pulling.");
+        if (repository.RetrieveStatus().IsDirty)
+            throw new InvalidOperationException("Commit or stash local changes before pulling.");
+
+        var signature = new Signature("Targit", "targit@localhost", DateTimeOffset.UtcNow);
+        var options = new PullOptions
+        {
+            FetchOptions = new FetchOptions
+            {
+                OnTransferProgress = _ => !cancellationToken.IsCancellationRequested
+            },
+            MergeOptions = new MergeOptions
+            {
+                FastForwardStrategy = FastForwardStrategy.FastForwardOnly
+            }
+        };
+        cancellationToken.ThrowIfCancellationRequested();
+        Commands.Pull(repository, signature, options);
+        cancellationToken.ThrowIfCancellationRequested();
+    }, cancellationToken);
+
     public Task RemoveAsync(string repositoryPath, string name,
         CancellationToken cancellationToken = default) => Task.Run(() =>
     {

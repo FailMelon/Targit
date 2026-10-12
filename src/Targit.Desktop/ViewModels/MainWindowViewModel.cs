@@ -323,6 +323,29 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task PullFastForwardAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            Status = "Pulling tracked branch (fast-forward only)...";
+            await _remotes.PullFastForwardAsync(repo.Path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await RefreshAsync();
+            Status = "Pull complete";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Pull fast-forward");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
     private async Task RemoveRemoteAsync()
     {
         if (SelectedRepository is not { } repo || SelectedRemote is not { } remote) return;
