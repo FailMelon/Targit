@@ -599,6 +599,31 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ApplySelectedStashAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedStash is not { } stash) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var current = await _stashes.ListAsync(repo.Path);
+            if (stash.Index >= current.Count || current[stash.Index].Message != stash.Message)
+                throw new InvalidOperationException("The selected stash changed. Refresh and select it again.");
+            await _stashes.ApplyAsync(repo.Path, stash.Index);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await RefreshAsync();
+            Status = $"Applied stash@{{{stash.Index}}}; stash entry was preserved.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Apply stash");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
     private async Task DropSelectedStashAsync()
     {
         if (SelectedRepository is not { } repo || SelectedStash is not { } stash) return;
