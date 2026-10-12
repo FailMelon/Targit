@@ -12,6 +12,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitWorkingTreeService _gitActions;
     private readonly GitDiffService _diffs = new();
     private readonly GitIdentityService _identity = new();
+    private readonly GitCommitInspectionService _commitInspection = new();
+    private readonly Dictionary<string, GitCommitSummary> _commitDetails = new(StringComparer.Ordinal);
     [ObservableProperty] private string configuredIdentity = "No repository selected";
     private readonly GitBranchService _branches = new();
     private readonly GitRemoteService _remotes = new();
@@ -34,7 +36,12 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string? selectedChangeLine;
     [ObservableProperty] private string? selectedBranchLine;
     [ObservableProperty] private string inspectorText = "Select a commit, changed file or branch to inspect it.";
-    partial void OnSelectedCommitLineChanged(string? value) { if (value is not null) InspectorText = value; }
+    partial void OnSelectedCommitLineChanged(string? value)
+    {
+        if (value is not null && _commitDetails.TryGetValue(value, out var commit))
+            InspectorText = $"Commit: {commit.Sha}\nAuthor: {commit.Author}\nDate: {commit.When:yyyy-MM-dd HH:mm:ss zzz}\nSubject: {commit.Message}";
+        else if (value is not null) InspectorText = value;
+    }
     partial void OnSelectedChangeLineChanged(string? value)
     {
         if (value is not null) InspectorText = value;
@@ -118,6 +125,7 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedChangeLine = null;
         _changePaths.Clear();
         ChangeLines.Clear();
+        _commitDetails.Clear();
         Remotes.Clear();
         SelectedRemote = null;
         StagingSummary = "No staged changes";
@@ -193,9 +201,16 @@ public partial class MainWindowViewModel : ObservableObject
             SelectedChangeLine = null;
             SelectedBranchLine = null;
             InspectorText = $"Repository: {repo.Name} · Branch: {CurrentBranch}";
+            var recentCommits = await _commitInspection.ListRecentAsync(repo.Path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
             CommitLines.Clear();
-            foreach (var commit in overview.Commits)
-                CommitLines.Add($"{commit.Sha[..7]}  {commit.Message} — {commit.Author}");
+            _commitDetails.Clear();
+            foreach (var commit in recentCommits)
+            {
+                var line = $"{commit.Sha[..7]}  {commit.Message} — {commit.Author}";
+                CommitLines.Add(line);
+                _commitDetails[line] = commit;
+            }
             ChangeLines.Clear();
             _changePaths.Clear();
             foreach (var change in overview.Changes)
