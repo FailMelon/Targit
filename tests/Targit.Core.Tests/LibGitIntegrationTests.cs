@@ -57,6 +57,14 @@ public sealed class LibGitIntegrationTests
     }
 
     [Fact]
+    public void InvalidRepositoryPathIsRejected()
+    {
+        var reader = new LibGitRepositoryReader();
+        Assert.False(reader.IsRepository(""));
+        Assert.False(reader.IsRepository(Path.Combine(Path.GetTempPath(), "targit-missing-" + Guid.NewGuid().ToString("N"))));
+    }
+
+    [Fact]
     public async Task NewlyInitializedRepositoryCanBeOpened()
     {
         var directory = Path.Combine(Path.GetTempPath(), "targit-git-" + Guid.NewGuid().ToString("N"));
