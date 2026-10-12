@@ -60,7 +60,7 @@ public sealed class GitRemoteService
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(remoteName);
         using var repository = new Repository(repositoryPath);
-        if (repository.Info.IsBare || repository.Head.Tip is null || repository.Head.IsDetached)
+        if (repository.Info.IsBare || repository.Head.Tip is null || repository.Info.IsHeadDetached)
             throw new InvalidOperationException("A checked-out local branch with a commit is required.");
         var remote = repository.Network.Remotes[remoteName]
             ?? throw new InvalidOperationException($"Remote '{remoteName}' does not exist.");
