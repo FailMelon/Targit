@@ -7,6 +7,43 @@ namespace Targit.Core.Tests;
 public sealed class LibGitIntegrationTests
 {
     [Fact]
+    public async Task OverviewIncludesCommittedHistoryAndBranch()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "targit-commit-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            Repository.Init(directory);
+            using (var repo = new Repository(directory))
+            {
+                File.WriteAllText(Path.Combine(directory, "readme.txt"), "hello");
+                Commands.Stage(repo, "readme.txt");
+                var author = new Signature("Targit Tests", "tests@example.invalid", DateTimeOffset.UtcNow);
+                repo.Commit("Initial commit", author, author);
+            }
+            var overview = await new LibGitOverviewReader().ReadOverviewAsync(directory);
+            Assert.Contains(overview.Commits, commit => commit.Message == "Initial commit");
+            Assert.NotEmpty(overview.Branches);
+            Assert.Empty(overview.Changes);
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Fact]
+    public async Task BareRepositoryOverviewHasNoWorkingTreeChanges()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "targit-bare-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            Repository.Init(directory, isBare: true);
+            var overview = await new LibGitOverviewReader().ReadOverviewAsync(directory);
+            Assert.Empty(overview.Changes);
+        }
+        finally { Directory.Delete(directory, true); }
+    }
+
+    [Fact]
     public async Task NewlyInitializedRepositoryCanBeOpened()
     {
         var directory = Path.Combine(Path.GetTempPath(), "targit-git-" + Guid.NewGuid().ToString("N"));
