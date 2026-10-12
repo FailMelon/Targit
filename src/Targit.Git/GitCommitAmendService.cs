@@ -12,7 +12,7 @@ public sealed class GitCommitAmendService
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         using var repository = new Repository(repositoryPath);
-        if (repository.Info.IsBare || repository.Head.IsDetached || repository.Head.Tip is not { } tip)
+        if (repository.Info.IsBare || repository.Info.IsHeadDetached || repository.Head.Tip is not { } tip)
             throw new InvalidOperationException("An attached branch with an existing commit is required.");
         if (repository.RetrieveStatus().IsDirty)
             throw new InvalidOperationException("Commit or stash all changes before amending the commit message.");
