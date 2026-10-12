@@ -46,6 +46,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string localIdentityEmail = "";
     private readonly GitBranchService _branches = new();
     [ObservableProperty] private string tagInspectionSummary = "Select an action to inspect.";
+    [ObservableProperty] private string blameSummary = "Select an action to inspect.";
+    [ObservableProperty] private string blamePath = "";
 
     [ObservableProperty] private string graphLaneSummary = "Select an action to inspect.";
 
@@ -1176,6 +1178,26 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Search commits");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = CommitSearchSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectBlameAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            string output;
+            var lines = await new GitFileBlameService().GetAsync(repo.Path, BlamePath.Trim()); output = lines.Count == 0 ? "No blame entries." : string.Join(Environment.NewLine, lines.Select(line => $"{line.StartLine} (+{line.LineCount}) {line.CommitSha[..7]} {line.Author}"));
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            BlameSummary = output;
+            Status = "Inspect blame completed.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect blame");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = BlameSummary = e.Message;
         }
     }
 
