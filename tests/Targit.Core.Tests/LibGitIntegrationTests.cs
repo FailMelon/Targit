@@ -6,6 +6,19 @@ namespace Targit.Core.Tests;
 
 public sealed class LibGitIntegrationTests
 {
+    private static void DeleteTemporaryRepository(string directory)
+    {
+        if (!Directory.Exists(directory)) return;
+        // Git object files are read-only on Windows. Clear the flag before cleanup.
+        foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+        {
+            var attributes = File.GetAttributes(file);
+            if ((attributes & FileAttributes.ReadOnly) != 0)
+                File.SetAttributes(file, attributes & ~FileAttributes.ReadOnly);
+        }
+        Directory.Delete(directory, recursive: true);
+    }
+
     [Fact]
     public async Task OverviewIncludesCommittedHistoryAndBranch()
     {
@@ -26,7 +39,7 @@ public sealed class LibGitIntegrationTests
             Assert.NotEmpty(overview.Branches);
             Assert.Empty(overview.Changes);
         }
-        finally { Directory.Delete(directory, true); }
+        finally { DeleteTemporaryRepository(directory); }
     }
 
     [Fact]
@@ -40,7 +53,7 @@ public sealed class LibGitIntegrationTests
             var overview = await new LibGitOverviewReader().ReadOverviewAsync(directory);
             Assert.Empty(overview.Changes);
         }
-        finally { Directory.Delete(directory, true); }
+        finally { DeleteTemporaryRepository(directory); }
     }
 
     [Fact]
@@ -57,7 +70,7 @@ public sealed class LibGitIntegrationTests
             Assert.False(snapshot.IsBare);
             Assert.Equal(Path.GetFullPath(directory), snapshot.Path);
         }
-        finally { Directory.Delete(directory, true); }
+        finally { DeleteTemporaryRepository(directory); }
     }
 
     [Fact]
@@ -73,6 +86,6 @@ public sealed class LibGitIntegrationTests
             var overview = await reader.ReadOverviewAsync(directory);
             Assert.Contains(overview.Changes, change => change.Path == "new-file.txt");
         }
-        finally { Directory.Delete(directory, true); }
+        finally { DeleteTemporaryRepository(directory); }
     }
 }
