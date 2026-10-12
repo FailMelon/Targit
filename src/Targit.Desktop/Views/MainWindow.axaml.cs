@@ -86,6 +86,7 @@ public partial class MainWindow : Window
         documents.ActiveDockable = existing;
         if (!vm.Tabs.Contains(title)) vm.Tabs.Add(title);
         vm.SelectedTab = title;
+        SaveLayout();
     }
 
     private void CloseTab_Click(object? sender, RoutedEventArgs e)
@@ -99,6 +100,7 @@ public partial class MainWindow : Window
         documents.ActiveDockable = tabs.OfType<Document>().FirstOrDefault();
         vm.Tabs.Remove(selected.Title ?? "");
         vm.SelectedTab = documents.ActiveDockable?.Title ?? "History";
+        SaveLayout();
     }
 
     private string NamedLayoutPath()
