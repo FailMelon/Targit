@@ -49,6 +49,11 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string blamePath = "";
 
     [ObservableProperty] private string graphLaneSummary = "Select an action to inspect.";
+
+    [ObservableProperty] private string commitSearchSummary = "Select an action to inspect.";
+    [ObservableProperty] private string commitSearchQuery = "";
+
+    [ObservableProperty] private string graphLaneSummary = "Select an action to inspect.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1153,6 +1158,26 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Load graph lanes");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = GraphLaneSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SearchCommitsAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            string output;
+            var hits = await new GitCommitSearchService().SearchAsync(repo.Path, CommitSearchQuery.Trim()); output = hits.Count == 0 ? "No matching commits." : string.Join(Environment.NewLine, hits.Select(hit => $"{hit.Sha[..7]} {hit.Subject} — {hit.Author}"));
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            CommitSearchSummary = output;
+            Status = "Search commits completed.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Search commits");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = CommitSearchSummary = e.Message;
         }
     }
 

@@ -2,12 +2,12 @@ using LibGit2Sharp;
 using Targit.Git;
 using Xunit;
 namespace Targit.Core.Tests;
-public sealed class Phase39Tests
+public sealed class Phase38Tests
 {
     [Fact]
     public async Task RepositoryIntegration()
     {
-        var path = Path.Combine(Path.GetTempPath(), "targit-39-" + Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(Path.GetTempPath(), "targit-38-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         try
         {
@@ -22,7 +22,7 @@ public sealed class Phase39Tests
                 Commands.Stage(repo, "file.txt");
                 repo.Commit("second", sig, sig);
             }
-            var lines = await new GitFileBlameService().GetAsync(path, "file.txt"); Assert.NotEmpty(lines); Assert.All(lines, line => Assert.True(line.LineCount > 0));
+            var hits = await new GitCommitSearchService().SearchAsync(path, "second"); Assert.Equal("second", Assert.Single(hits).Subject); Assert.Empty(await new GitCommitSearchService().SearchAsync(path, "absent"));
         }
         finally
         {
@@ -34,12 +34,12 @@ public sealed class Phase39Tests
     [Fact]
     public async Task ValidatesEdgeCases()
     {
-        var path = Path.Combine(Path.GetTempPath(), "targit-39-edge-" + Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(Path.GetTempPath(), "targit-38-edge-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         try
         {
             Repository.Init(path);
-            var service = new GitFileBlameService(); await Assert.ThrowsAsync<ArgumentException>(() => service.GetAsync(path, "../outside.txt")); await Assert.ThrowsAsync<ArgumentException>(() => service.GetAsync(path, " "));
+            var service = new GitCommitSearchService(); await Assert.ThrowsAsync<ArgumentException>(() => service.SearchAsync(path, " ")); await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.SearchAsync(path, "test", 0)); Assert.Empty(await service.SearchAsync(path, "missing"));
         }
         finally
         {

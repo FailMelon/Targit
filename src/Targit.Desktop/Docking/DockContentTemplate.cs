@@ -55,6 +55,25 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var result37 = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 100, TextWrapping = TextWrapping.Wrap };
                 result37.Bind(TextBox.TextProperty, new Binding(nameof(workspace.GraphLaneSummary)));
                 root.Children.Add(result37);
+
+                root.Children.Add(new TextBlock { Text = "Phase 38 inspection", FontWeight = FontWeight.SemiBold });
+                var input38 = new TextBox { Watermark = "Search message, author or SHA" };
+                input38.Bind(TextBox.TextProperty, new Binding(nameof(workspace.CommitSearchQuery)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(input38);
+                var action38 = new Button { Content = "Search Commits" };
+                action38.Bind(Button.CommandProperty, new Binding(nameof(workspace.SearchCommitsCommand)));
+                root.Children.Add(action38);
+                var result38 = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 100, TextWrapping = TextWrapping.Wrap };
+                result38.Bind(TextBox.TextProperty, new Binding(nameof(workspace.CommitSearchSummary)));
+                root.Children.Add(result38);
+
+                root.Children.Add(new TextBlock { Text = "Phase 37 inspection", FontWeight = FontWeight.SemiBold });
+                var action37 = new Button { Content = "Load Graph Lanes" };
+                action37.Bind(Button.CommandProperty, new Binding(nameof(workspace.LoadGraphLanesCommand)));
+                root.Children.Add(action37);
+                var result37 = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 100, TextWrapping = TextWrapping.Wrap };
+                result37.Bind(TextBox.TextProperty, new Binding(nameof(workspace.GraphLaneSummary)));
+                root.Children.Add(result37);
                 root.Children.Add(new TextBlock { Text = "Commit graph (parents and refs)", FontWeight = FontWeight.SemiBold });
                 var loadGraph = new Button { Content = "Load commit graph" };
                 loadGraph.Bind(Button.CommandProperty, new Binding(nameof(workspace.LoadCommitGraphCommand)));
