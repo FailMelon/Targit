@@ -17,6 +17,7 @@ public sealed class GitCommitGraphService
         var labels = new Dictionary<string, List<string>>(StringComparer.Ordinal);
         foreach (var branch in repo.Branches)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (branch.Tip is null) continue;
             if (!labels.TryGetValue(branch.Tip.Sha, out var names))
                 labels[branch.Tip.Sha] = names = new List<string>();
@@ -24,15 +25,17 @@ public sealed class GitCommitGraphService
         }
         foreach (var tag in repo.Tags)
         {
-            if (tag.Target is not Commit commit) continue;
+            cancellationToken.ThrowIfCancellationRequested();
+            var commit = tag.PeeledTarget as Commit;
+            if (commit is null) continue;
             if (!labels.TryGetValue(commit.Sha, out var names))
                 labels[commit.Sha] = names = new List<string>();
             names.Add("tag:" + tag.FriendlyName);
         }
         return repo.Commits.Take(maxCount)
-            .Select(c => new GitCommitNode(c.Sha, c.MessageShort, c.Author.Name, c.Author.When,
+            .Select(c => { cancellationToken.ThrowIfCancellationRequested(); return new GitCommitNode(c.Sha, c.MessageShort, c.Author.Name, c.Author.When,
                 c.Parents.Select(p => p.Sha).ToArray(),
-                labels.TryGetValue(c.Sha, out var names) ? names.OrderBy(n => n, StringComparer.Ordinal).ToArray() : Array.Empty<string>()))
+                labels.TryGetValue(c.Sha, out var names) ? names.OrderBy(n => n, StringComparer.Ordinal).ToArray() : Array.Empty<string>()); })
             .ToArray();
     }, cancellationToken);
 }
