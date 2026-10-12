@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Dock.Model.Core;
+using Dock.Model.Mvvm.Controls;
 using Dock.Serializer;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
@@ -24,6 +25,57 @@ public partial class MainWindow : Window
         WorkspaceDock.Layout = layout;
         Opened += (_, _) => RestoreLayout();
         Closing += (_, _) => SaveLayout();
+    }
+
+    private DocumentDock? FindDocuments()
+    {
+        if (WorkspaceDock.Layout is not { } root) return null;
+        return FindDocumentsRecursive(root);
+    }
+
+    private static DocumentDock? FindDocumentsRecursive(IDockable dockable)
+    {
+        if (dockable is DocumentDock documents) return documents;
+        if (dockable is IDock dock && dock.VisibleDockables is { } children)
+        {
+            foreach (var child in children)
+            {
+                var found = FindDocumentsRecursive(child);
+                if (found is not null) return found;
+            }
+        }
+        return null;
+    }
+
+    private void OpenTab_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        var documents = FindDocuments();
+        if (documents?.VisibleDockables is not { } tabs) return;
+        var title = vm.NewTab;
+        if (!vm.AvailableTabs.Contains(title)) return;
+        var existing = tabs.OfType<Document>().FirstOrDefault(d => d.Id == title.ToLowerInvariant());
+        if (existing is null)
+        {
+            existing = new Document { Id = title.ToLowerInvariant(), Title = title };
+            tabs.Add(existing);
+        }
+        documents.ActiveDockable = existing;
+        vm.SelectedTab = title;
+        if (!vm.Tabs.Contains(title)) vm.Tabs.Add(title);
+    }
+
+    private void CloseTab_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        var documents = FindDocuments();
+        if (documents?.VisibleDockables is not { } tabs || tabs.Count <= 1) return;
+        var selected = documents.ActiveDockable as Document;
+        if (selected is null) return;
+        tabs.Remove(selected);
+        documents.ActiveDockable = tabs.OfType<Document>().FirstOrDefault();
+        vm.Tabs.Remove(selected.Title ?? "");
+        vm.SelectedTab = documents.ActiveDockable?.Title ?? "History";
     }
 
     private string NamedLayoutPath()
