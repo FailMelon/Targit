@@ -36,17 +36,18 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 root.Children.Add(repositories);
                 break;
             case "history":
-                AddList(root, nameof(workspace.CommitLines));
+                AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
                 break;
             case "changes":
-                AddList(root, nameof(workspace.ChangeLines));
+                AddList(root, nameof(workspace.ChangeLines), nameof(workspace.SelectedChangeLine));
                 break;
             case "branches":
-                AddList(root, nameof(workspace.BranchLines));
+                AddList(root, nameof(workspace.BranchLines), nameof(workspace.SelectedBranchLine));
                 break;
             case "inspector":
                 var current = new TextBlock();
-                current.Bind(TextBlock.TextProperty, new Binding(nameof(workspace.CurrentBranch)));
+                current.TextWrapping = TextWrapping.Wrap;
+                current.Bind(TextBlock.TextProperty, new Binding(nameof(workspace.InspectorText)));
                 root.Children.Add(current);
                 break;
             case "output":
@@ -61,10 +62,11 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
         return new ScrollViewer { Content = root };
     }
 
-    private static void AddList(StackPanel root, string property)
+    private static void AddList(StackPanel root, string property, string selectionProperty)
     {
         var list = new ListBox { MinHeight = 150 };
         list.Bind(ItemsControl.ItemsSourceProperty, new Binding(property));
+        list.Bind(Avalonia.Controls.Primitives.SelectingItemsControl.SelectedItemProperty, new Binding(selectionProperty) { Mode = BindingMode.TwoWay });
         root.Children.Add(list);
     }
 }
