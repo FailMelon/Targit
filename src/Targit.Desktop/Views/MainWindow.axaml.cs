@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Dock.Model.Core;
+using Dock.Serializer.Newtonsoft;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Targit.Desktop.Docking;
@@ -9,6 +11,8 @@ namespace Targit.Desktop.Views;
 public partial class MainWindow : Window
 {
     private readonly TargitDockFactory _factory = new();
+    private readonly DockSerializer _serializer = new();
+    private readonly string _layoutPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Targit", "workspace.json");
 
     public MainWindow()
     {
@@ -17,6 +21,40 @@ public partial class MainWindow : Window
         _factory.InitLayout(layout);
         WorkspaceDock.Factory = _factory;
         WorkspaceDock.Layout = layout;
+        Opened += (_, _) => RestoreLayout();
+        Closing += (_, _) => SaveLayout();
+    }
+
+    private void RestoreLayout()
+    {
+        if (!File.Exists(_layoutPath)) return;
+        try
+        {
+            using var stream = File.OpenRead(_layoutPath);
+            var layout = _serializer.Load<IDock?>(stream);
+            if (layout is null) return;
+            WorkspaceDock.Layout = layout;
+            _factory.InitLayout(layout);
+        }
+        catch (Exception)
+        {
+            // Corrupt or incompatible layouts must never prevent the app from opening.
+            // The default workspace remains available for this session.
+        }
+    }
+
+    private void SaveLayout()
+    {
+        if (WorkspaceDock.Layout is not { } layout) return;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_layoutPath)!);
+            var temporary = _layoutPath + ".tmp";
+            using (var stream = File.Create(temporary)) _serializer.Save(stream, layout);
+            File.Move(temporary, _layoutPath, true);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private async void OpenFolder_Click(object? sender, RoutedEventArgs e)
