@@ -10,6 +10,10 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private readonly RepositorySessionManager _sessions;
     private readonly GitWorkingTreeService _gitActions;
+    private readonly GitDiffService _diffs = new();
+    private long _diffRevision;
+    [ObservableProperty] private string stagedDiffText = "";
+    [ObservableProperty] private string unstagedDiffText = "";
     private readonly Dictionary<string, string> _changePaths = new(StringComparer.Ordinal);
     public ObservableCollection<string> CommitLines { get; } = [];
     [ObservableProperty] private string? selectedCommitLine;
@@ -17,7 +21,32 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string? selectedBranchLine;
     [ObservableProperty] private string inspectorText = "Select a commit, changed file or branch to inspect it.";
     partial void OnSelectedCommitLineChanged(string? value) { if (value is not null) InspectorText = value; }
-    partial void OnSelectedChangeLineChanged(string? value) { if (value is not null) InspectorText = value; }
+    partial void OnSelectedChangeLineChanged(string? value)
+    {
+        if (value is not null) InspectorText = value;
+        _ = LoadSelectedDiffAsync(value);
+    }
+    private async Task LoadSelectedDiffAsync(string? selection)
+    {
+        var revision = Interlocked.Increment(ref _diffRevision);
+        var repository = SelectedRepository;
+        var selectionVersion = Interlocked.Read(ref _repositorySelectionVersion);
+        StagedDiffText = "";
+        UnstagedDiffText = "";
+        if (repository is null || selection is null || !_changePaths.TryGetValue(selection, out var path)) return;
+        try
+        {
+            var result = await _diffs.GetFileDiffAsync(repository.Path, path);
+            if (revision != Interlocked.Read(ref _diffRevision) || selectionVersion != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            StagedDiffText = string.IsNullOrWhiteSpace(result.StagedPatch) ? "No staged changes for this file." : result.StagedPatch;
+            UnstagedDiffText = string.IsNullOrWhiteSpace(result.UnstagedPatch) ? "No unstaged changes for this file." : result.UnstagedPatch;
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Load file diff");
+            if (revision == Interlocked.Read(ref _diffRevision) && selectionVersion == Interlocked.Read(ref _repositorySelectionVersion)) UnstagedDiffText = e.Message;
+        }
+    }
     partial void OnSelectedBranchLineChanged(string? value) { if (value is not null) InspectorText = "Branch: " + value; }
     public ObservableCollection<string> ChangeLines { get; } = [];
     public ObservableCollection<string> BranchLines { get; } = [];
