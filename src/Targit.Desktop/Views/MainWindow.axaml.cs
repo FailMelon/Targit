@@ -160,13 +160,27 @@ public partial class MainWindow : Window
     private async void OpenFolder_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        try
         {
-            Title = "Open Git repository",
-            AllowMultiple = false
-        });
-        if (folders.Count == 0) return;
-        vm.RepositoryPath = folders[0].Path.LocalPath;
-        await vm.AddRepositoryCommand.ExecuteAsync(null);
+            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = "Open Git repository",
+                AllowMultiple = false
+            });
+            if (folders.Count == 0) return;
+            var path = folders[0].TryGetLocalPath();
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                vm.Status = "The selected folder does not have a local filesystem path.";
+                return;
+            }
+            vm.RepositoryPath = path;
+            await vm.AddRepositoryCommand.ExecuteAsync(null);
+        }
+        catch (Exception exception)
+        {
+            FileLog.Error(exception, "Open repository folder picker");
+            vm.Status = "Could not open repository folder: " + exception.Message;
+        }
     }
 }
