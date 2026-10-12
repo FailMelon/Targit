@@ -300,6 +300,29 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task PushRemoteAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedRemote is not { } remote) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            Status = $"Pushing current branch to {remote.Name}...";
+            var branch = await _remotes.PushCurrentBranchAsync(repo.Path, remote.Name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await RefreshAsync();
+            Status = $"Pushed {branch} to {remote.Name}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Push remote");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
     private async Task RemoveRemoteAsync()
     {
         if (SelectedRepository is not { } repo || SelectedRemote is not { } remote) return;
