@@ -20,6 +20,7 @@ public partial class App : Avalonia.Application
         services.AddSingleton<IRepositoryReader, LibGitRepositoryReader>();
         services.AddSingleton<IRepositoryOverviewReader, LibGitOverviewReader>();
         services.AddSingleton<RepositoryWorkspace>();
+        services.AddSingleton<RepositorySessionManager>();
         services.AddSingleton<JsonSettingsStore>();
         services.AddSingleton<MainWindowViewModel>();
         _provider = services.BuildServiceProvider();
