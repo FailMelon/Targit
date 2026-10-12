@@ -73,6 +73,10 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 stashList.ItemTemplate = new FuncDataTemplate<Targit.Git.GitStashInfo>((stash, _) =>
                     new TextBlock { Text = stash is null ? "" : $"stash@{{{stash.Index}}}: {stash.Message}" });
                 root.Children.Add(stashList);
+                root.Children.Add(new TextBlock { Text = "Apply selected stash to a clean working tree (stash remains saved).", TextWrapping = TextWrapping.Wrap });
+                var applyStash = new Button { Content = "Apply selected stash (keep entry)" };
+                applyStash.Bind(Button.CommandProperty, new Binding(nameof(workspace.ApplySelectedStashCommand)));
+                root.Children.Add(applyStash);
                 root.Children.Add(new TextBlock { Text = "Permanently drop a stash without applying it. Select an entry and type stash@{index} to confirm.", TextWrapping = TextWrapping.Wrap });
                 var confirmStashDrop = new TextBox { Watermark = "Type stash@{0} for selected stash" };
                 confirmStashDrop.Bind(TextBox.TextProperty, new Binding(nameof(workspace.StashDropConfirmation)) { Mode = BindingMode.TwoWay });
