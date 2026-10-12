@@ -20,4 +20,37 @@ public sealed class Phase35Tests
         }
         finally { Cleanup(path); }
     }
+    [Fact]
+    public async Task ReportsConflictedPathsDuringMergeWithoutMislabelingAsRebase()
+    {
+        var path = NewPath();
+        try
+        {
+            Repository.Init(path);
+            using (var repo = new Repository(path))
+            {
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                File.WriteAllText(Path.Combine(path, "conflict.txt"), "base");
+                Commands.Stage(repo, "conflict.txt");
+                repo.Commit("base", signature, signature);
+                var original = repo.Head.FriendlyName;
+                repo.CreateBranch("topic");
+                File.WriteAllText(Path.Combine(path, "conflict.txt"), "main");
+                Commands.Stage(repo, "conflict.txt");
+                repo.Commit("main", signature, signature);
+                Commands.Checkout(repo, repo.Branches["topic"]);
+                File.WriteAllText(Path.Combine(path, "conflict.txt"), "topic");
+                Commands.Stage(repo, "conflict.txt");
+                repo.Commit("topic", signature, signature);
+                Commands.Checkout(repo, repo.Branches[original]);
+                var result = repo.Merge(repo.Branches["topic"], signature);
+                Assert.Equal(MergeStatus.Conflicts, result.Status);
+            }
+            var state = await new GitRebaseConflictService().InspectAsync(path);
+            Assert.False(state.IsRebasing);
+            Assert.Equal(new[] { "conflict.txt" }, state.Paths);
+        }
+        finally { Cleanup(path); }
+    }
+
 }
