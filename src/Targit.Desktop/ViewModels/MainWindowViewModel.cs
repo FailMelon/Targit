@@ -13,6 +13,9 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitDiffService _diffs = new();
     private readonly GitIdentityService _identity = new();
     private readonly GitTagService _tags = new();
+    private readonly GitStashService _stashes = new();
+    public ObservableCollection<GitStashInfo> Stashes { get; } = [];
+    [ObservableProperty] private string stashMessage = "";
     public ObservableCollection<GitTagInfo> Tags { get; } = [];
     [ObservableProperty] private string newTagName = "";
     [ObservableProperty] private GitTagInfo? selectedTag;
@@ -133,6 +136,7 @@ public partial class MainWindowViewModel : ObservableObject
         _commitDetails.Clear();
         Remotes.Clear();
         Tags.Clear();
+        Stashes.Clear();
         SelectedTag = null;
         TagDeletionConfirmation = "";
         SelectedRemote = null;
@@ -242,6 +246,10 @@ public partial class MainWindowViewModel : ObservableObject
             Tags.Clear();
             foreach (var tag in tags) Tags.Add(tag);
             SelectedTag = Tags.FirstOrDefault(tag => tag.Name == previousTag);
+            var stashes = await _stashes.ListAsync(repo.Path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+            Stashes.Clear();
+            foreach (var stash in stashes) Stashes.Add(stash);
         }
         catch (Exception e) { FileLog.Error(e, "Refresh repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion) && refreshVersion == Interlocked.Read(ref _refreshRevision)) Status = e.Message; }
     }
@@ -544,6 +552,30 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Delete local tag");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task SaveTrackedStashAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var message = StashMessage.Trim();
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _stashes.SaveAsync(repo.Path, message);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            StashMessage = "";
+            await RefreshAsync();
+            Status = "Saved tracked changes to stash (untracked files excluded).";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Save tracked stash");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
