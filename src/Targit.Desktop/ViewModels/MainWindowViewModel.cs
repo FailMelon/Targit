@@ -11,10 +11,40 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly RepositorySessionManager _sessions;
     private readonly GitWorkingTreeService _gitActions;
     private readonly GitDiffService _diffs = new();
+    private readonly GitIdentityService _identity = new();
+    private readonly GitTagService _tags = new();
+    private readonly GitStashService _stashes = new();
+    private readonly GitCommitAmendService _commitAmend = new();
+    private readonly GitCherryPickService _cherryPick = new();
+    private readonly GitRevertService _revert = new();
+    private readonly GitSoftResetService _softReset = new();
+    private readonly GitMixedResetService _mixedReset = new();
+    private readonly GitHardResetService _hardReset = new();
+    private readonly GitBranchFromCommitService _branchFromCommit = new();
+    [ObservableProperty] private string branchFromCommitName = "";
+    [ObservableProperty] private string hardResetConfirmation = "";
+    [ObservableProperty] private string mixedResetConfirmation = "";
+    [ObservableProperty] private string softResetConfirmation = "";
+    [ObservableProperty] private string amendedCommitMessage = "";
+    public ObservableCollection<GitStashInfo> Stashes { get; } = [];
+    [ObservableProperty] private string stashMessage = "";
+    [ObservableProperty] private GitStashInfo? selectedStash;
+    [ObservableProperty] private string stashDropConfirmation = "";
+    public ObservableCollection<GitTagInfo> Tags { get; } = [];
+    [ObservableProperty] private string newTagName = "";
+    [ObservableProperty] private string annotatedTagName = "";
+    [ObservableProperty] private string annotatedTagMessage = "";
+    [ObservableProperty] private string annotatedTagAuthorName = "";
+    [ObservableProperty] private string annotatedTagAuthorEmail = "";
+    [ObservableProperty] private GitTagInfo? selectedTag;
+    [ObservableProperty] private string tagDeletionConfirmation = "";
+    [ObservableProperty] private string remoteTagDeletionConfirmation = "";
+    private readonly GitCommitInspectionService _commitInspection = new();
+    private readonly Dictionary<string, GitCommitSummary> _commitDetails = new(StringComparer.Ordinal);
+    [ObservableProperty] private string configuredIdentity = "No repository selected";
+    [ObservableProperty] private string localIdentityName = "";
+    [ObservableProperty] private string localIdentityEmail = "";
     private readonly GitBranchService _branches = new();
-    private readonly GitResetService _reset = new();
-    [ObservableProperty] private string resetConfirmation = "";
-    [ObservableProperty] private string resetModeName = "Soft";
     private readonly GitRemoteService _remotes = new();
     public ObservableCollection<GitRemoteInfo> Remotes { get; } = [];
     public ObservableCollection<GitRemoteBranchInfo> RemoteBranches { get; } = [];
@@ -35,7 +65,12 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string? selectedChangeLine;
     [ObservableProperty] private string? selectedBranchLine;
     [ObservableProperty] private string inspectorText = "Select a commit, changed file or branch to inspect it.";
-    partial void OnSelectedCommitLineChanged(string? value) { if (value is not null) InspectorText = value; }
+    partial void OnSelectedCommitLineChanged(string? value)
+    {
+        if (value is not null && _commitDetails.TryGetValue(value, out var commit))
+            InspectorText = $"Commit: {commit.Sha}\nAuthor: {commit.Author}\nDate: {commit.When:yyyy-MM-dd HH:mm:ss zzz}\nSubject: {commit.Message}";
+        else if (value is not null) InspectorText = value;
+    }
     partial void OnSelectedChangeLineChanged(string? value)
     {
         if (value is not null) InspectorText = value;
@@ -119,9 +154,20 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedChangeLine = null;
         _changePaths.Clear();
         ChangeLines.Clear();
+        _commitDetails.Clear();
         Remotes.Clear();
+        Tags.Clear();
+        Stashes.Clear();
+        SelectedStash = null;
+        StashDropConfirmation = "";
+        SelectedTag = null;
+        TagDeletionConfirmation = "";
+        RemoteTagDeletionConfirmation = "";
         SelectedRemote = null;
         StagingSummary = "No staged changes";
+        ConfiguredIdentity = value is null ? "No repository selected" : "Loading Git identity...";
+        LocalIdentityName = "";
+        LocalIdentityEmail = "";
         if (value is null)
         {
             CurrentBranch = "No repository";
@@ -141,10 +187,58 @@ public partial class MainWindowViewModel : ObservableObject
             CurrentBranch = snapshot.Branch ?? "Detached HEAD";
             Status = $"Opened {repository.Name}";
             await RefreshAsync();
+            await LoadIdentityAsync(repository.Path, version);
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) await PersistAsync();
         }
         catch (Exception e) { FileLog.Error(e, "Open repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message; }
     }
+    private async Task LoadIdentityAsync(string path, long version)
+    {
+        try
+        {
+            var identity = await _identity.ReadAsync(path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != path) return;
+            LocalIdentityName = identity.Name ?? "";
+            LocalIdentityEmail = identity.Email ?? "";
+            ConfiguredIdentity = string.IsNullOrWhiteSpace(identity.Name) && string.IsNullOrWhiteSpace(identity.Email)
+                ? "No Git identity configured"
+                : $"{identity.Name ?? "(no name)"} <{identity.Email ?? "no email"}>";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Read Git identity");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) ConfiguredIdentity = "Unable to read Git identity: " + e.Message;
+        }
+    }
+    [RelayCommand]
+    private async Task SaveLocalIdentityAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var name = LocalIdentityName.Trim();
+        var email = LocalIdentityEmail.Trim();
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email))
+        {
+            Status = "Both author name and email are required.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _identity.SetLocalAsync(repo.Path, name, email);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await LoadIdentityAsync(repo.Path, version);
+            Status = "Saved repository-local Git identity; global Git settings were not changed.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Save local Git identity");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
     partial void OnSelectedLayoutChanged(string value) { if (!_loadingSettings) _ = PersistAsync(); }
     partial void OnSelectedTabChanged(string value) { if (!_loadingSettings) _ = PersistAsync(); }
     private async Task PersistAsync()
@@ -176,9 +270,16 @@ public partial class MainWindowViewModel : ObservableObject
             SelectedChangeLine = null;
             SelectedBranchLine = null;
             InspectorText = $"Repository: {repo.Name} · Branch: {CurrentBranch}";
+            var recentCommits = await _commitInspection.ListRecentAsync(repo.Path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
             CommitLines.Clear();
-            foreach (var commit in overview.Commits)
-                CommitLines.Add($"{commit.Sha[..7]}  {commit.Message} — {commit.Author}");
+            _commitDetails.Clear();
+            foreach (var commit in recentCommits)
+            {
+                var line = $"{commit.Sha[..7]}  {commit.Message} — {commit.Author}";
+                CommitLines.Add(line);
+                _commitDetails[line] = commit;
+            }
             ChangeLines.Clear();
             _changePaths.Clear();
             foreach (var change in overview.Changes)
@@ -196,6 +297,18 @@ public partial class MainWindowViewModel : ObservableObject
             foreach (var branch in overview.Branches) BranchLines.Add(branch);
             Status = $"{overview.Commits.Count} recent commits · {overview.Changes.Count} changed files";
             await RefreshRemotesAsync(repo.Path, version, refreshVersion);
+            var tags = await _tags.ListAsync(repo.Path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+            var previousTag = SelectedTag?.Name;
+            Tags.Clear();
+            foreach (var tag in tags) Tags.Add(tag);
+            SelectedTag = Tags.FirstOrDefault(tag => tag.Name == previousTag);
+            var stashes = await _stashes.ListAsync(repo.Path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+            var previousStash = SelectedStash?.Message;
+            Stashes.Clear();
+            foreach (var stash in stashes) Stashes.Add(stash);
+            SelectedStash = Stashes.FirstOrDefault(stash => stash.Message == previousStash);
         }
         catch (Exception e) { FileLog.Error(e, "Refresh repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion) && refreshVersion == Interlocked.Read(ref _refreshRevision)) Status = e.Message; }
     }
@@ -474,30 +587,34 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task ResetToSelectedCommitAsync()
+    private async Task PushSelectedTagAsync()
     {
-        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line)
+        if (SelectedRepository is not { } repo || SelectedRemote is not { } remote || SelectedTag is not { } tag) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
         {
-            Status = "Select a commit in History before resetting.";
-            return;
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _tags.PushAsync(repo.Path, remote.Name, tag.Name);
+            if (version == Interlocked.Read(ref _repositorySelectionVersion))
+                Status = $"Pushed tag {tag.Name} to {remote.Name} (without force).";
         }
-        var shaPrefix = line.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
-        if (shaPrefix is null || shaPrefix.Length != 7)
+        catch (Exception e)
         {
-            Status = "Selected history entry does not contain a commit SHA.";
-            return;
+            FileLog.Error(e, "Push tag");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
-        var mode = ResetModeName switch
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task DeleteSelectedRemoteTagAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedRemote is not { } remote || SelectedTag is not { } tag) return;
+        var expected = $"{remote.Name}/{tag.Name}";
+        if (!string.Equals(RemoteTagDeletionConfirmation.Trim(), expected, StringComparison.Ordinal))
         {
-            "Soft" => LibGit2Sharp.ResetMode.Soft,
-            "Mixed" => LibGit2Sharp.ResetMode.Mixed,
-            "Hard" => LibGit2Sharp.ResetMode.Hard,
-            _ => throw new InvalidOperationException("Unsupported reset mode.")
-        };
-        var expected = $"RESET {ResetModeName.ToUpperInvariant()} {shaPrefix}";
-        if (!string.Equals(ResetConfirmation.Trim(), expected, StringComparison.Ordinal))
-        {
-            Status = $"Type {expected} to confirm.";
+            Status = $"Type {expected} to confirm remote tag deletion.";
             return;
         }
         var version = Interlocked.Read(ref _repositorySelectionVersion);
@@ -505,15 +622,437 @@ public partial class MainWindowViewModel : ObservableObject
         try
         {
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
-            await _reset.ResetAsync(repo.Path, shaPrefix, mode);
-            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
-            ResetConfirmation = "";
-            await RefreshAsync();
-            Status = $"Completed {ResetModeName.ToLowerInvariant()} reset to {shaPrefix}.";
+            await _tags.DeleteRemoteAsync(repo.Path, remote.Name, tag.Name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            RemoteTagDeletionConfirmation = "";
+            Status = $"Deleted remote tag {tag.Name} from {remote.Name}; local tag preserved.";
         }
         catch (Exception e)
         {
-            FileLog.Error(e, "Reset selected commit");
+            FileLog.Error(e, "Delete remote tag");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task DeleteSelectedTagAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedTag is not { } tag) return;
+        var tagName = tag.Name;
+        if (!string.Equals(TagDeletionConfirmation.Trim(), tagName, StringComparison.Ordinal))
+        {
+            Status = $"Type {tagName} to confirm local tag deletion.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _tags.DeleteAsync(repo.Path, tagName);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            SelectedTag = null;
+            TagDeletionConfirmation = "";
+            await RefreshAsync();
+            Status = $"Deleted local tag {tagName}; remote tags were not changed.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Delete local tag");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task PopSelectedStashAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedStash is not { } stash) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var current = await _stashes.ListAsync(repo.Path);
+            if (stash.Index >= current.Count || current[stash.Index].Message != stash.Message)
+                throw new InvalidOperationException("The selected stash changed. Refresh and select it again.");
+            await _stashes.PopAsync(repo.Path, stash.Index);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            SelectedStash = null;
+            await RefreshAsync();
+            Status = $"Popped stash@{{{stash.Index}}}; entry removed after successful application.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Pop stash");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task ApplySelectedStashAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedStash is not { } stash) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var current = await _stashes.ListAsync(repo.Path);
+            if (stash.Index >= current.Count || current[stash.Index].Message != stash.Message)
+                throw new InvalidOperationException("The selected stash changed. Refresh and select it again.");
+            await _stashes.ApplyAsync(repo.Path, stash.Index);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await RefreshAsync();
+            Status = $"Applied stash@{{{stash.Index}}}; stash entry was preserved.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Apply stash");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task DropSelectedStashAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedStash is not { } stash) return;
+        var expected = $"stash@{{{stash.Index}}}";
+        if (!string.Equals(StashDropConfirmation.Trim(), expected, StringComparison.Ordinal))
+        {
+            Status = $"Type {expected} to confirm permanent stash deletion.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var current = await _stashes.ListAsync(repo.Path);
+            if (stash.Index >= current.Count || current[stash.Index].Message != stash.Message)
+                throw new InvalidOperationException("The selected stash changed. Refresh and select it again.");
+            await _stashes.DropAsync(repo.Path, stash.Index);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            SelectedStash = null;
+            StashDropConfirmation = "";
+            await RefreshAsync();
+            Status = $"Dropped {expected} permanently without applying it.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Drop stash");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task SaveTrackedStashAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var message = StashMessage.Trim();
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _stashes.SaveAsync(repo.Path, message);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            StashMessage = "";
+            await RefreshAsync();
+            Status = "Saved tracked changes to stash (untracked files excluded).";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Save tracked stash");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CreateBranchFromSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select a commit in History to create a branch from.";
+            return;
+        }
+        var name = BranchFromCommitName.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            Status = "Enter a name for the new branch.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var created = await _branchFromCommit.CreateAsync(repo.Path, commit.Sha, name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            BranchFromCommitName = "";
+            await RefreshAsync();
+            Status = $"Created branch {created} at {commit.Sha[..7]} without switching branches.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Create branch from commit");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task HardResetToSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select an ancestor commit in History.";
+            return;
+        }
+        var expected = $"HARD RESET {commit.Sha[..7]}";
+        if (!string.Equals(HardResetConfirmation.Trim(), expected, StringComparison.Ordinal))
+        {
+            Status = $"Type {expected} to confirm discarding commits and resetting tracked files.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _hardReset.ResetToAncestorAsync(repo.Path, commit.Sha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            HardResetConfirmation = "";
+            await RefreshAsync();
+            Status = $"Hard reset to {sha[..7]}; tracked files and index reset to target.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Hard reset");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task MixedResetToSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select an ancestor commit in History.";
+            return;
+        }
+        var expected = $"MIXED {commit.Sha[..7]}";
+        if (!string.Equals(MixedResetConfirmation.Trim(), expected, StringComparison.Ordinal))
+        {
+            Status = $"Type {expected} to confirm moving HEAD and unstaging changes.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _mixedReset.ResetToAncestorAsync(repo.Path, commit.Sha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            MixedResetConfirmation = "";
+            await RefreshAsync();
+            Status = $"Mixed reset HEAD to {sha[..7]}; index reset, working files preserved.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Mixed reset");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task SoftResetToSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select an ancestor commit in History.";
+            return;
+        }
+        var expected = $"RESET {commit.Sha[..7]}";
+        if (!string.Equals(SoftResetConfirmation.Trim(), expected, StringComparison.Ordinal))
+        {
+            Status = $"Type {expected} to confirm moving HEAD.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _softReset.ResetToAncestorAsync(repo.Path, commit.Sha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            SoftResetConfirmation = "";
+            await RefreshAsync();
+            Status = $"Soft reset HEAD to {sha[..7]}; index and working files preserved.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Soft reset");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task RevertSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select a commit in History to revert.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _revert.RevertAsync(repo.Path, commit.Sha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await RefreshAsync();
+            Status = $"Reverted {commit.Sha[..7]} with new commit {sha[..7]}.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Revert commit");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion))
+            {
+                await RefreshAsync();
+                Status = e.Message;
+            }
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CherryPickSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select a commit in History to cherry-pick.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _cherryPick.CherryPickAsync(repo.Path, commit.Sha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await RefreshAsync();
+            Status = $"Cherry-picked {commit.Sha[..7]} as {sha[..7]}.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Cherry-pick commit");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion))
+            {
+                await RefreshAsync();
+                Status = e.Message;
+            }
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task AmendLatestCommitMessageAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var message = AmendedCommitMessage.Trim();
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            Status = "Enter a replacement commit message.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _commitAmend.AmendLatestMessageAsync(repo.Path, message);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            AmendedCommitMessage = "";
+            await RefreshAsync();
+            Status = $"Amended latest unpublished commit message: {sha[..7]}.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Amend commit message");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CreateAnnotatedTagAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var tagName = AnnotatedTagName.Trim();
+        var message = AnnotatedTagMessage.Trim();
+        var authorName = AnnotatedTagAuthorName.Trim();
+        var authorEmail = AnnotatedTagAuthorEmail.Trim();
+        if (string.IsNullOrWhiteSpace(tagName) || string.IsNullOrWhiteSpace(message) ||
+            string.IsNullOrWhiteSpace(authorName) || string.IsNullOrWhiteSpace(authorEmail))
+        {
+            Status = "Annotated tags require a name, message, author name and author email.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _tags.CreateAnnotatedAsync(repo.Path, tagName, message, authorName, authorEmail);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            AnnotatedTagName = "";
+            AnnotatedTagMessage = "";
+            await RefreshAsync();
+            Status = $"Created annotated tag {tagName}.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Create annotated tag");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CreateLightweightTagAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var tagName = NewTagName.Trim();
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _tags.CreateAsync(repo.Path, tagName);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            NewTagName = "";
+            await RefreshAsync();
+            Status = $"Created lightweight tag {tagName}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Create lightweight tag");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
