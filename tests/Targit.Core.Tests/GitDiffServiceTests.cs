@@ -7,6 +7,35 @@ namespace Targit.Core.Tests;
 public sealed class GitDiffServiceTests
 {
     [Fact]
+    public async Task DeletedTrackedFileAppearsInUnstagedPatch()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-deleted-diff-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            var file = Path.Combine(path, "removed.txt");
+            File.WriteAllText(file, "removed content\n");
+            using (var repository = new Repository(path))
+            {
+                Commands.Stage(repository, "removed.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                repository.Commit("Initial", signature, signature);
+            }
+            File.Delete(file);
+            var result = await new GitDiffService().GetFileDiffAsync(path, "removed.txt");
+            Assert.Empty(result.StagedPatch);
+            Assert.Contains("-removed content", result.UnstagedPatch);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task UntrackedFileIsVisibleAsAddedLines()
     {
         var path = Path.Combine(Path.GetTempPath(), "targit-untracked-diff-" + Guid.NewGuid().ToString("N"));
