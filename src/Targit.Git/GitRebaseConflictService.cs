@@ -12,8 +12,12 @@ public sealed class GitRebaseConflictService
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
         using var repo = new Repository(repositoryPath);
+        if (repo.Info.IsBare)
+            throw new InvalidOperationException("Rebase conflict inspection requires a working repository.");
         var paths = repo.Index.Conflicts
             .Select(c => c.Ours?.Path ?? c.Theirs?.Path ?? c.Ancestor?.Path ?? string.Empty)
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.Ordinal)
             .OrderBy(p => p, StringComparer.Ordinal).ToArray();
         return new GitRebaseConflictState(repo.Info.CurrentOperation == CurrentOperation.Rebase, paths);
     }, cancellationToken);
