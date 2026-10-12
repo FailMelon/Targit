@@ -71,6 +71,7 @@ public partial class MainWindowViewModel : ObservableObject
             InspectorText = "Select a repository to inspect it.";
         }
         else _ = ActivateAsync(value, version);
+        if (!_loadingSettings) _ = PersistAsync();
     }
     private async Task ActivateAsync(RepositoryInfo? repository, long version)
     {
