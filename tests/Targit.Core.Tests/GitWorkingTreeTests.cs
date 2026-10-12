@@ -15,6 +15,13 @@ public sealed class GitWorkingTreeTests
         {
             Repository.Init(path);
             var service = new GitWorkingTreeService();
+            using (var repository = new Repository(path))
+            {
+                File.WriteAllText(Path.Combine(path, "initial.txt"), "base");
+                Commands.Stage(repository, "initial.txt");
+                var author = new Signature("Test", "test@example.com", DateTimeOffset.UtcNow);
+                repository.Commit("Initial", author, author);
+            }
             File.WriteAllText(Path.Combine(path, "one.txt"), "first");
             File.WriteAllText(Path.Combine(path, "two.txt"), "not staged");
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
