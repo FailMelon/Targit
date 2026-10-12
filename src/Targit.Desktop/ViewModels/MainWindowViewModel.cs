@@ -12,6 +12,9 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitWorkingTreeService _gitActions;
     private readonly GitDiffService _diffs = new();
     private readonly GitIdentityService _identity = new();
+    private readonly GitTagService _tags = new();
+    public ObservableCollection<GitTagInfo> Tags { get; } = [];
+    [ObservableProperty] private string newTagName = "";
     private readonly GitCommitInspectionService _commitInspection = new();
     private readonly Dictionary<string, GitCommitSummary> _commitDetails = new(StringComparer.Ordinal);
     [ObservableProperty] private string configuredIdentity = "No repository selected";
@@ -127,6 +130,7 @@ public partial class MainWindowViewModel : ObservableObject
         ChangeLines.Clear();
         _commitDetails.Clear();
         Remotes.Clear();
+        Tags.Clear();
         SelectedRemote = null;
         StagingSummary = "No staged changes";
         ConfiguredIdentity = value is null ? "No repository selected" : "Loading Git identity...";
@@ -228,6 +232,10 @@ public partial class MainWindowViewModel : ObservableObject
             foreach (var branch in overview.Branches) BranchLines.Add(branch);
             Status = $"{overview.Commits.Count} recent commits · {overview.Changes.Count} changed files";
             await RefreshRemotesAsync(repo.Path, version, refreshVersion);
+            var tags = await _tags.ListAsync(repo.Path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+            Tags.Clear();
+            foreach (var tag in tags) Tags.Add(tag);
         }
         catch (Exception e) { FileLog.Error(e, "Refresh repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion) && refreshVersion == Interlocked.Read(ref _refreshRevision)) Status = e.Message; }
     }
@@ -500,6 +508,30 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Remove remote");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CreateLightweightTagAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var tagName = NewTagName.Trim();
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _tags.CreateAsync(repo.Path, tagName);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            NewTagName = "";
+            await RefreshAsync();
+            Status = $"Created lightweight tag {tagName}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Create lightweight tag");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
