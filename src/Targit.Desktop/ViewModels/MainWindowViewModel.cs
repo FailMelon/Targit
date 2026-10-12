@@ -22,6 +22,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string upstreamBranchName = "";
     partial void OnSelectedRemoteChanged(GitRemoteInfo? value) => _ = LoadRemoteBranchesAsync(value);
     [ObservableProperty] private string newBranchName = "";
+    [ObservableProperty] private string renameBranchName = "";
     private long _diffRevision;
     [ObservableProperty] private string stagedDiffText = "";
     [ObservableProperty] private string unstagedDiffText = "";
@@ -513,6 +514,33 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Checkout branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task RenameBranchAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedBranchLine is not { } selected) return;
+        var oldName = selected.Trim();
+        if (oldName.StartsWith("* ", StringComparison.Ordinal)) oldName = oldName[2..];
+        var newName = RenameBranchName.Trim();
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _branches.RenameAsync(repo.Path, oldName, newName);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            if (CurrentBranch == oldName) CurrentBranch = newName;
+            RenameBranchName = "";
+            await RefreshAsync();
+            Status = $"Renamed branch {oldName} to {newName}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Rename branch");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
