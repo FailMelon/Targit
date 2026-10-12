@@ -45,6 +45,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string localIdentityName = "";
     [ObservableProperty] private string localIdentityEmail = "";
     private readonly GitBranchService _branches = new();
+    private readonly GitCommitGraphService _commitGraph = new();
+    [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
     [ObservableProperty] private string rebaseConflictSummary = "Select Inspect to view the current rebase state and unresolved paths.";
     private readonly GitRebasePlanService _rebasePlanner = new();
@@ -1106,6 +1108,27 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Inspect rebase conflicts");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = RebaseConflictSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task LoadCommitGraphAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var nodes = await _commitGraph.GetAsync(repo.Path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            CommitGraphSummary = nodes.Count == 0 ? "No commits yet." :
+                string.Join(Environment.NewLine, nodes.Select(node =>
+                    $"{node.Sha[..7]} {node.Subject} | parents: {(node.Parents.Count == 0 ? "root" : string.Join(", ", node.Parents.Select(parent => parent[..7])))} | {string.Join(", ", node.Labels)}"));
+            Status = $"Loaded {nodes.Count} commit graph nodes.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Load commit graph");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = CommitGraphSummary = e.Message;
         }
     }
 
