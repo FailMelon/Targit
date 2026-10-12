@@ -52,6 +52,27 @@ public sealed class GitRemoteService
         cancellationToken.ThrowIfCancellationRequested();
     }, cancellationToken);
 
+    /// <summary>Pushes the current local branch without force-updating remote history.</summary>
+    public Task<string> PushCurrentBranchAsync(string repositoryPath, string remoteName,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(remoteName);
+        using var repository = new Repository(repositoryPath);
+        if (repository.Info.IsBare || repository.Head.Tip is null || repository.Head.IsDetached)
+            throw new InvalidOperationException("A checked-out local branch with a commit is required.");
+        var remote = repository.Network.Remotes[remoteName]
+            ?? throw new InvalidOperationException($"Remote '{remoteName}' does not exist.");
+        var branch = repository.Head;
+        // Fully qualified source and destination, without a leading '+' (force).
+        var refspec = $"{branch.CanonicalName}:{branch.CanonicalName}";
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Network.Push(remote, refspec, new PushOptions());
+        cancellationToken.ThrowIfCancellationRequested();
+        return branch.FriendlyName;
+    }, cancellationToken);
+
     public Task RemoveAsync(string repositoryPath, string name,
         CancellationToken cancellationToken = default) => Task.Run(() =>
     {
