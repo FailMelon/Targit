@@ -45,6 +45,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string localIdentityName = "";
     [ObservableProperty] private string localIdentityEmail = "";
     private readonly GitBranchService _branches = new();
+    [ObservableProperty] private string graphLaneSummary = "Select an action to inspect.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1129,6 +1130,26 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Load commit graph");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = CommitGraphSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task LoadGraphLanesAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            string output;
+            var lanes = await new GitGraphLaneService().GetAsync(repo.Path); output = lanes.Count == 0 ? "No commits." : string.Join(Environment.NewLine, lanes.Select(lane => $"lane {lane.Lane}: {lane.Sha[..7]} -> {string.Join(", ", lane.Parents.Select(parent => parent[..7]))}"));
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            GraphLaneSummary = output;
+            Status = "Load graph lanes completed.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Load graph lanes");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = GraphLaneSummary = e.Message;
         }
     }
 
