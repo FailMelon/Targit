@@ -18,7 +18,10 @@ public sealed class GitBranchFromCommitService
         var commit = repository.Lookup<Commit>(commitSha)
             ?? throw new ArgumentException("Selected commit was not found.", nameof(commitSha));
         var name = branchName.Trim();
-        if (!Reference.IsValidName("refs/heads/" + name))
+        if (name.StartsWith('-') || name.StartsWith('/') || name.EndsWith('/') || name.EndsWith('.') ||
+            name.EndsWith(".lock", StringComparison.OrdinalIgnoreCase) || name.Contains("..", StringComparison.Ordinal) ||
+            name.Contains("@{", StringComparison.Ordinal) || name.Contains("//", StringComparison.Ordinal) ||
+            name.Any(c => char.IsControl(c) || " ~^:?*[\\\\ ".Contains(c)))
             throw new ArgumentException("Invalid branch name.", nameof(branchName));
         if (repository.Branches["refs/heads/" + name] is not null)
             throw new InvalidOperationException("A local branch with this name already exists.");
