@@ -38,7 +38,11 @@ public sealed class GitBranchService
             ?? throw new InvalidOperationException("Branch does not exist.");
         if (branch.IsRemote) throw new InvalidOperationException("Select a local branch.");
         cancellationToken.ThrowIfCancellationRequested();
-        Commands.Checkout(repository, branch);
+        // Do not allow checkout to overwrite local work, including untracked files.
+        Commands.Checkout(repository, branch, new CheckoutOptions
+        {
+            CheckoutModifiers = CheckoutModifiers.None
+        });
         return repository.Head.FriendlyName;
     }, cancellationToken);
 
