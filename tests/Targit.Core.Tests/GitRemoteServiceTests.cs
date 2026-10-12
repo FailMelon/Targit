@@ -42,6 +42,49 @@ public sealed class GitRemoteServiceTests
     }
 
     [Fact]
+    public async Task FetchMissingRemoteFailsWithoutChangingRepository()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-fetch-missing-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            var service = new GitRemoteService();
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.FetchAsync(path, "missing"));
+            Assert.Empty(await service.ListAsync(path));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
+    public async Task CancelledFetchDoesNotStartNetworkOperation()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-fetch-cancel-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            var service = new GitRemoteService();
+            await service.AddAsync(path, "origin", "https://example.invalid/repo.git");
+            using var cancellation = new CancellationTokenSource();
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                service.FetchAsync(path, "origin", cancellation.Token));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task CanAddListAndRemoveRemote()
     {
         var path = Path.Combine(Path.GetTempPath(), "targit-remote-" + Guid.NewGuid().ToString("N"));
