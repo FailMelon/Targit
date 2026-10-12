@@ -31,4 +31,22 @@ public sealed class Phase40Tests
             Directory.Delete(path, true);
         }
     }
+    [Fact]
+    public async Task ValidatesEdgeCases()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-40-edge-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            var service = new GitFileHistoryService(); await Assert.ThrowsAsync<ArgumentException>(() => service.GetAsync(path, "../outside.txt")); await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.GetAsync(path, "file.txt", 0)); Assert.Empty(await service.GetAsync(path, "missing.txt"));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
 }
