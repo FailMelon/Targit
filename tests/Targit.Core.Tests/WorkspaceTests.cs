@@ -18,17 +18,28 @@ public sealed class WorkspaceTests
         Assert.Equal(Path.GetFullPath("."), snapshot.Path);
     }
     [Fact]
+    public async Task MissingSettingsReturnSafeDefaults()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "targit-empty-" + Guid.NewGuid().ToString("N"));
+        var loaded = await new JsonSettingsStore(root).LoadAsync();
+        Assert.Empty(loaded.Repositories);
+        Assert.Null(loaded.ActiveRepository);
+        Assert.Equal("Standard", loaded.LayoutName);
+    }
+
+    [Fact]
     public async Task SettingsRoundTrip()
     {
         var root = Path.Combine(Path.GetTempPath(), "targit-tests-" + Guid.NewGuid().ToString("N"));
         try
         {
             var store = new JsonSettingsStore(root);
-            var settings = new TargitSettings([new RepositoryInfo("/example", "Example")], "/example", ["History", "Changes"], "Changes");
+            var settings = new TargitSettings([new RepositoryInfo("/example", "Example")], "/example", ["History", "Changes"], "Changes", LayoutName: "Review");
             await store.SaveAsync(settings);
             var loaded = await store.LoadAsync();
             Assert.Equal(settings.ActiveRepository, loaded.ActiveRepository);
             Assert.Equal(settings.ActiveTab, loaded.ActiveTab);
+            Assert.Equal(settings.LayoutName, loaded.LayoutName);
             Assert.Equal(settings.LeftPanel, loaded.LeftPanel);
             Assert.Equal(settings.RightPanel, loaded.RightPanel);
             Assert.Equal(settings.Repositories, loaded.Repositories);
