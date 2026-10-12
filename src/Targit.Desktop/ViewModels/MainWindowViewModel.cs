@@ -45,6 +45,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string localIdentityName = "";
     [ObservableProperty] private string localIdentityEmail = "";
     private readonly GitBranchService _branches = new();
+    [ObservableProperty] private string fileHistorySummary = "Select an action to inspect.";
+    [ObservableProperty] private string fileHistoryPath = "";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1129,6 +1131,26 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Load commit graph");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = CommitGraphSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task LoadFileHistoryAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            string output;
+            var entries = await new GitFileHistoryService().GetAsync(repo.Path, FileHistoryPath.Trim()); output = entries.Count == 0 ? "No file history." : string.Join(Environment.NewLine, entries.Select(entry => $"{entry.Sha[..7]} {entry.Subject}"));
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            FileHistorySummary = output;
+            Status = "Load file history completed.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Load file history");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = FileHistorySummary = e.Message;
         }
     }
 
