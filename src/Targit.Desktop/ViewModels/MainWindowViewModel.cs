@@ -25,6 +25,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitCommitInspectionService _commitInspection = new();
     private readonly Dictionary<string, GitCommitSummary> _commitDetails = new(StringComparer.Ordinal);
     [ObservableProperty] private string configuredIdentity = "No repository selected";
+    [ObservableProperty] private string localIdentityName = "";
+    [ObservableProperty] private string localIdentityEmail = "";
     private readonly GitBranchService _branches = new();
     private readonly GitRemoteService _remotes = new();
     public ObservableCollection<GitRemoteInfo> Remotes { get; } = [];
@@ -146,6 +148,8 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedRemote = null;
         StagingSummary = "No staged changes";
         ConfiguredIdentity = value is null ? "No repository selected" : "Loading Git identity...";
+        LocalIdentityName = "";
+        LocalIdentityEmail = "";
         if (value is null)
         {
             CurrentBranch = "No repository";
@@ -176,6 +180,8 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var identity = await _identity.ReadAsync(path);
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != path) return;
+            LocalIdentityName = identity.Name ?? "";
+            LocalIdentityEmail = identity.Email ?? "";
             ConfiguredIdentity = string.IsNullOrWhiteSpace(identity.Name) && string.IsNullOrWhiteSpace(identity.Email)
                 ? "No Git identity configured"
                 : $"{identity.Name ?? "(no name)"} <{identity.Email ?? "no email"}>";
@@ -186,6 +192,35 @@ public partial class MainWindowViewModel : ObservableObject
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) ConfiguredIdentity = "Unable to read Git identity: " + e.Message;
         }
     }
+    [RelayCommand]
+    private async Task SaveLocalIdentityAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var name = LocalIdentityName.Trim();
+        var email = LocalIdentityEmail.Trim();
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email))
+        {
+            Status = "Both author name and email are required.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _identity.SetLocalAsync(repo.Path, name, email);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await LoadIdentityAsync(repo.Path, version);
+            Status = "Saved repository-local Git identity; global Git settings were not changed.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Save local Git identity");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
     partial void OnSelectedLayoutChanged(string value) { if (!_loadingSettings) _ = PersistAsync(); }
     partial void OnSelectedTabChanged(string value) { if (!_loadingSettings) _ = PersistAsync(); }
     private async Task PersistAsync()
