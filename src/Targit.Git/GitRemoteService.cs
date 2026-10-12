@@ -33,6 +33,25 @@ public sealed class GitRemoteService
         repository.Network.Remotes.Add(name, url);
     }, cancellationToken);
 
+    public Task FetchAsync(string repositoryPath, string name,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        using var repository = new Repository(repositoryPath);
+        var remote = repository.Network.Remotes[name]
+            ?? throw new InvalidOperationException($"Remote '{name}' does not exist.");
+        var options = new FetchOptions
+        {
+            OnTransferProgress = progress => !cancellationToken.IsCancellationRequested
+        };
+        cancellationToken.ThrowIfCancellationRequested();
+        Commands.Fetch(repository, remote.Name, remote.FetchRefSpecs.Select(spec => spec.Specification),
+            options, $"Targit fetch {name}");
+        cancellationToken.ThrowIfCancellationRequested();
+    }, cancellationToken);
+
     public Task RemoveAsync(string repositoryPath, string name,
         CancellationToken cancellationToken = default) => Task.Run(() =>
     {
