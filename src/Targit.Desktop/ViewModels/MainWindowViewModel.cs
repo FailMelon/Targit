@@ -16,6 +16,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitStashService _stashes = new();
     public ObservableCollection<GitStashInfo> Stashes { get; } = [];
     [ObservableProperty] private string stashMessage = "";
+    [ObservableProperty] private GitStashInfo? selectedStash;
+    [ObservableProperty] private string stashDropConfirmation = "";
     public ObservableCollection<GitTagInfo> Tags { get; } = [];
     [ObservableProperty] private string newTagName = "";
     [ObservableProperty] private GitTagInfo? selectedTag;
@@ -137,6 +139,8 @@ public partial class MainWindowViewModel : ObservableObject
         Remotes.Clear();
         Tags.Clear();
         Stashes.Clear();
+        SelectedStash = null;
+        StashDropConfirmation = "";
         SelectedTag = null;
         TagDeletionConfirmation = "";
         SelectedRemote = null;
@@ -248,8 +252,10 @@ public partial class MainWindowViewModel : ObservableObject
             SelectedTag = Tags.FirstOrDefault(tag => tag.Name == previousTag);
             var stashes = await _stashes.ListAsync(repo.Path);
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+            var previousStash = SelectedStash?.Message;
             Stashes.Clear();
             foreach (var stash in stashes) Stashes.Add(stash);
+            SelectedStash = Stashes.FirstOrDefault(stash => stash.Message == previousStash);
         }
         catch (Exception e) { FileLog.Error(e, "Refresh repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion) && refreshVersion == Interlocked.Read(ref _refreshRevision)) Status = e.Message; }
     }
@@ -552,6 +558,39 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Delete local tag");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task DropSelectedStashAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedStash is not { } stash) return;
+        var expected = $"stash@{{{stash.Index}}}";
+        if (!string.Equals(StashDropConfirmation.Trim(), expected, StringComparison.Ordinal))
+        {
+            Status = $"Type {expected} to confirm permanent stash deletion.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var current = await _stashes.ListAsync(repo.Path);
+            if (stash.Index >= current.Count || current[stash.Index].Message != stash.Message)
+                throw new InvalidOperationException("The selected stash changed. Refresh and select it again.");
+            await _stashes.DropAsync(repo.Path, stash.Index);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            SelectedStash = null;
+            StashDropConfirmation = "";
+            await RefreshAsync();
+            Status = $"Dropped {expected} permanently without applying it.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Drop stash");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
