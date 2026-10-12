@@ -17,6 +17,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitCommitAmendService _commitAmend = new();
     private readonly GitCherryPickService _cherryPick = new();
     private readonly GitRevertService _revert = new();
+    private readonly GitSoftResetService _softReset = new();
+    [ObservableProperty] private string softResetConfirmation = "";
     [ObservableProperty] private string amendedCommitMessage = "";
     public ObservableCollection<GitStashInfo> Stashes { get; } = [];
     [ObservableProperty] private string stashMessage = "";
@@ -760,6 +762,40 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Save tracked stash");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task SoftResetToSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select an ancestor commit in History.";
+            return;
+        }
+        var expected = $"RESET {commit.Sha[..7]}";
+        if (!string.Equals(SoftResetConfirmation.Trim(), expected, StringComparison.Ordinal))
+        {
+            Status = $"Type {expected} to confirm moving HEAD.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _softReset.ResetToAncestorAsync(repo.Path, commit.Sha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            SoftResetConfirmation = "";
+            await RefreshAsync();
+            Status = $"Soft reset HEAD to {sha[..7]}; index and working files preserved.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Soft reset");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
