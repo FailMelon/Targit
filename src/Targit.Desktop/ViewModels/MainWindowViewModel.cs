@@ -250,8 +250,11 @@ public partial class MainWindowViewModel : ObservableObject
         var remotes = await _remotes.ListAsync(path);
         if (version != Interlocked.Read(ref _repositorySelectionVersion) ||
             refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+        var selectedName = SelectedRemote?.Name;
         Remotes.Clear();
         foreach (var remote in remotes) Remotes.Add(remote);
+        SelectedRemote = remotes.FirstOrDefault(remote => remote.Name == selectedName);
+        if (SelectedRemote is not null) await LoadRemoteBranchesAsync(SelectedRemote);
     }
 
     [RelayCommand]
