@@ -16,7 +16,8 @@
         <Button Content="Open path" Command="{Binding AddRepositoryCommand}"/>
         <TextBlock Text="Branch:" VerticalAlignment="Center"/>
         <TextBlock Text="{Binding CurrentBranch}" VerticalAlignment="Center"/>
-        <Button Content="Favorite" Command="{Binding ToggleFavoriteCommand}"/><Button Content="Refresh" Command="{Binding RefreshCommand}"/>
+        <Button Content="Favorite" Command="{Binding ToggleFavoriteCommand}"/>
+        <Button Content="Remove recent" Command="{Binding RemoveRepositoryCommand}"/><Button Content="Refresh" Command="{Binding RefreshCommand}"/>
         <ComboBox Width="145" ItemsSource="{Binding LayoutNames}" SelectedItem="{Binding SelectedLayout}"/>
         <Button Content="Save layout" Click="SaveLayout_Click"/>
         <Button Content="Load layout" Click="LoadLayout_Click"/>
