@@ -18,6 +18,9 @@
         <TextBlock Text="{Binding CurrentBranch}" VerticalAlignment="Center"/>
         <Button Content="Favorite" Command="{Binding ToggleFavoriteCommand}"/>
         <Button Content="Remove recent" Command="{Binding RemoveRepositoryCommand}"/><Button Content="Refresh" Command="{Binding RefreshCommand}"/>
+        <ComboBox Width="125" ItemsSource="{Binding AvailableTabs}" SelectedItem="{Binding NewTab}"/>
+        <Button Content="Open tab" Click="OpenTab_Click"/>
+        <Button Content="Close tab" Click="CloseTab_Click"/>
         <ComboBox Width="145" ItemsSource="{Binding LayoutNames}" SelectedItem="{Binding SelectedLayout}"/>
         <Button Content="Save layout" Click="SaveLayout_Click"/>
         <Button Content="Load layout" Click="LoadLayout_Click"/>
