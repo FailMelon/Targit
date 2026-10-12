@@ -41,6 +41,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string status = "Ready";
     [ObservableProperty] private string repositoryPath = "";
     [ObservableProperty] private string newTab = "History";
+    [ObservableProperty] private string stagingSummary = "No staged changes";
     [ObservableProperty] private string commitMessage = "";
     [ObservableProperty] private string authorName = "";
     [ObservableProperty] private string authorEmail = "";
@@ -74,6 +75,7 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedChangeLine = null;
         _changePaths.Clear();
         ChangeLines.Clear();
+        StagingSummary = "No staged changes";
         if (value is null)
         {
             CurrentBranch = "No repository";
@@ -139,6 +141,11 @@ public partial class MainWindowViewModel : ObservableObject
                 ChangeLines.Add(line);
                 _changePaths[line] = change.Path;
             }
+            var stagedCount = overview.Changes.Count(change =>
+                change.State.Contains("InIndex", StringComparison.Ordinal));
+            StagingSummary = stagedCount == 0
+                ? "No staged changes"
+                : stagedCount == 1 ? "1 staged file" : $"{stagedCount} staged files";
             BranchLines.Clear();
             foreach (var branch in overview.Branches) BranchLines.Add(branch);
             Status = $"{overview.Commits.Count} recent commits · {overview.Changes.Count} changed files";
