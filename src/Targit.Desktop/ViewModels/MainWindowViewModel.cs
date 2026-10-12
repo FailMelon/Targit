@@ -12,6 +12,9 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitWorkingTreeService _gitActions;
     private readonly GitDiffService _diffs = new();
     private readonly GitBranchService _branches = new();
+    private readonly GitResetService _reset = new();
+    [ObservableProperty] private string resetConfirmation = "";
+    [ObservableProperty] private string resetModeName = "Soft";
     private readonly GitRemoteService _remotes = new();
     public ObservableCollection<GitRemoteInfo> Remotes { get; } = [];
     public ObservableCollection<GitRemoteBranchInfo> RemoteBranches { get; } = [];
@@ -465,6 +468,52 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Remove remote");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task ResetToSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line)
+        {
+            Status = "Select a commit in History before resetting.";
+            return;
+        }
+        var shaPrefix = line.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        if (shaPrefix is null || shaPrefix.Length != 7)
+        {
+            Status = "Selected history entry does not contain a commit SHA.";
+            return;
+        }
+        var mode = ResetModeName switch
+        {
+            "Soft" => LibGit2Sharp.ResetMode.Soft,
+            "Mixed" => LibGit2Sharp.ResetMode.Mixed,
+            "Hard" => LibGit2Sharp.ResetMode.Hard,
+            _ => throw new InvalidOperationException("Unsupported reset mode.")
+        };
+        var expected = $"RESET {ResetModeName.ToUpperInvariant()} {shaPrefix}";
+        if (!string.Equals(ResetConfirmation.Trim(), expected, StringComparison.Ordinal))
+        {
+            Status = $"Type {expected} to confirm.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _reset.ResetAsync(repo.Path, shaPrefix, mode);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            ResetConfirmation = "";
+            await RefreshAsync();
+            Status = $"Completed {ResetModeName.ToLowerInvariant()} reset to {shaPrefix}.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Reset selected commit");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
