@@ -70,6 +70,9 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedRepositoryChanged(RepositoryInfo? value)
     {
         var version = Interlocked.Increment(ref _repositorySelectionVersion);
+        SelectedChangeLine = null;
+        _changePaths.Clear();
+        ChangeLines.Clear();
         if (value is null)
         {
             CurrentBranch = "No repository";
