@@ -45,10 +45,14 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string localIdentityName = "";
     [ObservableProperty] private string localIdentityEmail = "";
     private readonly GitBranchService _branches = new();
+    [ObservableProperty] private string blameSummary = "Select an action to inspect.";
+    [ObservableProperty] private string blamePath = "";
+
+    [ObservableProperty] private string graphLaneSummary = "Select an action to inspect.";
+
     [ObservableProperty] private string commitSearchSummary = "Select an action to inspect.";
     [ObservableProperty] private string commitSearchQuery = "";
 
-    [ObservableProperty] private string graphLaneSummary = "Select an action to inspect.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1173,6 +1177,26 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Search commits");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = CommitSearchSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectBlameAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            string output;
+            var lines = await new GitFileBlameService().GetAsync(repo.Path, BlamePath.Trim()); output = lines.Count == 0 ? "No blame entries." : string.Join(Environment.NewLine, lines.Select(line => $"{line.StartLine} (+{line.LineCount}) {line.CommitSha[..7]} {line.Author}"));
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            BlameSummary = output;
+            Status = "Inspect blame completed.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect blame");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = BlameSummary = e.Message;
         }
     }
 
