@@ -1,0 +1,19 @@
+name: Build and test
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore src/Targit.Desktop/Targit.Desktop.csproj
+      - run: dotnet build src/Targit.Desktop/Targit.Desktop.csproj --no-restore -c Release
+      - run: dotnet test tests/Targit.Core.Tests/Targit.Core.Tests.csproj -c Release
