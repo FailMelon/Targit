@@ -31,4 +31,22 @@ public sealed class Phase37Tests
             Directory.Delete(path, true);
         }
     }
+    [Fact]
+    public async Task ValidatesEdgeCases()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-37-edge-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            var service = new GitGraphLaneService(); Assert.Empty(await service.GetAsync(path)); await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.GetAsync(path, 0));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
 }
