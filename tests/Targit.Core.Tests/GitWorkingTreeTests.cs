@@ -115,6 +115,33 @@ public sealed class GitWorkingTreeTests
     }
 
     [Fact]
+    public async Task InitialCommitOnlyContainsStagedFiles()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-unborn-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            File.WriteAllText(Path.Combine(path, "included.txt"), "staged");
+            File.WriteAllText(Path.Combine(path, "excluded.txt"), "untracked");
+            var service = new GitWorkingTreeService();
+            await service.StageAsync(path, "included.txt");
+            var sha = await service.CommitAsync(path, "Initial", "Test", "test@example.com");
+            using var repo = new Repository(path);
+            Assert.Equal(sha, repo.Head.Tip.Sha);
+            Assert.NotNull(repo.Head.Tip["included.txt"]);
+            Assert.Null(repo.Head.Tip["excluded.txt"]);
+            Assert.True((repo.RetrieveStatus("excluded.txt") & FileStatus.NewInWorkdir) != 0);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task CommitRequiresValidInputs()
     {
         var service = new GitWorkingTreeService();
