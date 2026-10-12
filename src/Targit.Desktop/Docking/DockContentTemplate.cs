@@ -77,6 +77,10 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var applyStash = new Button { Content = "Apply selected stash (keep entry)" };
                 applyStash.Bind(Button.CommandProperty, new Binding(nameof(workspace.ApplySelectedStashCommand)));
                 root.Children.Add(applyStash);
+                root.Children.Add(new TextBlock { Text = "Pop applies the selected stash to a clean working tree and removes its entry only if application succeeds.", TextWrapping = TextWrapping.Wrap });
+                var popStash = new Button { Content = "Pop selected stash (apply and remove)" };
+                popStash.Bind(Button.CommandProperty, new Binding(nameof(workspace.PopSelectedStashCommand)));
+                root.Children.Add(popStash);
                 root.Children.Add(new TextBlock { Text = "Permanently drop a stash without applying it. Select an entry and type stash@{index} to confirm.", TextWrapping = TextWrapping.Wrap });
                 var confirmStashDrop = new TextBox { Watermark = "Type stash@{0} for selected stash" };
                 confirmStashDrop.Bind(TextBox.TextProperty, new Binding(nameof(workspace.StashDropConfirmation)) { Mode = BindingMode.TwoWay });
