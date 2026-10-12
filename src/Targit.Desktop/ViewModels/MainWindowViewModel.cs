@@ -16,6 +16,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly SemaphoreSlim _saveLock = new(1, 1);
     public ObservableCollection<RepositoryInfo> Repositories { get; } = [];
     public ObservableCollection<string> Tabs { get; } = ["History", "Changes", "Branches", "Output"];
+    public IReadOnlyList<string> LayoutNames { get; } = ["Standard", "Review", "Merge Resolution"];
+    [ObservableProperty] private string selectedLayout = "Standard";
     public IReadOnlyList<string> AvailableTabs { get; } = ["History", "Changes", "Branches", "Output", "Worktrees", "Remotes", "Tags"];
     [ObservableProperty] private RepositoryInfo? selectedRepository;
     [ObservableProperty] private string selectedTab = "History";
