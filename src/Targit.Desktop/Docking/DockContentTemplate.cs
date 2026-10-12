@@ -69,9 +69,17 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 root.Children.Add(saveStash);
                 var stashList = new ListBox { MinHeight = 70 };
                 stashList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.Stashes)));
+                stashList.Bind(Avalonia.Controls.Primitives.SelectingItemsControl.SelectedItemProperty, new Binding(nameof(workspace.SelectedStash)) { Mode = BindingMode.TwoWay });
                 stashList.ItemTemplate = new FuncDataTemplate<Targit.Git.GitStashInfo>((stash, _) =>
                     new TextBlock { Text = stash is null ? "" : $"stash@{{{stash.Index}}}: {stash.Message}" });
                 root.Children.Add(stashList);
+                root.Children.Add(new TextBlock { Text = "Permanently drop a stash without applying it. Select an entry and type stash@{index} to confirm.", TextWrapping = TextWrapping.Wrap });
+                var confirmStashDrop = new TextBox { Watermark = "Type stash@{0} for selected stash" };
+                confirmStashDrop.Bind(TextBox.TextProperty, new Binding(nameof(workspace.StashDropConfirmation)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(confirmStashDrop);
+                var dropStash = new Button { Content = "Permanently drop selected stash" };
+                dropStash.Bind(Button.CommandProperty, new Binding(nameof(workspace.DropSelectedStashCommand)));
+                root.Children.Add(dropStash);
                 var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
                 var stage = new Button { Content = "Stage selected" };
                 stage.Bind(Button.CommandProperty, new Binding(nameof(workspace.StageSelectedCommand)));
