@@ -45,6 +45,7 @@ public partial class MainWindowViewModel : ObservableObject
                 foreach (var tab in data.Tabs.Distinct()) Tabs.Add(tab);
             }
             SelectedTab = Tabs.Contains(data.ActiveTab) ? data.ActiveTab : Tabs.FirstOrDefault() ?? "History";
+            SelectedLayout = LayoutNames.Contains(data.LayoutName) ? data.LayoutName : "Standard";
             SelectedRepository = Repositories.FirstOrDefault(r => r.Path == data.ActiveRepository);
             _initialized = true;
         }
@@ -66,11 +67,12 @@ public partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
     }
+    partial void OnSelectedLayoutChanged(string value) { if (!_loadingSettings) _ = PersistAsync(); }
     partial void OnSelectedTabChanged(string value) { if (!_loadingSettings) _ = PersistAsync(); }
     private async Task PersistAsync()
     {
         if (!_initialized || _loadingSettings) return;
-        var snapshot = new TargitSettings(Repositories.ToList(), SelectedRepository?.Path, Tabs.ToList(), SelectedTab);
+        var snapshot = new TargitSettings(Repositories.ToList(), SelectedRepository?.Path, Tabs.ToList(), SelectedTab, LayoutName: SelectedLayout);
         await _saveLock.WaitAsync();
         try { await _settings.SaveAsync(snapshot); }
         catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
