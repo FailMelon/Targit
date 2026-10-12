@@ -25,10 +25,10 @@ public partial class MainWindowViewModel : ObservableObject
     private long _repositorySelectionVersion;
     private long _settingsRevision;
     public ObservableCollection<RepositoryInfo> Repositories { get; } = [];
-    public ObservableCollection<string> Tabs { get; } = ["History", "Changes", "Branches", "Output"];
+    public ObservableCollection<string> Tabs { get; } = ["History", "Changes", "Branches"];
     public IReadOnlyList<string> LayoutNames { get; } = ["Standard", "Review", "Merge Resolution"];
     [ObservableProperty] private string selectedLayout = "Standard";
-    public IReadOnlyList<string> AvailableTabs { get; } = ["History", "Changes", "Branches", "Output", "Worktrees", "Remotes", "Tags"];
+    public IReadOnlyList<string> AvailableTabs { get; } = ["History", "Changes", "Branches"];
     [ObservableProperty] private RepositoryInfo? selectedRepository;
     [ObservableProperty] private string selectedTab = "History";
     [ObservableProperty] private string currentBranch = "No repository";
