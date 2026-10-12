@@ -29,7 +29,7 @@ public sealed class GitCommitAmendAcceptanceTests
             {
                 Assert.Equal("new message", repo.Head.Tip!.MessageShort);
                 Assert.Equal("content", File.ReadAllText(Path.Combine(path, "file.txt")));
-                repo.Branches.Add("refs/remotes/origin/main", repo.Head.Tip);
+                repo.Refs.Add("refs/remotes/origin/main", repo.Head.Tip.Id);
             }
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.AmendLatestMessageAsync(path, "must fail"));
         }
