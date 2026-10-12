@@ -7,6 +7,28 @@ namespace Targit.Core.Tests;
 public sealed class GitDiffServiceTests
 {
     [Fact]
+    public async Task UntrackedFileIsVisibleAsAddedLines()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-untracked-diff-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            File.WriteAllText(Path.Combine(path, "new.txt"), "first line\\nsecond line\\n");
+            var result = await new GitDiffService().GetFileDiffAsync(path, "new.txt");
+            Assert.Empty(result.StagedPatch);
+            Assert.Contains("+first line", result.UnstagedPatch);
+            Assert.Contains("+second line", result.UnstagedPatch);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task ReportsStagedAndUnstagedVersionsSeparately()
     {
         var path = Path.Combine(Path.GetTempPath(), "targit-diff-" + Guid.NewGuid().ToString("N"));
