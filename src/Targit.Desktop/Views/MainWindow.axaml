@@ -17,6 +17,10 @@
         <TextBlock Text="Branch:" VerticalAlignment="Center"/>
         <TextBlock Text="{Binding CurrentBranch}" VerticalAlignment="Center"/>
         <Button Content="Favorite" Command="{Binding ToggleFavoriteCommand}"/><Button Content="Refresh" Command="{Binding RefreshCommand}"/>
+        <ComboBox Width="145" ItemsSource="{Binding LayoutNames}" SelectedItem="{Binding SelectedLayout}"/>
+        <Button Content="Save layout" Click="SaveLayout_Click"/>
+        <Button Content="Load layout" Click="LoadLayout_Click"/>
+        <Button Content="Reset" Click="ResetLayout_Click"/>
       </StackPanel>
     </Border>
     <Border DockPanel.Dock="Bottom" Background="#252526" Padding="7">
