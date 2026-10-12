@@ -114,6 +114,9 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var pushRemote = new Button { Content = "Push current branch (no force)" };
                 pushRemote.Bind(Button.CommandProperty, new Binding(nameof(workspace.PushRemoteCommand)));
                 root.Children.Add(pushRemote);
+                var pullRemote = new Button { Content = "Pull tracked branch (fast-forward only)" };
+                pullRemote.Bind(Button.CommandProperty, new Binding(nameof(workspace.PullFastForwardCommand)));
+                root.Children.Add(pullRemote);
                 break;
             case "inspector":
                 var current = new TextBlock();
