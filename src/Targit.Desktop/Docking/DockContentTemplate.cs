@@ -84,6 +84,9 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var checkoutBranch = new Button { Content = "Switch to selected branch" };
                 checkoutBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.CheckoutBranchCommand)));
                 root.Children.Add(checkoutBranch);
+                var deleteBranch = new Button { Content = "Delete selected local branch" };
+                deleteBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.DeleteBranchCommand)));
+                root.Children.Add(deleteBranch);
                 break;
             case "inspector":
                 var current = new TextBlock();
