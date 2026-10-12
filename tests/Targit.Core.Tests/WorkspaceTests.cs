@@ -26,7 +26,13 @@ public sealed class WorkspaceTests
             var store = new JsonSettingsStore(root);
             var settings = new TargitSettings([new RepositoryInfo("/example", "Example")], "/example", ["History", "Changes"], "Changes");
             await store.SaveAsync(settings);
-            Assert.Equal(settings, (await store.LoadAsync()) with { Repositories = settings.Repositories });
+            var loaded = await store.LoadAsync();
+            Assert.Equal(settings.ActiveRepository, loaded.ActiveRepository);
+            Assert.Equal(settings.ActiveTab, loaded.ActiveTab);
+            Assert.Equal(settings.LeftPanel, loaded.LeftPanel);
+            Assert.Equal(settings.RightPanel, loaded.RightPanel);
+            Assert.Equal(settings.Repositories, loaded.Repositories);
+            Assert.Equal(settings.Tabs, loaded.Tabs);
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }
