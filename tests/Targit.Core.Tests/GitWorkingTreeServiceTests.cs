@@ -108,6 +108,23 @@ public sealed class GitWorkingTreeServiceTests
     }
 
     [Fact]
+    public async Task BareRepositoriesRejectStageUnstageAndCommit()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-bare-actions-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path, isBare: true);
+            var git = new GitWorkingTreeService();
+            await Assert.ThrowsAsync<InvalidOperationException>(() => git.StageAsync(path, "file.txt"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => git.UnstageAsync(path, "file.txt"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                git.CommitAsync(path, "message", "Tester", "tester@example.invalid"));
+        }
+        finally { Cleanup(path); }
+    }
+
+    [Fact]
     public async Task CommitRequiresAuthorAndMessage()
     {
         var path = NewRepository();
