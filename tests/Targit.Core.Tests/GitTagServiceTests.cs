@@ -70,6 +70,7 @@ public sealed class GitTagServiceTests
         var root = Path.Combine(Path.GetTempPath(), "targit-remote-tags-" + Guid.NewGuid().ToString("N"));
         var source = Path.Combine(root, "source");
         var clone = Path.Combine(root, "clone");
+        var remote = Path.Combine(root, "remote.git");
         Directory.CreateDirectory(source);
         try
         {
@@ -81,14 +82,17 @@ public sealed class GitTagServiceTests
                 var s = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 r.Commit("Initial", s, s);
             }
+            Repository.Init(remote, isBare: true);
             Repository.Clone(source, clone);
+            using (var r = new Repository(clone))
+                r.Network.Remotes.Update("origin", updater => updater.Url = remote);
             using (var r = new Repository(clone))
                 r.Tags.Add("v2", r.Head.Tip);
             var service = new GitTagService();
             await service.PushAsync(clone, "origin", "v2");
-            using (var r = new Repository(source)) Assert.NotNull(r.Tags["v2"]);
+            using (var r = new Repository(remote)) Assert.NotNull(r.Tags["v2"]);
             await service.DeleteRemoteAsync(clone, "origin", "v2");
-            using (var r = new Repository(source)) Assert.Null(r.Tags["v2"]);
+            using (var r = new Repository(remote)) Assert.Null(r.Tags["v2"]);
             using (var r = new Repository(clone)) Assert.NotNull(r.Tags["v2"]);
         }
         finally
