@@ -107,10 +107,11 @@ public partial class MainWindowViewModel : ObservableObject
     {
         var repo = SelectedRepository;
         if (repo is null) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
         try
         {
             var overview = await _sessions.GetSession(repo.Path).RefreshAsync();
-            if (SelectedRepository != repo) return;
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
             SelectedCommitLine = null;
             SelectedChangeLine = null;
             SelectedBranchLine = null;
@@ -125,7 +126,7 @@ public partial class MainWindowViewModel : ObservableObject
             foreach (var branch in overview.Branches) BranchLines.Add(branch);
             Status = $"{overview.Commits.Count} recent commits · {overview.Changes.Count} changed files";
         }
-        catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
+        catch (Exception e) { FileLog.Error(e, "Refresh repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message; }
     }
 
     [RelayCommand]
