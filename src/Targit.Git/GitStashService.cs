@@ -16,4 +16,20 @@ public sealed class GitStashService
         return repository.Stashes.Select((stash, index) =>
             new GitStashInfo(index, stash.Message)).ToArray();
     }, cancellationToken);
+    /// <summary>Saves tracked working-tree changes in a stash without including untracked files.</summary>
+    public Task SaveAsync(string repositoryPath, string message,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        using var repository = new Repository(repositoryPath);
+        if (repository.Info.IsBare || repository.Head.Tip is null)
+            throw new InvalidOperationException("A working tree with an initial commit is required.");
+        if (!repository.RetrieveStatus().IsDirty)
+            throw new InvalidOperationException("There are no local changes to stash.");
+        var signature = new Signature("Targit", "targit@localhost", DateTimeOffset.UtcNow);
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Stashes.Add(signature, message ?? string.Empty, StashModifiers.Default);
+    }, cancellationToken);
+
 }
