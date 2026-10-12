@@ -45,6 +45,13 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var revertCommit = new Button { Content = "Revert selected commit" };
                 revertCommit.Bind(Button.CommandProperty, new Binding(nameof(workspace.RevertSelectedCommitCommand)));
                 root.Children.Add(revertCommit);
+                root.Children.Add(new TextBlock { Text = "Soft reset to a selected ancestor: moves local HEAD, preserves staged changes and working files. Published HEAD commits are blocked. Type RESET followed by the selected 7-character SHA to confirm.", TextWrapping = TextWrapping.Wrap });
+                var softResetConfirmation = new TextBox { Watermark = "RESET abc1234" };
+                softResetConfirmation.Bind(TextBox.TextProperty, new Binding(nameof(workspace.SoftResetConfirmation)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(softResetConfirmation);
+                var softReset = new Button { Content = "Soft reset to selected ancestor" };
+                softReset.Bind(Button.CommandProperty, new Binding(nameof(workspace.SoftResetToSelectedCommitCommand)));
+                root.Children.Add(softReset);
                 root.Children.Add(new TextBlock { Text = "Lightweight tags (current HEAD)", FontWeight = FontWeight.SemiBold });
                 var tagName = new TextBox { Watermark = "Tag name (e.g. v1.0.0)" };
                 tagName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.NewTagName)) { Mode = BindingMode.TwoWay });
