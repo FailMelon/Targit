@@ -108,6 +108,33 @@ public sealed class GitWorkingTreeServiceTests
     }
 
     [Fact]
+    public async Task UnstageTrackedModificationPreservesWorkingTreeFile()
+    {
+        var path = NewRepository();
+        try
+        {
+            var git = new GitWorkingTreeService();
+            var file = Path.Combine(path, "tracked.txt");
+            File.WriteAllText(file, "original");
+            await git.StageAsync(path, "tracked.txt");
+            await git.CommitAsync(path, "Initial", "Tester", "tester@example.invalid");
+
+            File.WriteAllText(file, "modified");
+            await git.StageAsync(path, "tracked.txt");
+            await git.UnstageAsync(path, "tracked.txt");
+
+            using var repo = new Repository(path);
+            var status = repo.RetrieveStatus("tracked.txt");
+            Assert.True((status & FileStatus.ModifiedInWorkdir) != 0);
+            Assert.True((status & FileStatus.ModifiedInIndex) == 0);
+            Assert.Equal("modified", File.ReadAllText(file));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                git.CommitAsync(path, "Should not commit", "Tester", "tester@example.invalid"));
+        }
+        finally { Cleanup(path); }
+    }
+
+    [Fact]
     public async Task BareRepositoriesRejectStageUnstageAndCommit()
     {
         var path = Path.Combine(Path.GetTempPath(), "targit-bare-actions-" + Guid.NewGuid().ToString("N"));
