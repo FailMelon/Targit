@@ -71,6 +71,39 @@ public sealed class GitBranchServiceTests
         }
     }
 
+    [Fact]
+    public async Task DeleteBranchRemovesOnlyNonCurrentLocalBranch()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-branch-delete-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            string initialBranch;
+            using (var repository = new Repository(path))
+            {
+                File.WriteAllText(Path.Combine(path, "readme.txt"), "initial\n");
+                Commands.Stage(repository, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                repository.Commit("Initial", signature, signature);
+                initialBranch = repository.Head.FriendlyName;
+            }
+            var service = new GitBranchService();
+            await service.CreateAsync(path, "feature/delete-me");
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeleteAsync(path, initialBranch));
+            await service.DeleteAsync(path, "feature/delete-me");
+            using var result = new Repository(path);
+            Assert.Null(result.Branches["feature/delete-me"]);
+            Assert.Equal(initialBranch, result.Head.FriendlyName);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
     [Theory]
     [InlineData("bad name")]
     [InlineData("bad..name")]
