@@ -19,6 +19,7 @@ public sealed class TargitDockFactory : Factory
         var history = new Document { Id = "history", Title = "History" };
         var changes = new Document { Id = "changes", Title = "Changes" };
         var branches = new Document { Id = "branches", Title = "Branches" };
+        var remotes = new Document { Id = "remotes", Title = "Remotes" };
         var repositories = new Tool { Id = "repositories", Title = "Repositories" };
         var inspector = new Tool { Id = "inspector", Title = "Inspector" };
         var output = new Tool { Id = "output", Title = "Output" };
@@ -38,7 +39,7 @@ public sealed class TargitDockFactory : Factory
             Title = "Documents",
             Proportion = 0.56,
             ActiveDockable = history,
-            VisibleDockables = CreateList<IDockable>(history, changes, branches)
+            VisibleDockables = CreateList<IDockable>(history, changes, branches, remotes)
         };
         var right = new ToolDock
         {

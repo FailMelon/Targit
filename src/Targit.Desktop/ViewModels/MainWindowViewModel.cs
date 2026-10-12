@@ -4,17 +4,56 @@ using CommunityToolkit.Mvvm.Input;
 using Targit.Application;
 using Targit.Core;
 using Targit.Infrastructure;
+using Targit.Git;
 namespace Targit.Desktop.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly RepositorySessionManager _sessions;
+    private readonly GitWorkingTreeService _gitActions;
+    private readonly GitDiffService _diffs = new();
+    private readonly GitBranchService _branches = new();
+    private readonly GitRemoteService _remotes = new();
+    public ObservableCollection<GitRemoteInfo> Remotes { get; } = [];
+    [ObservableProperty] private GitRemoteInfo? selectedRemote;
+    [ObservableProperty] private string newRemoteName = "";
+    [ObservableProperty] private string newRemoteUrl = "";
+    [ObservableProperty] private string newBranchName = "";
+    private long _diffRevision;
+    [ObservableProperty] private string stagedDiffText = "";
+    [ObservableProperty] private string unstagedDiffText = "";
+    private readonly Dictionary<string, string> _changePaths = new(StringComparer.Ordinal);
     public ObservableCollection<string> CommitLines { get; } = [];
     [ObservableProperty] private string? selectedCommitLine;
     [ObservableProperty] private string? selectedChangeLine;
     [ObservableProperty] private string? selectedBranchLine;
     [ObservableProperty] private string inspectorText = "Select a commit, changed file or branch to inspect it.";
     partial void OnSelectedCommitLineChanged(string? value) { if (value is not null) InspectorText = value; }
-    partial void OnSelectedChangeLineChanged(string? value) { if (value is not null) InspectorText = value; }
+    partial void OnSelectedChangeLineChanged(string? value)
+    {
+        if (value is not null) InspectorText = value;
+        _ = LoadSelectedDiffAsync(value);
+    }
+    private async Task LoadSelectedDiffAsync(string? selection)
+    {
+        var revision = Interlocked.Increment(ref _diffRevision);
+        var repository = SelectedRepository;
+        var selectionVersion = Interlocked.Read(ref _repositorySelectionVersion);
+        StagedDiffText = "";
+        UnstagedDiffText = "";
+        if (repository is null || selection is null || !_changePaths.TryGetValue(selection, out var path)) return;
+        try
+        {
+            var result = await _diffs.GetFileDiffAsync(repository.Path, path);
+            if (revision != Interlocked.Read(ref _diffRevision) || selectionVersion != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            StagedDiffText = string.IsNullOrWhiteSpace(result.StagedPatch) ? "No staged changes for this file." : result.StagedPatch;
+            UnstagedDiffText = string.IsNullOrWhiteSpace(result.UnstagedPatch) ? "No unstaged changes for this file." : result.UnstagedPatch;
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Load file diff");
+            if (revision == Interlocked.Read(ref _diffRevision) && selectionVersion == Interlocked.Read(ref _repositorySelectionVersion)) UnstagedDiffText = e.Message;
+        }
+    }
     partial void OnSelectedBranchLineChanged(string? value) { if (value is not null) InspectorText = "Branch: " + value; }
     public ObservableCollection<string> ChangeLines { get; } = [];
     public ObservableCollection<string> BranchLines { get; } = [];
@@ -26,8 +65,9 @@ public partial class MainWindowViewModel : ObservableObject
     private long _repositorySelectionVersion;
     private long _settingsRevision;
     private long _refreshRevision;
+    private readonly SemaphoreSlim _gitMutationLock = new(1, 1);
     public ObservableCollection<RepositoryInfo> Repositories { get; } = [];
-    public ObservableCollection<string> Tabs { get; } = ["History", "Changes", "Branches"];
+    public ObservableCollection<string> Tabs { get; } = ["History", "Changes", "Branches", "Remotes"];
     public IReadOnlyList<string> LayoutNames { get; } = ["Standard", "Review", "Merge Resolution"];
     [ObservableProperty] private string selectedLayout = "Standard";
     public IReadOnlyList<string> AvailableTabs { get; } = ["History", "Changes", "Branches"];
@@ -37,9 +77,13 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string status = "Ready";
     [ObservableProperty] private string repositoryPath = "";
     [ObservableProperty] private string newTab = "History";
-    public MainWindowViewModel(RepositorySessionManager sessions, JsonSettingsStore settings)
+    [ObservableProperty] private string stagingSummary = "No staged changes";
+    [ObservableProperty] private string commitMessage = "";
+    [ObservableProperty] private string authorName = "";
+    [ObservableProperty] private string authorEmail = "";
+    public MainWindowViewModel(RepositorySessionManager sessions, JsonSettingsStore settings, GitWorkingTreeService gitActions)
     {
-        _sessions = sessions; _settings = settings;
+        _sessions = sessions; _settings = settings; _gitActions = gitActions;
         Initialization = InitializeAsync();
     }
     private async Task InitializeAsync()
@@ -64,6 +108,12 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedRepositoryChanged(RepositoryInfo? value)
     {
         var version = Interlocked.Increment(ref _repositorySelectionVersion);
+        SelectedChangeLine = null;
+        _changePaths.Clear();
+        ChangeLines.Clear();
+        Remotes.Clear();
+        SelectedRemote = null;
+        StagingSummary = "No staged changes";
         if (value is null)
         {
             CurrentBranch = "No repository";
@@ -122,11 +172,22 @@ public partial class MainWindowViewModel : ObservableObject
             foreach (var commit in overview.Commits)
                 CommitLines.Add($"{commit.Sha[..7]}  {commit.Message} — {commit.Author}");
             ChangeLines.Clear();
+            _changePaths.Clear();
             foreach (var change in overview.Changes)
-                ChangeLines.Add($"{change.State}  {change.Path}");
+            {
+                var line = $"{change.State}  {change.Path}";
+                ChangeLines.Add(line);
+                _changePaths[line] = change.Path;
+            }
+            var stagedCount = overview.Changes.Count(change =>
+                change.State.Contains("InIndex", StringComparison.Ordinal));
+            StagingSummary = stagedCount == 0
+                ? "No staged changes"
+                : stagedCount == 1 ? "1 staged file" : $"{stagedCount} staged files";
             BranchLines.Clear();
             foreach (var branch in overview.Branches) BranchLines.Add(branch);
             Status = $"{overview.Commits.Count} recent commits · {overview.Changes.Count} changed files";
+            await RefreshRemotesAsync(repo.Path, version, refreshVersion);
         }
         catch (Exception e) { FileLog.Error(e, "Refresh repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion) && refreshVersion == Interlocked.Read(ref _refreshRevision)) Status = e.Message; }
     }
@@ -179,5 +240,218 @@ public partial class MainWindowViewModel : ObservableObject
             await PersistAsync();
         }
         catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
+    }
+    private async Task RefreshRemotesAsync(string path, long version, long refreshVersion)
+    {
+        var remotes = await _remotes.ListAsync(path);
+        if (version != Interlocked.Read(ref _repositorySelectionVersion) ||
+            refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+        Remotes.Clear();
+        foreach (var remote in remotes) Remotes.Add(remote);
+    }
+
+    [RelayCommand]
+    private async Task AddRemoteAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var name = NewRemoteName.Trim();
+        var url = NewRemoteUrl.Trim();
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _remotes.AddAsync(repo.Path, name, url);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            NewRemoteName = "";
+            NewRemoteUrl = "";
+            await RefreshAsync();
+            Status = $"Added remote {name}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Add remote");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task FetchRemoteAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedRemote is not { } remote) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            Status = $"Fetching {remote.Name}...";
+            await _remotes.FetchAsync(repo.Path, remote.Name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await RefreshAsync();
+            Status = $"Fetched {remote.Name}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Fetch remote");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task RemoveRemoteAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedRemote is not { } remote) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _remotes.RemoveAsync(repo.Path, remote.Name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await RefreshAsync();
+            Status = $"Removed remote {remote.Name}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Remove remote");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CreateBranchAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var name = NewBranchName.Trim();
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _branches.CreateAsync(repo.Path, name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            NewBranchName = "";
+            await RefreshAsync();
+            Status = $"Created branch {name}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Create branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CheckoutBranchAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedBranchLine is not { } selected) return;
+        var name = selected.Trim();
+        if (name.StartsWith("* ", StringComparison.Ordinal)) name = name[2..];
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            var current = await _branches.CheckoutAsync(repo.Path, name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            CurrentBranch = current;
+            await RefreshAsync();
+            Status = $"Switched to {current}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Checkout branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task DeleteBranchAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedBranchLine is not { } selected) return;
+        var name = selected.Trim();
+        if (name.StartsWith("* ", StringComparison.Ordinal)) name = name[2..];
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _branches.DeleteAsync(repo.Path, name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await RefreshAsync();
+            Status = $"Deleted branch {name}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Delete branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task StageSelectedAsync()
+    {
+        await ChangeStageAsync(stage: true);
+    }
+
+    [RelayCommand]
+    private async Task UnstageSelectedAsync()
+    {
+        await ChangeStageAsync(stage: false);
+    }
+
+    private async Task ChangeStageAsync(bool stage)
+    {
+        if (SelectedRepository is not { } repo || SelectedChangeLine is not { } selected ||
+            !_changePaths.TryGetValue(selected, out var path)) return;
+        var selectionVersion = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (selectionVersion != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            if (stage) await _gitActions.StageAsync(repo.Path, path);
+            else await _gitActions.UnstageAsync(repo.Path, path);
+            if (SelectedRepository?.Path != repo.Path) return;
+            await RefreshAsync();
+            if (SelectedRepository?.Path == repo.Path) Status = stage ? $"Staged {path}" : $"Unstaged {path}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, stage ? "Stage file" : "Unstage file");
+            if (SelectedRepository?.Path == repo.Path) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CommitAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var message = CommitMessage;
+        var author = AuthorName;
+        var email = AuthorEmail;
+        var selectionVersion = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (selectionVersion != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _gitActions.CommitAsync(repo.Path, message, author, email);
+            if (SelectedRepository?.Path != repo.Path) return;
+            CommitMessage = "";
+            await RefreshAsync();
+            if (SelectedRepository?.Path == repo.Path) Status = $"Created commit {sha[..7]}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Create commit");
+            if (SelectedRepository?.Path == repo.Path) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
     }
 }

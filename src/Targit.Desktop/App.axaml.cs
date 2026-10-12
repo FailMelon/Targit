@@ -19,6 +19,7 @@ public partial class App : Avalonia.Application
         var services = new ServiceCollection();
         services.AddSingleton<IRepositoryReader, LibGitRepositoryReader>();
         services.AddSingleton<IRepositoryOverviewReader, LibGitOverviewReader>();
+        services.AddSingleton<GitWorkingTreeService>();
         services.AddSingleton<RepositoryWorkspace>();
         services.AddSingleton<RepositorySessionManager>();
         services.AddSingleton<JsonSettingsStore>();

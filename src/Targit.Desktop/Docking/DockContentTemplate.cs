@@ -40,9 +40,77 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "changes":
                 AddList(root, nameof(workspace.ChangeLines), nameof(workspace.SelectedChangeLine));
+                var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                var stage = new Button { Content = "Stage selected" };
+                stage.Bind(Button.CommandProperty, new Binding(nameof(workspace.StageSelectedCommand)));
+                var unstage = new Button { Content = "Unstage selected" };
+                unstage.Bind(Button.CommandProperty, new Binding(nameof(workspace.UnstageSelectedCommand)));
+                actions.Children.Add(stage);
+                actions.Children.Add(unstage);
+                root.Children.Add(actions);
+                var stagedSummary = new TextBlock();
+                stagedSummary.Bind(TextBlock.TextProperty, new Binding(nameof(workspace.StagingSummary)));
+                root.Children.Add(stagedSummary);
+                root.Children.Add(new TextBlock { Text = "Staged diff", FontWeight = FontWeight.SemiBold });
+                var stagedPatch = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap, MinHeight = 110, FontFamily = FontFamily.Parse("Consolas, Menlo, monospace") };
+                stagedPatch.Bind(TextBox.TextProperty, new Binding(nameof(workspace.StagedDiffText)));
+                root.Children.Add(stagedPatch);
+                root.Children.Add(new TextBlock { Text = "Unstaged diff", FontWeight = FontWeight.SemiBold });
+                var unstagedPatch = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap, MinHeight = 110, FontFamily = FontFamily.Parse("Consolas, Menlo, monospace") };
+                unstagedPatch.Bind(TextBox.TextProperty, new Binding(nameof(workspace.UnstagedDiffText)));
+                root.Children.Add(unstagedPatch);
+                root.Children.Add(new TextBlock { Text = "Commit staged changes", FontWeight = FontWeight.SemiBold });
+                var message = new TextBox { Watermark = "Commit message", AcceptsReturn = true, MinHeight = 60 };
+                message.Bind(TextBox.TextProperty, new Binding(nameof(workspace.CommitMessage)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(message);
+                var name = new TextBox { Watermark = "Author name" };
+                name.Bind(TextBox.TextProperty, new Binding(nameof(workspace.AuthorName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(name);
+                var email = new TextBox { Watermark = "Author email" };
+                email.Bind(TextBox.TextProperty, new Binding(nameof(workspace.AuthorEmail)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(email);
+                var commit = new Button { Content = "Commit staged" };
+                commit.Bind(Button.CommandProperty, new Binding(nameof(workspace.CommitCommand)));
+                root.Children.Add(commit);
                 break;
             case "branches":
                 AddList(root, nameof(workspace.BranchLines), nameof(workspace.SelectedBranchLine));
+                var branchName = new TextBox { Watermark = "New local branch name" };
+                branchName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.NewBranchName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(branchName);
+                var createBranch = new Button { Content = "Create branch" };
+                createBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.CreateBranchCommand)));
+                root.Children.Add(createBranch);
+                var checkoutBranch = new Button { Content = "Switch to selected branch" };
+                checkoutBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.CheckoutBranchCommand)));
+                root.Children.Add(checkoutBranch);
+                var deleteBranch = new Button { Content = "Delete selected local branch" };
+                deleteBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.DeleteBranchCommand)));
+                root.Children.Add(deleteBranch);
+                break;
+            case "remotes":
+                var remoteList = new ListBox { MinHeight = 150 };
+                remoteList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.Remotes)));
+                remoteList.Bind(Avalonia.Controls.Primitives.SelectingItemsControl.SelectedItemProperty,
+                    new Binding(nameof(workspace.SelectedRemote)) { Mode = BindingMode.TwoWay });
+                remoteList.ItemTemplate = new FuncDataTemplate<Targit.Git.GitRemoteInfo>((remote, _) =>
+                    new TextBlock { Text = remote is null ? "" : remote.Name + " — " + remote.Url, TextWrapping = TextWrapping.Wrap });
+                root.Children.Add(remoteList);
+                var remoteName = new TextBox { Watermark = "Remote name (e.g. origin)" };
+                remoteName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.NewRemoteName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(remoteName);
+                var remoteUrl = new TextBox { Watermark = "Remote URL" };
+                remoteUrl.Bind(TextBox.TextProperty, new Binding(nameof(workspace.NewRemoteUrl)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(remoteUrl);
+                var addRemote = new Button { Content = "Add remote" };
+                addRemote.Bind(Button.CommandProperty, new Binding(nameof(workspace.AddRemoteCommand)));
+                root.Children.Add(addRemote);
+                var removeRemote = new Button { Content = "Remove selected remote" };
+                removeRemote.Bind(Button.CommandProperty, new Binding(nameof(workspace.RemoveRemoteCommand)));
+                root.Children.Add(removeRemote);
+                var fetchRemote = new Button { Content = "Fetch selected remote" };
+                fetchRemote.Bind(Button.CommandProperty, new Binding(nameof(workspace.FetchRemoteCommand)));
+                root.Children.Add(fetchRemote);
                 break;
             case "inspector":
                 var current = new TextBlock();
