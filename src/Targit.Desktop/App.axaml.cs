@@ -9,7 +9,7 @@ using Targit.Infrastructure;
 using Targit.Desktop.ViewModels;
 using Targit.Desktop.Views;
 namespace Targit.Desktop;
-public partial class App : Application
+public partial class App : Avalonia.Application
 {
     private ServiceProvider? _provider;
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
