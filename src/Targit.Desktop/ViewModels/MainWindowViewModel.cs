@@ -20,6 +20,7 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<string> BranchLines { get; } = [];
     private readonly JsonSettingsStore _settings;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
+    public Task Initialization { get; }
     private bool _initialized;
     private bool _loadingSettings = true;
     private long _repositorySelectionVersion;
@@ -40,7 +41,7 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(RepositorySessionManager sessions, JsonSettingsStore settings)
     {
         _sessions = sessions; _settings = settings;
-        _ = InitializeAsync();
+        Initialization = InitializeAsync();
     }
     private async Task InitializeAsync()
     {
