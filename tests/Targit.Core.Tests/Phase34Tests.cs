@@ -31,4 +31,15 @@ public sealed class Phase34Tests
         }
         finally { Cleanup(path); }
     }
+    [Fact]
+    public void RejectsInvalidActionsAndDuplicateSteps()
+    {
+        var pick = new GitRebaseStep("a", "first", GitRebaseAction.Pick);
+        GitRebasePlanService.ValidatePlan(new[] { pick, new GitRebaseStep("b", "second", GitRebaseAction.Squash) });
+        Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { pick, pick }));
+        Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { new GitRebaseStep("a", "first", GitRebaseAction.Fixup) }));
+        Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { new GitRebaseStep("a", "first", GitRebaseAction.Drop), new GitRebaseStep("b", "second", GitRebaseAction.Squash) }));
+        Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { new GitRebaseStep("a", "first", (GitRebaseAction)999) }));
+    }
+
 }
