@@ -37,6 +37,18 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Lightweight tags (current HEAD)", FontWeight = FontWeight.SemiBold });
+                var tagName = new TextBox { Watermark = "Tag name (e.g. v1.0.0)" };
+                tagName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.NewTagName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(tagName);
+                var createTag = new Button { Content = "Create lightweight tag" };
+                createTag.Bind(Button.CommandProperty, new Binding(nameof(workspace.CreateLightweightTagCommand)));
+                root.Children.Add(createTag);
+                var tagList = new ListBox { MinHeight = 80 };
+                tagList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.Tags)));
+                tagList.ItemTemplate = new FuncDataTemplate<Targit.Git.GitTagInfo>((tag, _) =>
+                    new TextBlock { Text = tag is null ? "" : tag.Name + "  " + tag.TargetSha[..7] + (tag.IsAnnotated ? " (annotated)" : "") });
+                root.Children.Add(tagList);
                 break;
             case "changes":
                 AddList(root, nameof(workspace.ChangeLines), nameof(workspace.SelectedChangeLine));
