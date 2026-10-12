@@ -37,6 +37,13 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Commit graph (parents and refs)", FontWeight = FontWeight.SemiBold });
+                var loadGraph = new Button { Content = "Load commit graph" };
+                loadGraph.Bind(Button.CommandProperty, new Binding(nameof(workspace.LoadCommitGraphCommand)));
+                root.Children.Add(loadGraph);
+                var graphDetails = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 130, TextWrapping = TextWrapping.Wrap };
+                graphDetails.Bind(TextBox.TextProperty, new Binding(nameof(workspace.CommitGraphSummary)));
+                root.Children.Add(graphDetails);
                 root.Children.Add(new TextBlock { Text = "Rebase conflicts (read-only)", FontWeight = FontWeight.SemiBold });
                 var inspectRebase = new Button { Content = "Inspect rebase conflicts" };
                 inspectRebase.Bind(Button.CommandProperty, new Binding(nameof(workspace.InspectRebaseConflictsCommand)));

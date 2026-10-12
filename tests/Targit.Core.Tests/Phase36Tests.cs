@@ -32,4 +32,22 @@ public sealed class Phase36Tests
         }
         finally { Cleanup(path); }
     }
+    [Fact]
+    public async Task EmptyRepositoryAndCountValidation()
+    {
+        var path = NewPath();
+        try
+        {
+            Repository.Init(path);
+            var service = new GitCommitGraphService();
+            Assert.Empty(await service.GetAsync(path));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.GetAsync(path, 0));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.GetAsync(path, 10001));
+            using var cancelled = new CancellationTokenSource();
+            cancelled.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.GetAsync(path, cancellationToken: cancelled.Token));
+        }
+        finally { Cleanup(path); }
+    }
+
 }
