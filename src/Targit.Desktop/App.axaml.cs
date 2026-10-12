@@ -7,6 +7,7 @@ using Targit.Core;
 using Targit.Git;
 using Targit.Infrastructure;
 using Targit.Desktop.ViewModels;
+using Targit.Desktop.Docking;
 using Targit.Desktop.Views;
 namespace Targit.Desktop;
 public partial class App : Avalonia.Application
@@ -17,13 +18,16 @@ public partial class App : Avalonia.Application
     {
         var services = new ServiceCollection();
         services.AddSingleton<IRepositoryReader, LibGitRepositoryReader>();
+        services.AddSingleton<IRepositoryOverviewReader, LibGitOverviewReader>();
         services.AddSingleton<RepositoryWorkspace>();
         services.AddSingleton<JsonSettingsStore>();
         services.AddSingleton<MainWindowViewModel>();
         _provider = services.BuildServiceProvider();
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow { DataContext = _provider.GetRequiredService<MainWindowViewModel>() };
+            var vm = _provider.GetRequiredService<MainWindowViewModel>();
+            DataTemplates.Add(new DockContentTemplate(vm));
+            desktop.MainWindow = new MainWindow { DataContext = vm };
             desktop.Exit += (_, _) => _provider.Dispose();
         }
         base.OnFrameworkInitializationCompleted();
