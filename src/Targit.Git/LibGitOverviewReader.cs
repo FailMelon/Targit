@@ -1,18 +1,34 @@
 using LibGit2Sharp;
 using Targit.Core;
+
 namespace Targit.Git;
+
+/// <summary>Reads a bounded repository overview using short-lived libgit2 handles.</summary>
 public sealed class LibGitOverviewReader : IRepositoryOverviewReader
 {
     public Task<RepositoryOverview> ReadOverviewAsync(string path, CancellationToken cancellationToken = default) =>
         Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
-            using var repo = new Repository(path);
-            var commits = repo.Commits.Take(100)
-                .Select(c => new CommitSummary(c.Sha, c.MessageShort, c.Author.Name, c.Author.When)).ToArray();
+            using var repo = new Repository(Path.GetFullPath(path));
+            var commits = new List<CommitSummary>();
+            foreach (var commit in repo.Commits.Take(100))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                commits.Add(new CommitSummary(commit.Sha, commit.MessageShort, commit.Author.Name, commit.Author.When));
+            }
+
+            // Bare repositories have no working tree to inspect.
+            var changes = repo.Info.IsBare
+                ? Array.Empty<ChangedFile>()
+                : repo.RetrieveStatus().Select(entry => new ChangedFile(entry.FilePath, entry.State.ToString())).ToArray();
+
             cancellationToken.ThrowIfCancellationRequested();
-            var changes = repo.RetrieveStatus().Select(e => new ChangedFile(e.FilePath, e.State.ToString())).ToArray();
-            var branches = repo.Branches.Select(b => b.FriendlyName).OrderBy(b => b).ToArray();
+            var branches = repo.Branches
+                .Select(branch => branch.FriendlyName)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
+
             return new RepositoryOverview(commits, changes, branches);
         }, cancellationToken);
 }
