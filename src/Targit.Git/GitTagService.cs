@@ -35,4 +35,18 @@ public sealed class GitTagService
         repository.Tags.Add(tagName, repository.Head.Tip, false);
     }, cancellationToken);
 
+
+    /// <summary>Deletes a local tag; remote tags are not affected.</summary>
+    public Task DeleteAsync(string repositoryPath, string tagName,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+        using var repository = new Repository(repositoryPath);
+        if (repository.Tags[tagName] is null)
+            throw new InvalidOperationException($"Tag '{tagName}' does not exist.");
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Tags.Remove(tagName);
+    }, cancellationToken);
 }
