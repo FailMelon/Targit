@@ -8,6 +8,10 @@ namespace Targit.Desktop.ViewModels;
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly RepositoryWorkspace _workspace;
+    private readonly IRepositoryOverviewReader _overview;
+    public ObservableCollection<string> CommitLines { get; } = [];
+    public ObservableCollection<string> ChangeLines { get; } = [];
+    public ObservableCollection<string> BranchLines { get; } = [];
     private readonly JsonSettingsStore _settings;
     private readonly SemaphoreSlim _saveLock = new(1, 1);
     public ObservableCollection<RepositoryInfo> Repositories { get; } = [];
@@ -21,9 +25,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string newTab = "History";
     [ObservableProperty] private bool showLeftPanel = true;
     [ObservableProperty] private bool showRightPanel = true;
-    public MainWindowViewModel(RepositoryWorkspace workspace, JsonSettingsStore settings)
+    public MainWindowViewModel(RepositoryWorkspace workspace, IRepositoryOverviewReader overview, JsonSettingsStore settings)
     {
-        _workspace = workspace; _settings = settings;
+        _workspace = workspace; _overview = overview; _settings = settings;
         _ = InitializeAsync();
     }
     private async Task InitializeAsync()
@@ -52,6 +56,7 @@ public partial class MainWindowViewModel : ObservableObject
             if (SelectedRepository != repository) return;
             CurrentBranch = snapshot.Branch ?? "Detached HEAD";
             Status = $"Opened {repository.Name}";
+            await RefreshAsync();
             await PersistAsync();
         }
         catch (Exception e) { Status = e.Message; }
@@ -64,6 +69,40 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e) { Status = e.Message; }
         finally { _saveLock.Release(); }
     }
+    [RelayCommand]
+    private async Task RefreshAsync()
+    {
+        var repo = SelectedRepository;
+        if (repo is null) return;
+        try
+        {
+            var overview = await _overview.ReadOverviewAsync(repo.Path);
+            if (SelectedRepository != repo) return;
+            CommitLines.Clear();
+            foreach (var commit in overview.Commits)
+                CommitLines.Add($"{commit.Sha[..7]}  {commit.Message} — {commit.Author}");
+            ChangeLines.Clear();
+            foreach (var change in overview.Changes)
+                ChangeLines.Add($"{change.State}  {change.Path}");
+            BranchLines.Clear();
+            foreach (var branch in overview.Branches) BranchLines.Add(branch);
+            Status = $"{overview.Commits.Count} recent commits · {overview.Changes.Count} changed files";
+        }
+        catch (Exception e) { Status = e.Message; }
+    }
+
+    [RelayCommand]
+    private async Task ToggleFavoriteAsync()
+    {
+        if (SelectedRepository is null) return;
+        var index = Repositories.IndexOf(SelectedRepository);
+        if (index < 0) return;
+        var replacement = SelectedRepository with { IsFavorite = !SelectedRepository.IsFavorite };
+        Repositories[index] = replacement;
+        SelectedRepository = replacement;
+        await PersistAsync();
+    }
+
     [RelayCommand]
     private async Task AddRepositoryAsync()
     {
