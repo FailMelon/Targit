@@ -19,4 +19,20 @@ public sealed class GitTagService
             .OrderBy(tag => tag.Name, StringComparer.Ordinal)
             .ToArray();
     }, cancellationToken);
+    /// <summary>Creates a lightweight tag at the current commit without overwriting existing tags.</summary>
+    public Task CreateAsync(string repositoryPath, string tagName,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+        using var repository = new Repository(repositoryPath);
+        if (repository.Head.Tip is null)
+            throw new InvalidOperationException("An existing commit is required to create a tag.");
+        if (repository.Tags[tagName] is not null)
+            throw new InvalidOperationException($"Tag '{tagName}' already exists.");
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Tags.Add(tagName, repository.Head.Tip, false);
+    }, cancellationToken);
+
 }
