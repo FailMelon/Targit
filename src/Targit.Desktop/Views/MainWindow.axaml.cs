@@ -23,7 +23,7 @@ public partial class MainWindow : Window
         _factory.InitLayout(layout);
         WorkspaceDock.Factory = _factory;
         WorkspaceDock.Layout = layout;
-        Opened += (_, _) => RestoreLayout();
+        Opened += (_, _) => { RestoreLayout(); SynchronizeDocumentTabs(); };
         Closing += (_, _) => SaveLayout();
     }
 
