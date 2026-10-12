@@ -31,4 +31,22 @@ public sealed class Phase41Tests
             Directory.Delete(path, true);
         }
     }
+    [Fact]
+    public async Task ValidatesEdgeCases()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-41-edge-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            var service = new GitTagInspectionService(); Assert.Empty(await service.GetAsync(path)); using var cancelled = new CancellationTokenSource(); cancelled.Cancel(); await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.GetAsync(path, cancelled.Token));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
 }
