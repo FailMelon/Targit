@@ -16,4 +16,18 @@ public sealed class GitStashService
         return repository.Stashes.Select((stash, index) =>
             new GitStashInfo(index, stash.Message)).ToArray();
     }, cancellationToken);
+    /// <summary>Permanently removes a selected stash entry without applying it.</summary>
+    public Task DropAsync(string repositoryPath, int index,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        if (index < 0) throw new ArgumentOutOfRangeException(nameof(index));
+        using var repository = new Repository(repositoryPath);
+        if (index >= repository.Stashes.Count())
+            throw new ArgumentOutOfRangeException(nameof(index), "Stash does not exist.");
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Stashes.Remove(index);
+    }, cancellationToken);
+
 }
