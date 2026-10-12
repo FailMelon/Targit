@@ -45,7 +45,7 @@ public partial class MainWindowViewModel : ObservableObject
             SelectedTab = Tabs.Contains(data.ActiveTab) ? data.ActiveTab : Tabs.FirstOrDefault() ?? "History";
             SelectedRepository = Repositories.FirstOrDefault(r => r.Path == data.ActiveRepository);
         }
-        catch (Exception e) { Status = e.Message; }
+        catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
     }
     partial void OnSelectedRepositoryChanged(RepositoryInfo? value) => _ = ActivateAsync(value);
     private async Task ActivateAsync(RepositoryInfo? repository)
@@ -60,14 +60,14 @@ public partial class MainWindowViewModel : ObservableObject
             await RefreshAsync();
             await PersistAsync();
         }
-        catch (Exception e) { Status = e.Message; }
+        catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
     }
     partial void OnSelectedTabChanged(string value) => _ = PersistAsync();
     private async Task PersistAsync()
     {
         await _saveLock.WaitAsync();
         try { await _settings.SaveAsync(new TargitSettings(Repositories.ToList(), SelectedRepository?.Path, Tabs.ToList(), SelectedTab)); }
-        catch (Exception e) { Status = e.Message; }
+        catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
         finally { _saveLock.Release(); }
     }
     [RelayCommand]
@@ -89,7 +89,7 @@ public partial class MainWindowViewModel : ObservableObject
             foreach (var branch in overview.Branches) BranchLines.Add(branch);
             Status = $"{overview.Commits.Count} recent commits · {overview.Changes.Count} changed files";
         }
-        catch (Exception e) { Status = e.Message; }
+        catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
     }
 
     [RelayCommand]
@@ -121,7 +121,7 @@ public partial class MainWindowViewModel : ObservableObject
             RepositoryPath = "";
             await PersistAsync();
         }
-        catch (Exception e) { Status = e.Message; }
+        catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
     }
     [RelayCommand]
     private void AddTab()
