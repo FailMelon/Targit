@@ -37,6 +37,13 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Rebase conflicts (read-only)", FontWeight = FontWeight.SemiBold });
+                var inspectRebase = new Button { Content = "Inspect rebase conflicts" };
+                inspectRebase.Bind(Button.CommandProperty, new Binding(nameof(workspace.InspectRebaseConflictsCommand)));
+                root.Children.Add(inspectRebase);
+                var rebaseConflicts = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 90, TextWrapping = TextWrapping.Wrap };
+                rebaseConflicts.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RebaseConflictSummary)));
+                root.Children.Add(rebaseConflicts);
                 root.Children.Add(new TextBlock { Text = "Interactive rebase plan preview (read-only)", FontWeight = FontWeight.SemiBold });
                 var rebaseUpstream = new TextBox { Watermark = "Upstream ancestor commit SHA" };
                 rebaseUpstream.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RebaseUpstreamSha)) { Mode = BindingMode.TwoWay });
