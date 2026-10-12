@@ -7,6 +7,38 @@ namespace Targit.Core.Tests;
 public sealed class GitRemoteServiceTests
 {
     [Fact]
+    public async Task PushRejectsUnbornAndDetachedHead()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "targit-push-invalid-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            Repository.Init(root);
+            var service = new GitRemoteService();
+            await service.AddAsync(root, "origin", Path.Combine(root, "nonexistent.git"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.PushCurrentBranchAsync(root, "origin"));
+
+            using (var repository = new Repository(root))
+            {
+                File.WriteAllText(Path.Combine(root, "readme.txt"), "initial\n");
+                Commands.Stage(repository, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                var commit = repository.Commit("Initial", signature, signature);
+                Commands.Checkout(repository, commit);
+            }
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.PushCurrentBranchAsync(root, "origin"));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public async Task PushCurrentBranchToBareRemote()
     {
         var root = Path.Combine(Path.GetTempPath(), "targit-push-" + Guid.NewGuid().ToString("N"));
