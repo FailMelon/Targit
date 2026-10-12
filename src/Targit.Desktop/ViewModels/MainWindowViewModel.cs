@@ -356,6 +356,31 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task CheckoutRemoteBranchAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedRemoteBranch is not { } remoteBranch) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            var localName = remoteBranch.BranchName;
+            await _branches.CheckoutRemoteBranchAsync(repo.Path, remoteBranch.RemoteName,
+                remoteBranch.BranchName, localName);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            CurrentBranch = localName;
+            await RefreshAsync();
+            Status = $"Checked out {localName} tracking {remoteBranch.RemoteName}/{remoteBranch.BranchName}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Checkout remote branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
     private async Task SetUpstreamAsync()
     {
         if (SelectedRepository is not { } repo || SelectedRemote is not { } remote) return;
