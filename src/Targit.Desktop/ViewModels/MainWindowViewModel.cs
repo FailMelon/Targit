@@ -45,6 +45,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string localIdentityName = "";
     [ObservableProperty] private string localIdentityEmail = "";
     private readonly GitBranchService _branches = new();
+    private readonly GitRebaseConflictService _rebaseConflicts = new();
+    [ObservableProperty] private string rebaseConflictSummary = "Select Inspect to view the current rebase state and unresolved paths.";
     private readonly GitRebasePlanService _rebasePlanner = new();
     [ObservableProperty] private string rebaseUpstreamSha = "";
     [ObservableProperty] private string rebasePlanPreview = "Enter an ancestor SHA to preview commits. No history will be rewritten.";
@@ -1083,6 +1085,27 @@ public partial class MainWindowViewModel : ObservableObject
                 RebasePlanPreview = e.Message;
                 Status = e.Message;
             }
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectRebaseConflictsAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var state = await _rebaseConflicts.InspectAsync(repo.Path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            RebaseConflictSummary = (state.IsRebasing ? "Rebase in progress" : "No rebase in progress") +
+                Environment.NewLine + (state.Paths.Count == 0 ? "No unresolved index conflicts." :
+                "Unresolved paths:" + Environment.NewLine + string.Join(Environment.NewLine, state.Paths));
+            Status = state.Paths.Count == 0 ? "No unresolved index conflicts." : $"{state.Paths.Count} unresolved conflicted paths.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect rebase conflicts");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = RebaseConflictSummary = e.Message;
         }
     }
 
