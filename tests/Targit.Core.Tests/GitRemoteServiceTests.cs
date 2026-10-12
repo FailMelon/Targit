@@ -107,6 +107,36 @@ public sealed class GitRemoteServiceTests
     }
 
     [Fact]
+    public async Task UpstreamConfigurationRejectsDetachedHead()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-upstream-detached-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            using (var repository = new Repository(path))
+            {
+                File.WriteAllText(Path.Combine(path, "readme.txt"), "initial\n");
+                Commands.Stage(repository, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                var commit = repository.Commit("Initial", signature, signature);
+                Commands.Checkout(repository, commit);
+            }
+            var service = new GitRemoteService();
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SetCurrentBranchUpstreamAsync(path, "origin", "main"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.ClearCurrentBranchUpstreamAsync(path));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task UpstreamConfigurationRejectsMissingRemoteAndUnbornHead()
     {
         var path = Path.Combine(Path.GetTempPath(), "targit-upstream-invalid-" + Guid.NewGuid().ToString("N"));
