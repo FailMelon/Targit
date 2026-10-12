@@ -111,13 +111,31 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task RemoveRepositoryAsync()
+    {
+        var selected = SelectedRepository;
+        if (selected is null) return;
+        Repositories.Remove(selected);
+        SelectedRepository = Repositories.FirstOrDefault();
+        if (SelectedRepository is null)
+        {
+            CurrentBranch = "No repository";
+            CommitLines.Clear();
+            ChangeLines.Clear();
+            BranchLines.Clear();
+            Status = "Repository removed from recent list (files were not deleted)";
+        }
+        await PersistAsync();
+    }
+
+    [RelayCommand]
     private async Task AddRepositoryAsync()
     {
         if (string.IsNullOrWhiteSpace(RepositoryPath)) return;
         try
         {
             var snapshot = await _sessions.GetSession(RepositoryPath).OpenAsync();
-            var existing = Repositories.FirstOrDefault(r => string.Equals(r.Path, snapshot.Path, StringComparison.OrdinalIgnoreCase));
+            var existing = Repositories.FirstOrDefault(r => string.Equals(r.Path, snapshot.Path, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal));
             if (existing is null)
             {
                 existing = new RepositoryInfo(snapshot.Path, Path.GetFileName(Path.TrimEndingDirectorySeparator(snapshot.Path)));
