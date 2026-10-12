@@ -170,6 +170,45 @@ public sealed class GitRemoteServiceTests
     }
 
     [Fact]
+    public async Task ListsFetchedRemoteBranchesAndTrackingState()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "targit-remote-branches-" + Guid.NewGuid().ToString("N"));
+        var sourcePath = Path.Combine(root, "source");
+        var localPath = Path.Combine(root, "local");
+        Directory.CreateDirectory(sourcePath);
+        try
+        {
+            Repository.Init(sourcePath);
+            using (var source = new Repository(sourcePath))
+            {
+                File.WriteAllText(Path.Combine(sourcePath, "readme.txt"), "initial\n");
+                Commands.Stage(source, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                source.Commit("Initial", signature, signature);
+            }
+            Repository.Clone(sourcePath, localPath);
+            string branchName;
+            using (var local = new Repository(localPath)) branchName = local.Head.FriendlyName;
+            var service = new GitRemoteService();
+            var branches = await service.ListRemoteBranchesAsync(localPath, "origin");
+            var branch = Assert.Single(branches);
+            Assert.Equal(branchName, branch.BranchName);
+            Assert.True(branch.IsTrackedByCurrentBranch);
+            await service.ClearCurrentBranchUpstreamAsync(localPath);
+            branch = Assert.Single(await service.ListRemoteBranchesAsync(localPath, "origin"));
+            Assert.False(branch.IsTrackedByCurrentBranch);
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.ListRemoteBranchesAsync(localPath, "missing"));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public async Task CanSetAndClearCurrentBranchUpstream()
     {
         var root = Path.Combine(Path.GetTempPath(), "targit-upstream-" + Guid.NewGuid().ToString("N"));

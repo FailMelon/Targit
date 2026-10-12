@@ -14,10 +14,13 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitBranchService _branches = new();
     private readonly GitRemoteService _remotes = new();
     public ObservableCollection<GitRemoteInfo> Remotes { get; } = [];
+    public ObservableCollection<GitRemoteBranchInfo> RemoteBranches { get; } = [];
+    [ObservableProperty] private GitRemoteBranchInfo? selectedRemoteBranch;
     [ObservableProperty] private GitRemoteInfo? selectedRemote;
     [ObservableProperty] private string newRemoteName = "";
     [ObservableProperty] private string newRemoteUrl = "";
     [ObservableProperty] private string upstreamBranchName = "";
+    partial void OnSelectedRemoteChanged(GitRemoteInfo? value) => _ = LoadRemoteBranchesAsync(value);
     [ObservableProperty] private string newBranchName = "";
     private long _diffRevision;
     [ObservableProperty] private string stagedDiffText = "";
@@ -247,8 +250,11 @@ public partial class MainWindowViewModel : ObservableObject
         var remotes = await _remotes.ListAsync(path);
         if (version != Interlocked.Read(ref _repositorySelectionVersion) ||
             refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+        var selectedName = SelectedRemote?.Name;
         Remotes.Clear();
         foreach (var remote in remotes) Remotes.Add(remote);
+        SelectedRemote = remotes.FirstOrDefault(remote => remote.Name == selectedName);
+        if (SelectedRemote is not null) await LoadRemoteBranchesAsync(SelectedRemote);
     }
 
     [RelayCommand]
@@ -321,6 +327,32 @@ public partial class MainWindowViewModel : ObservableObject
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
+    }
+
+    private async Task LoadRemoteBranchesAsync(GitRemoteInfo? remote)
+    {
+        var repo = SelectedRepository;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        RemoteBranches.Clear();
+        SelectedRemoteBranch = null;
+        if (repo is null || remote is null) return;
+        try
+        {
+            var branches = await _remotes.ListRemoteBranchesAsync(repo.Path, remote.Name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)
+                || SelectedRemote?.Name != remote.Name) return;
+            foreach (var branch in branches) RemoteBranches.Add(branch);
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Load remote branches");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+    }
+
+    partial void OnSelectedRemoteBranchChanged(GitRemoteBranchInfo? value)
+    {
+        if (value is not null) UpstreamBranchName = value.BranchName;
     }
 
     [RelayCommand]
