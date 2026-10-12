@@ -32,8 +32,12 @@ public sealed class GitWorkingTreeService
                 throw new ArgumentException("A commit author name and email are required.");
             using var repo = new Repository(repositoryPath);
             if (repo.Info.IsBare) throw new InvalidOperationException("Cannot commit from a bare repository.");
-            if (!repo.RetrieveStatus().IsDirty && repo.Index.Count == 0)
-                throw new InvalidOperationException("There are no changes to commit.");
+            // Index.Count includes already tracked files, even when nothing is staged.
+            // Only index-side changes are eligible for a commit.
+            const FileStatus staged = FileStatus.NewInIndex | FileStatus.ModifiedInIndex |
+                FileStatus.DeletedFromIndex | FileStatus.RenamedInIndex | FileStatus.TypeChangeInIndex;
+            if (!repo.RetrieveStatus().Any(entry => (entry.State & staged) != 0))
+                throw new InvalidOperationException("Stage at least one change before committing.");
             var signature = new Signature(authorName.Trim(), authorEmail.Trim(), DateTimeOffset.Now);
             return repo.Commit(message.Trim(), signature, signature).Sha;
         }, ct);
