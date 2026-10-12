@@ -104,6 +104,40 @@ public sealed class GitRemoteService
         cancellationToken.ThrowIfCancellationRequested();
     }, cancellationToken);
 
+    /// <summary>Configures the checked-out branch to track an existing remote-tracking branch.</summary>
+    public Task SetCurrentBranchUpstreamAsync(string repositoryPath, string remoteName,
+        string remoteBranchName, CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(remoteName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(remoteBranchName);
+        using var repository = new Repository(repositoryPath);
+        if (repository.Info.IsBare || repository.Info.IsHeadDetached || repository.Head.Tip is null)
+            throw new InvalidOperationException("An existing checked-out local branch is required.");
+        if (repository.Network.Remotes[remoteName] is null)
+            throw new InvalidOperationException($"Remote '{remoteName}' does not exist.");
+        var canonical = $"refs/remotes/{remoteName}/{remoteBranchName}";
+        var trackingBranch = repository.Branches[canonical];
+        if (trackingBranch is null || !trackingBranch.IsRemote)
+            throw new InvalidOperationException($"Fetch '{remoteName}' before tracking '{remoteBranchName}'.");
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Branches.Update(repository.Head, updater => updater.TrackedBranch = canonical);
+    }, cancellationToken);
+
+    /// <summary>Removes the upstream configuration from the checked-out branch.</summary>
+    public Task ClearCurrentBranchUpstreamAsync(string repositoryPath,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        using var repository = new Repository(repositoryPath);
+        if (repository.Info.IsBare || repository.Info.IsHeadDetached || repository.Head.Tip is null)
+            throw new InvalidOperationException("An existing checked-out local branch is required.");
+        cancellationToken.ThrowIfCancellationRequested();
+        repository.Branches.Update(repository.Head, updater => updater.TrackedBranch = null!);
+    }, cancellationToken);
+
     public Task RemoveAsync(string repositoryPath, string name,
         CancellationToken cancellationToken = default) => Task.Run(() =>
     {
