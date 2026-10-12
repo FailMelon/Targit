@@ -37,6 +37,16 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Interactive rebase plan preview (read-only)", FontWeight = FontWeight.SemiBold });
+                var rebaseUpstream = new TextBox { Watermark = "Upstream ancestor commit SHA" };
+                rebaseUpstream.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RebaseUpstreamSha)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(rebaseUpstream);
+                var previewRebase = new Button { Content = "Preview rebase steps" };
+                previewRebase.Bind(Button.CommandProperty, new Binding(nameof(workspace.PreviewRebasePlanCommand)));
+                root.Children.Add(previewRebase);
+                var rebasePreview = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 100, TextWrapping = TextWrapping.Wrap };
+                rebasePreview.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RebasePlanPreview)));
+                root.Children.Add(rebasePreview);
                 root.Children.Add(new TextBlock { Text = "Create a local branch pointing to the selected historical commit, without checking it out or changing files.", TextWrapping = TextWrapping.Wrap });
                 var branchFromCommitName = new TextBox { Watermark = "New branch name (e.g. recovery/old-work)" };
                 branchFromCommitName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.BranchFromCommitName)) { Mode = BindingMode.TwoWay });
