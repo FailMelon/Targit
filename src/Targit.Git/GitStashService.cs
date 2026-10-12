@@ -46,4 +46,24 @@ public sealed class GitStashService
         cancellationToken.ThrowIfCancellationRequested();
         repository.Stashes.Remove(index);
     }, cancellationToken);
+
+    /// <summary>Applies a saved stash without removing it.</summary>
+    public Task ApplyAsync(string repositoryPath, int index,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        if (index < 0) throw new ArgumentOutOfRangeException(nameof(index));
+        using var repository = new Repository(repositoryPath);
+        if (repository.Info.IsBare || repository.Head.Tip is null)
+            throw new InvalidOperationException("Stash application requires a working tree and an initial commit.");
+        if (repository.RetrieveStatus().IsDirty)
+            throw new InvalidOperationException("Commit or stash current changes before applying a stash.");
+        if (index >= repository.Stashes.Count())
+            throw new ArgumentOutOfRangeException(nameof(index));
+        cancellationToken.ThrowIfCancellationRequested();
+        var status = repository.Stashes.Apply(index);
+        if (status != StashApplyStatus.Applied)
+            throw new InvalidOperationException($"Stash application did not succeed: {status}.");
+    }, cancellationToken);
 }
