@@ -16,6 +16,10 @@ Phase 2 builds on PR #1 and adds working-tree actions through LibGit2Sharp only.
 - [ ] Stage a new file and confirm it appears as staged.
 - [ ] Unstage the file and confirm it returns to the working tree.
 - [ ] Stage and commit a change; confirm new commit in History.
+- [ ] Stage only one of two changed files; verify the other remains uncommitted.
+- [ ] Stage a tracked deletion and commit it.
+- [ ] Stage a tracked modification, edit it again, and verify commit includes only the staged snapshot.
+- [ ] Verify bare repositories reject working-tree operations without crashing.
 - [ ] Verify a blank commit message or author is rejected without a crash.
 - [ ] Verify a failed Git operation is logged and the UI remains usable.
 - [ ] Verify switching repositories does not commit changes in the wrong repository.
