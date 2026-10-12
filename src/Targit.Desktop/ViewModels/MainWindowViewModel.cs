@@ -179,24 +179,4 @@ public partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
     }
-    [RelayCommand]
-    private void AddTab()
-    {
-        if (!AvailableTabs.Contains(NewTab)) return;
-        if (!Tabs.Contains(NewTab)) Tabs.Add(NewTab);
-        SelectedTab = NewTab;
-        _ = PersistAsync();
-    }
-    [RelayCommand]
-    private void CloseTab()
-    {
-        if (Tabs.Count <= 1) return;
-        Tabs.Remove(SelectedTab);
-        SelectedTab = Tabs[0];
-        _ = PersistAsync();
-    }
-    [RelayCommand]
-    private void ToggleLeft() => ShowLeftPanel = !ShowLeftPanel;
-    [RelayCommand]
-    private void ToggleRight() => ShowRightPanel = !ShowRightPanel;
 }
