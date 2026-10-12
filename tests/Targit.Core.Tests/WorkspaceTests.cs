@@ -28,6 +28,25 @@ public sealed class WorkspaceTests
     }
 
     [Fact]
+    public async Task CorruptSettingsAreBackedUpAndDefaultsLoaded()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "targit-corrupt-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            File.WriteAllText(Path.Combine(root, "settings.json"), "{ invalid json");
+            var store = new JsonSettingsStore(root);
+            var loaded = await store.LoadAsync();
+            Assert.Empty(loaded.Repositories);
+            Assert.Null(loaded.ActiveRepository);
+            Assert.Single(Directory.GetFiles(root, "settings.json.corrupt-*"));
+            await store.SaveAsync(new TargitSettings([], null));
+            Assert.True(File.Exists(Path.Combine(root, "settings.json")));
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    [Fact]
     public async Task SettingsRoundTrip()
     {
         var root = Path.Combine(Path.GetTempPath(), "targit-tests-" + Guid.NewGuid().ToString("N"));
