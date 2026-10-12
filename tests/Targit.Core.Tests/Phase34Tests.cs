@@ -31,4 +31,42 @@ public sealed class Phase34Tests
         }
         finally { Cleanup(path); }
     }
+    [Fact]
+    public void RejectsInvalidPlanActions()
+    {
+        var pick = new GitRebaseStep("a", "first", GitRebaseAction.Pick);
+        GitRebasePlanService.ValidatePlan(new[] { pick, new GitRebaseStep("b", "second", GitRebaseAction.Squash) });
+        Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { pick, pick }));
+        Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { new GitRebaseStep("a", "first", GitRebaseAction.Fixup) }));
+        Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { new GitRebaseStep("a", "first", GitRebaseAction.Drop), new GitRebaseStep("b", "second", GitRebaseAction.Squash) }));
+        Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { new GitRebaseStep("a", "first", (GitRebaseAction)999) }));
+    }
+
+    [Fact]
+    public async Task RejectsUpstreamNotReachableFromHead()
+    {
+        var path = NewPath();
+        try
+        {
+            Repository.Init(path);
+            string other;
+            using (var r = new Repository(path))
+            {
+                var s = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                File.WriteAllText(Path.Combine(path, "file.txt"), "one");
+                Commands.Stage(r, "file.txt");
+                r.Commit("first", s, s);
+                var original = r.Head.FriendlyName;
+                r.CreateBranch("other");
+                Commands.Checkout(r, r.Branches["other"]);
+                File.WriteAllText(Path.Combine(path, "other.txt"), "other");
+                Commands.Stage(r, "other.txt");
+                other = r.Commit("other", s, s).Sha;
+                Commands.Checkout(r, r.Branches[original]);
+            }
+            await Assert.ThrowsAsync<InvalidOperationException>(() => new GitRebasePlanService().PlanAsync(path, other));
+        }
+        finally { Cleanup(path); }
+    }
+
 }
