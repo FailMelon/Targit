@@ -40,6 +40,27 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "changes":
                 AddList(root, nameof(workspace.ChangeLines), nameof(workspace.SelectedChangeLine));
+                var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                var stage = new Button { Content = "Stage selected" };
+                stage.Bind(Button.CommandProperty, new Binding(nameof(workspace.StageSelectedCommand)));
+                var unstage = new Button { Content = "Unstage selected" };
+                unstage.Bind(Button.CommandProperty, new Binding(nameof(workspace.UnstageSelectedCommand)));
+                actions.Children.Add(stage);
+                actions.Children.Add(unstage);
+                root.Children.Add(actions);
+                root.Children.Add(new TextBlock { Text = "Commit staged changes", FontWeight = FontWeight.SemiBold });
+                var message = new TextBox { Watermark = "Commit message", AcceptsReturn = true, MinHeight = 60 };
+                message.Bind(TextBox.TextProperty, new Binding(nameof(workspace.CommitMessage)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(message);
+                var name = new TextBox { Watermark = "Author name" };
+                name.Bind(TextBox.TextProperty, new Binding(nameof(workspace.AuthorName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(name);
+                var email = new TextBox { Watermark = "Author email" };
+                email.Bind(TextBox.TextProperty, new Binding(nameof(workspace.AuthorEmail)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(email);
+                var commit = new Button { Content = "Commit staged" };
+                commit.Bind(Button.CommandProperty, new Binding(nameof(workspace.CommitCommand)));
+                root.Children.Add(commit);
                 break;
             case "branches":
                 AddList(root, nameof(workspace.BranchLines), nameof(workspace.SelectedBranchLine));
