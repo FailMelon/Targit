@@ -66,6 +66,17 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 tagList.ItemTemplate = new FuncDataTemplate<Targit.Git.GitTagInfo>((tag, _) =>
                     new TextBlock { Text = tag is null ? "" : tag.Name + "  " + tag.TargetSha[..7] + (tag.IsAnnotated ? " (annotated)" : "") });
                 root.Children.Add(tagList);
+                root.Children.Add(new TextBlock { Text = "Remote tags: select a local tag above and a remote in the Remotes panel.", TextWrapping = TextWrapping.Wrap });
+                var pushTag = new Button { Content = "Push selected tag to selected remote (no force)" };
+                pushTag.Bind(Button.CommandProperty, new Binding(nameof(workspace.PushSelectedTagCommand)));
+                root.Children.Add(pushTag);
+                root.Children.Add(new TextBlock { Text = "Delete remote tag only: type remote/tag exactly to confirm. Local tag is preserved.", TextWrapping = TextWrapping.Wrap });
+                var confirmRemoteTag = new TextBox { Watermark = "remote/tag (e.g. origin/v1.0.0)" };
+                confirmRemoteTag.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RemoteTagDeletionConfirmation)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(confirmRemoteTag);
+                var deleteRemoteTag = new Button { Content = "Delete selected tag from remote" };
+                deleteRemoteTag.Bind(Button.CommandProperty, new Binding(nameof(workspace.DeleteSelectedRemoteTagCommand)));
+                root.Children.Add(deleteRemoteTag);
                 root.Children.Add(new TextBlock { Text = "Delete local tag: select a tag and type its exact name to confirm. Remote tags are unaffected.", TextWrapping = TextWrapping.Wrap });
                 var confirmTagDeletion = new TextBox { Watermark = "Exact tag name to confirm deletion" };
                 confirmTagDeletion.Bind(TextBox.TextProperty, new Binding(nameof(workspace.TagDeletionConfirmation)) { Mode = BindingMode.TwoWay });
