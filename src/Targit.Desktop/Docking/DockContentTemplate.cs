@@ -88,6 +88,27 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 deleteBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.DeleteBranchCommand)));
                 root.Children.Add(deleteBranch);
                 break;
+            case "remotes":
+                var remoteList = new ListBox { MinHeight = 150 };
+                remoteList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.Remotes)));
+                remoteList.Bind(Avalonia.Controls.Primitives.SelectingItemsControl.SelectedItemProperty,
+                    new Binding(nameof(workspace.SelectedRemote)) { Mode = BindingMode.TwoWay });
+                remoteList.ItemTemplate = new FuncDataTemplate<Targit.Git.GitRemoteInfo>((remote, _) =>
+                    new TextBlock { Text = remote is null ? "" : remote.Name + " — " + remote.Url, TextWrapping = TextWrapping.Wrap });
+                root.Children.Add(remoteList);
+                var remoteName = new TextBox { Watermark = "Remote name (e.g. origin)" };
+                remoteName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.NewRemoteName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(remoteName);
+                var remoteUrl = new TextBox { Watermark = "Remote URL" };
+                remoteUrl.Bind(TextBox.TextProperty, new Binding(nameof(workspace.NewRemoteUrl)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(remoteUrl);
+                var addRemote = new Button { Content = "Add remote" };
+                addRemote.Bind(Button.CommandProperty, new Binding(nameof(workspace.AddRemoteCommand)));
+                root.Children.Add(addRemote);
+                var removeRemote = new Button { Content = "Remove selected remote" };
+                removeRemote.Bind(Button.CommandProperty, new Binding(nameof(workspace.RemoveRemoteCommand)));
+                root.Children.Add(removeRemote);
+                break;
             case "inspector":
                 var current = new TextBlock();
                 current.TextWrapping = TextWrapping.Wrap;
