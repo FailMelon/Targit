@@ -20,6 +20,10 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string stashDropConfirmation = "";
     public ObservableCollection<GitTagInfo> Tags { get; } = [];
     [ObservableProperty] private string newTagName = "";
+    [ObservableProperty] private string annotatedTagName = "";
+    [ObservableProperty] private string annotatedTagMessage = "";
+    [ObservableProperty] private string annotatedTagAuthorName = "";
+    [ObservableProperty] private string annotatedTagAuthorEmail = "";
     [ObservableProperty] private GitTagInfo? selectedTag;
     [ObservableProperty] private string tagDeletionConfirmation = "";
     private readonly GitCommitInspectionService _commitInspection = new();
@@ -701,6 +705,40 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Save tracked stash");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CreateAnnotatedTagAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var tagName = AnnotatedTagName.Trim();
+        var message = AnnotatedTagMessage.Trim();
+        var authorName = AnnotatedTagAuthorName.Trim();
+        var authorEmail = AnnotatedTagAuthorEmail.Trim();
+        if (string.IsNullOrWhiteSpace(tagName) || string.IsNullOrWhiteSpace(message) ||
+            string.IsNullOrWhiteSpace(authorName) || string.IsNullOrWhiteSpace(authorEmail))
+        {
+            Status = "Annotated tags require a name, message, author name and author email.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _tags.CreateAnnotatedAsync(repo.Path, tagName, message, authorName, authorEmail);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            AnnotatedTagName = "";
+            AnnotatedTagMessage = "";
+            await RefreshAsync();
+            Status = $"Created annotated tag {tagName}.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Create annotated tag");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
