@@ -12,6 +12,11 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitWorkingTreeService _gitActions;
     private readonly GitDiffService _diffs = new();
     private readonly GitBranchService _branches = new();
+    private readonly GitRemoteService _remotes = new();
+    public ObservableCollection<GitRemoteInfo> Remotes { get; } = [];
+    [ObservableProperty] private GitRemoteInfo? selectedRemote;
+    [ObservableProperty] private string newRemoteName = "";
+    [ObservableProperty] private string newRemoteUrl = "";
     [ObservableProperty] private string newBranchName = "";
     private long _diffRevision;
     [ObservableProperty] private string stagedDiffText = "";
@@ -106,6 +111,8 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedChangeLine = null;
         _changePaths.Clear();
         ChangeLines.Clear();
+        Remotes.Clear();
+        SelectedRemote = null;
         StagingSummary = "No staged changes";
         if (value is null)
         {
@@ -180,6 +187,7 @@ public partial class MainWindowViewModel : ObservableObject
             BranchLines.Clear();
             foreach (var branch in overview.Branches) BranchLines.Add(branch);
             Status = $"{overview.Commits.Count} recent commits · {overview.Changes.Count} changed files";
+            await RefreshRemotesAsync(repo.Path, version, refreshVersion);
         }
         catch (Exception e) { FileLog.Error(e, "Refresh repository"); if (version == Interlocked.Read(ref _repositorySelectionVersion) && refreshVersion == Interlocked.Read(ref _refreshRevision)) Status = e.Message; }
     }
@@ -233,6 +241,63 @@ public partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
     }
+    private async Task RefreshRemotesAsync(string path, long version, long refreshVersion)
+    {
+        var remotes = await _remotes.ListAsync(path);
+        if (version != Interlocked.Read(ref _repositorySelectionVersion) ||
+            refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+        Remotes.Clear();
+        foreach (var remote in remotes) Remotes.Add(remote);
+    }
+
+    [RelayCommand]
+    private async Task AddRemoteAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var name = NewRemoteName.Trim();
+        var url = NewRemoteUrl.Trim();
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _remotes.AddAsync(repo.Path, name, url);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            NewRemoteName = "";
+            NewRemoteUrl = "";
+            await RefreshAsync();
+            Status = $"Added remote {name}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Add remote");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task RemoveRemoteAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedRemote is not { } remote) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _remotes.RemoveAsync(repo.Path, remote.Name);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await RefreshAsync();
+            Status = $"Removed remote {remote.Name}";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Remove remote");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
     [RelayCommand]
     private async Task CreateBranchAsync()
     {
