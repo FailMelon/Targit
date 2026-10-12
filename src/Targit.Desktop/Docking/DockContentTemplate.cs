@@ -117,6 +117,15 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var pullRemote = new Button { Content = "Pull tracked branch (fast-forward only)" };
                 pullRemote.Bind(Button.CommandProperty, new Binding(nameof(workspace.PullFastForwardCommand)));
                 root.Children.Add(pullRemote);
+                var upstreamBranch = new TextBox { Watermark = "Remote branch to track (e.g. main)" };
+                upstreamBranch.Bind(TextBox.TextProperty, new Binding(nameof(workspace.UpstreamBranchName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(upstreamBranch);
+                var setUpstream = new Button { Content = "Track selected remote branch" };
+                setUpstream.Bind(Button.CommandProperty, new Binding(nameof(workspace.SetUpstreamCommand)));
+                root.Children.Add(setUpstream);
+                var clearUpstream = new Button { Content = "Clear current branch upstream" };
+                clearUpstream.Bind(Button.CommandProperty, new Binding(nameof(workspace.ClearUpstreamCommand)));
+                root.Children.Add(clearUpstream);
                 break;
             case "inspector":
                 var current = new TextBlock();

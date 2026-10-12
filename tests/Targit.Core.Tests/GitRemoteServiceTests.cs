@@ -107,6 +107,114 @@ public sealed class GitRemoteServiceTests
     }
 
     [Fact]
+    public async Task UpstreamConfigurationRejectsDetachedHead()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-upstream-detached-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            using (var repository = new Repository(path))
+            {
+                File.WriteAllText(Path.Combine(path, "readme.txt"), "initial\n");
+                Commands.Stage(repository, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                var commit = repository.Commit("Initial", signature, signature);
+                Commands.Checkout(repository, commit);
+            }
+            var service = new GitRemoteService();
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SetCurrentBranchUpstreamAsync(path, "origin", "main"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.ClearCurrentBranchUpstreamAsync(path));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
+    public async Task UpstreamConfigurationRejectsMissingRemoteAndUnbornHead()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-upstream-invalid-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            var service = new GitRemoteService();
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SetCurrentBranchUpstreamAsync(path, "origin", "main"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.ClearCurrentBranchUpstreamAsync(path));
+
+            using (var repository = new Repository(path))
+            {
+                File.WriteAllText(Path.Combine(path, "readme.txt"), "initial\n");
+                Commands.Stage(repository, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                repository.Commit("Initial", signature, signature);
+            }
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SetCurrentBranchUpstreamAsync(path, "missing", "main"));
+            Assert.Contains("does not exist", error.Message);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
+    public async Task CanSetAndClearCurrentBranchUpstream()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "targit-upstream-" + Guid.NewGuid().ToString("N"));
+        var sourcePath = Path.Combine(root, "source");
+        var localPath = Path.Combine(root, "local");
+        Directory.CreateDirectory(sourcePath);
+        try
+        {
+            Repository.Init(sourcePath);
+            using (var source = new Repository(sourcePath))
+            {
+                File.WriteAllText(Path.Combine(sourcePath, "readme.txt"), "initial\n");
+                Commands.Stage(source, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                source.Commit("Initial", signature, signature);
+            }
+            Repository.Clone(sourcePath, localPath);
+            string branchName;
+            using (var local = new Repository(localPath))
+                branchName = local.Head.FriendlyName;
+            var service = new GitRemoteService();
+            await service.ClearCurrentBranchUpstreamAsync(localPath);
+            using (var local = new Repository(localPath))
+                Assert.False(local.Head.IsTracking);
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SetCurrentBranchUpstreamAsync(localPath, "origin", "nonexistent"));
+            await service.SetCurrentBranchUpstreamAsync(localPath, "origin", branchName);
+            using (var local = new Repository(localPath))
+            {
+                Assert.True(local.Head.IsTracking);
+                Assert.Equal("origin", local.Head.RemoteName);
+            }
+            await service.ClearCurrentBranchUpstreamAsync(localPath);
+            using (var local = new Repository(localPath))
+                Assert.False(local.Head.IsTracking);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(root, true);
+        }
+    }
+
+    [Fact]
     public async Task PullRequiresTrackingBranch()
     {
         var path = Path.Combine(Path.GetTempPath(), "targit-pull-" + Guid.NewGuid().ToString("N"));
