@@ -15,6 +15,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitTagService _tags = new();
     private readonly GitStashService _stashes = new();
     private readonly GitCommitAmendService _commitAmend = new();
+    private readonly GitCherryPickService _cherryPick = new();
     [ObservableProperty] private string amendedCommitMessage = "";
     public ObservableCollection<GitStashInfo> Stashes { get; } = [];
     [ObservableProperty] private string stashMessage = "";
@@ -759,6 +760,37 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Save tracked stash");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task CherryPickSelectedCommitAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedCommitLine is not { } line ||
+            !_commitDetails.TryGetValue(line, out var commit))
+        {
+            Status = "Select a commit in History to cherry-pick.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _cherryPick.CherryPickAsync(repo.Path, commit.Sha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await RefreshAsync();
+            Status = $"Cherry-picked {commit.Sha[..7]} as {sha[..7]}.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Cherry-pick commit");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion))
+            {
+                await RefreshAsync();
+                Status = e.Message;
+            }
         }
         finally { _gitMutationLock.Release(); }
     }
