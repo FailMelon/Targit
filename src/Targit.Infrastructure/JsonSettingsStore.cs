@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Targit.Core;
 namespace Targit.Infrastructure;
-public sealed record TargitSettings(List<RepositoryInfo> Repositories, string? ActiveRepository, List<string>? Tabs = null, string ActiveTab = "History", string LeftPanel = "Repositories", string RightPanel = "Inspector");
+public sealed record TargitSettings(List<RepositoryInfo> Repositories, string? ActiveRepository, List<string>? Tabs = null, string ActiveTab = "History", string LeftPanel = "Repositories", string RightPanel = "Inspector", string LayoutName = "Standard");
 public sealed class JsonSettingsStore
 {
     private readonly string _file;
