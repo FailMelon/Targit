@@ -35,4 +35,39 @@ public sealed class GitTagServiceTests
             Directory.Delete(path, true);
         }
     }
+    [Fact]
+    public async Task PushAndDeleteRemoteTagWithoutDeletingLocalTag()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "targit-remote-tags-" + Guid.NewGuid().ToString("N"));
+        var source = Path.Combine(root, "source");
+        var clone = Path.Combine(root, "clone");
+        Directory.CreateDirectory(source);
+        try
+        {
+            Repository.Init(source);
+            using (var r = new Repository(source))
+            {
+                File.WriteAllText(Path.Combine(source, "file.txt"), "hello");
+                Commands.Stage(r, "file.txt");
+                var s = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                r.Commit("Initial", s, s);
+            }
+            Repository.Clone(source, clone);
+            using (var r = new Repository(clone))
+                r.Tags.Add("v2", r.Head.Tip);
+            var service = new GitTagService();
+            await service.PushAsync(clone, "origin", "v2");
+            using (var r = new Repository(source)) Assert.NotNull(r.Tags["v2"]);
+            await service.DeleteRemoteAsync(clone, "origin", "v2");
+            using (var r = new Repository(source)) Assert.Null(r.Tags["v2"]);
+            using (var r = new Repository(clone)) Assert.NotNull(r.Tags["v2"]);
+        }
+        finally
+        {
+            foreach (var f in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+                File.SetAttributes(f, File.GetAttributes(f) & ~FileAttributes.ReadOnly);
+            Directory.Delete(root, true);
+        }
+    }
+
 }
