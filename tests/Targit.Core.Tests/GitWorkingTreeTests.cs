@@ -80,6 +80,41 @@ public sealed class GitWorkingTreeTests
     }
 
     [Fact]
+    public async Task StageTrackedModificationAndDeletion()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "targit-tracked-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            using (var repo = new Repository(path))
+            {
+                File.WriteAllText(Path.Combine(path, "modify.txt"), "old");
+                File.WriteAllText(Path.Combine(path, "delete.txt"), "old");
+                Commands.Stage(repo, "*");
+                var author = new Signature("Test", "test@example.com", DateTimeOffset.UtcNow);
+                repo.Commit("Base", author, author);
+            }
+            File.WriteAllText(Path.Combine(path, "modify.txt"), "new");
+            File.Delete(Path.Combine(path, "delete.txt"));
+            var service = new GitWorkingTreeService();
+            await service.StageAsync(path, "modify.txt");
+            await service.StageAsync(path, "delete.txt");
+            await service.CommitAsync(path, "Update", "Test", "test@example.com");
+            using var result = new Repository(path);
+            Assert.Null(result.Head.Tip["delete.txt"]);
+            Assert.Equal("new", ((Blob)result.Head.Tip["modify.txt"].Target).GetContentText());
+            Assert.False(result.RetrieveStatus().IsDirty);
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task CommitRequiresValidInputs()
     {
         var service = new GitWorkingTreeService();
