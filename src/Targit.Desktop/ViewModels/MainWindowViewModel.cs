@@ -36,8 +36,6 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string status = "Ready";
     [ObservableProperty] private string repositoryPath = "";
     [ObservableProperty] private string newTab = "History";
-    [ObservableProperty] private bool showLeftPanel = true;
-    [ObservableProperty] private bool showRightPanel = true;
     public MainWindowViewModel(RepositorySessionManager sessions, JsonSettingsStore settings)
     {
         _sessions = sessions; _settings = settings;
