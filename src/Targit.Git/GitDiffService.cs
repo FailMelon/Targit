@@ -23,8 +23,7 @@ public sealed class GitDiffService
 
             using var staged = repository.Diff.Compare<Patch>(
                 headTree, DiffTargets.Index, paths, null, options);
-            using var unstaged = repository.Diff.Compare<Patch>(
-                DiffTargets.Index, DiffTargets.WorkingDirectory, paths, null, options);
+            using var unstaged = repository.Diff.Compare<Patch>(DiffTargets.Index | DiffTargets.WorkingDirectory, paths, null, options);
 
             cancellationToken.ThrowIfCancellationRequested();
             var unstagedContent = unstaged.Content;
