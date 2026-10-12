@@ -52,8 +52,8 @@ public partial class MainWindow : Window
             using var stream = File.OpenRead(path);
             var layout = _serializer.Load<IDock?>(stream);
             if (layout is null) return;
-            WorkspaceDock.Layout = layout;
             _factory.InitLayout(layout);
+            WorkspaceDock.Layout = layout;
         }
         catch (Exception e)
         {
@@ -77,6 +77,7 @@ public partial class MainWindow : Window
         }
         catch (IOException e) { FileLog.Error(e, "Save dock layout"); }
         catch (UnauthorizedAccessException e) { FileLog.Error(e, "Save dock layout"); }
+        catch (Exception e) { FileLog.Error(e, "Serialize dock layout"); }
     }
 
     private async void OpenFolder_Click(object? sender, RoutedEventArgs e)
