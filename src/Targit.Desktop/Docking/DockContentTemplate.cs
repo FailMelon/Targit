@@ -37,6 +37,13 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Create a local branch pointing to the selected historical commit, without checking it out or changing files.", TextWrapping = TextWrapping.Wrap });
+                var branchFromCommitName = new TextBox { Watermark = "New branch name (e.g. recovery/old-work)" };
+                branchFromCommitName.Bind(TextBox.TextProperty, new Binding(nameof(workspace.BranchFromCommitName)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(branchFromCommitName);
+                var createBranchFromCommit = new Button { Content = "Create branch from selected commit" };
+                createBranchFromCommit.Bind(Button.CommandProperty, new Binding(nameof(workspace.CreateBranchFromSelectedCommitCommand)));
+                root.Children.Add(createBranchFromCommit);
                 root.Children.Add(new TextBlock { Text = "Cherry-pick the selected non-merge commit onto the current branch. Requires a clean working tree; conflicts must be resolved manually.", TextWrapping = TextWrapping.Wrap });
                 var cherryPick = new Button { Content = "Cherry-pick selected commit" };
                 cherryPick.Bind(Button.CommandProperty, new Binding(nameof(workspace.CherryPickSelectedCommitCommand)));
