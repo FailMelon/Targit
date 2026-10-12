@@ -5,6 +5,7 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Targit.Desktop.Docking;
 using Targit.Desktop.ViewModels;
+using Targit.Infrastructure;
 
 namespace Targit.Desktop.Views;
 
@@ -54,8 +55,9 @@ public partial class MainWindow : Window
             WorkspaceDock.Layout = layout;
             _factory.InitLayout(layout);
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            FileLog.Error(e, "Restore dock layout");
             // Corrupt or incompatible layouts must never prevent the app from opening.
             // The default workspace remains available for this session.
         }
@@ -73,8 +75,8 @@ public partial class MainWindow : Window
             using (var stream = File.Create(temporary)) _serializer.Save(stream, layout);
             File.Move(temporary, path, true);
         }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
+        catch (IOException e) { FileLog.Error(e, "Save dock layout"); }
+        catch (UnauthorizedAccessException e) { FileLog.Error(e, "Save dock layout"); }
     }
 
     private async void OpenFolder_Click(object? sender, RoutedEventArgs e)
