@@ -23,6 +23,7 @@ public partial class MainWindowViewModel : ObservableObject
     private bool _initialized;
     private bool _loadingSettings = true;
     private long _repositorySelectionVersion;
+    private long _settingsRevision;
     public ObservableCollection<RepositoryInfo> Repositories { get; } = [];
     public ObservableCollection<string> Tabs { get; } = ["History", "Changes", "Branches", "Output"];
     public IReadOnlyList<string> LayoutNames { get; } = ["Standard", "Review", "Merge Resolution"];
@@ -90,9 +91,14 @@ public partial class MainWindowViewModel : ObservableObject
     private async Task PersistAsync()
     {
         if (!_initialized || _loadingSettings) return;
-        var snapshot = new TargitSettings(Repositories.ToList(), SelectedRepository?.Path, Tabs.ToList(), SelectedTab, LayoutName: SelectedLayout);
+        var revision = Interlocked.Increment(ref _settingsRevision);
         await _saveLock.WaitAsync();
-        try { await _settings.SaveAsync(snapshot); }
+        try
+        {
+            if (revision != Interlocked.Read(ref _settingsRevision)) return;
+            var snapshot = new TargitSettings(Repositories.ToList(), SelectedRepository?.Path, Tabs.ToList(), SelectedTab, LayoutName: SelectedLayout);
+            await _settings.SaveAsync(snapshot);
+        }
         catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }
         finally { _saveLock.Release(); }
     }
