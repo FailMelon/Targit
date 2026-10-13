@@ -37,6 +37,20 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Merge base inspection", FontWeight = FontWeight.SemiBold });
+                var mergeBaseFirst = new TextBox { Watermark = "First commit SHA" };
+                mergeBaseFirst.Bind(TextBox.TextProperty, new Binding(nameof(workspace.MergeBaseFirstSha)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(mergeBaseFirst);
+                var mergeBaseSecond = new TextBox { Watermark = "Second commit SHA" };
+                mergeBaseSecond.Bind(TextBox.TextProperty, new Binding(nameof(workspace.MergeBaseSecondSha)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(mergeBaseSecond);
+                var mergeBaseAction = new Button { Content = "Find common ancestor" };
+                mergeBaseAction.Bind(Button.CommandProperty, new Binding(nameof(workspace.InspectMergeBaseCommand)));
+                root.Children.Add(mergeBaseAction);
+                var mergeBaseResult = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 100, TextWrapping = TextWrapping.Wrap };
+                mergeBaseResult.Bind(TextBox.TextProperty, new Binding(nameof(workspace.MergeBaseSummary)));
+                root.Children.Add(mergeBaseResult);
+
                 root.Children.Add(new TextBlock { Text = "Commit descendants inspection", FontWeight = FontWeight.SemiBold });
                 var descendantsInput = new TextBox { Watermark = "Ancestor commit SHA" };
                 descendantsInput.Bind(TextBox.TextProperty, new Binding(nameof(workspace.DescendantCommitSha)) { Mode = BindingMode.TwoWay });
