@@ -61,6 +61,32 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitMergeService _mergeOperation = new();
     private readonly GitMergeLifecycleService _mergeLifecycle = new();
     private readonly GitConflictResolutionService _conflictResolution = new();
+    private readonly GitThreeWayConflictService _threeWayConflict = new();
+    [ObservableProperty] private string conflictBaseText = "";
+    [ObservableProperty] private string conflictOursText = "";
+    [ObservableProperty] private string conflictTheirsText = "";
+    partial void OnConflictPathChanged(string value) => _ = InspectThreeWayConflictAsync(value);
+    private async Task InspectThreeWayConflictAsync(string path)
+    {
+        ConflictBaseText = ConflictOursText = ConflictTheirsText = "";
+        if (SelectedRepository is not { } repo || string.IsNullOrWhiteSpace(path)) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var stages = await _threeWayConflict.InspectAsync(repo.Path, path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || ConflictPath != path) return;
+            ConflictBaseText = stages.Base ?? "(file absent in base)";
+            ConflictOursText = stages.Ours ?? "(file absent in ours)";
+            ConflictTheirsText = stages.Theirs ?? "(file absent in theirs)";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect three-way conflict");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion) && ConflictPath == path)
+                ConflictBaseText = e.Message;
+        }
+    }
+
     [ObservableProperty] private string mergeCommitMessage = "Merge branches";
     [ObservableProperty] private string conflictPath = "";
     [ObservableProperty] private string conflictSummary = "No conflicts inspected.";
