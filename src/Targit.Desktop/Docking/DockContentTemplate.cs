@@ -37,6 +37,17 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Commit diff statistics", FontWeight = FontWeight.SemiBold });
+                var statisticsInput = new TextBox { Watermark = "Commit SHA" };
+                statisticsInput.Bind(TextBox.TextProperty, new Binding(nameof(workspace.DiffStatisticsCommitSha)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(statisticsInput);
+                var statisticsAction = new Button { Content = "Inspect change statistics" };
+                statisticsAction.Bind(Button.CommandProperty, new Binding(nameof(workspace.InspectDiffStatisticsCommand)));
+                root.Children.Add(statisticsAction);
+                var statisticsResult = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 100, TextWrapping = TextWrapping.Wrap };
+                statisticsResult.Bind(TextBox.TextProperty, new Binding(nameof(workspace.DiffStatisticsSummary)));
+                root.Children.Add(statisticsResult);
+
                 root.Children.Add(new TextBlock { Text = "Commit relationship inspection", FontWeight = FontWeight.SemiBold });
                 var relationshipFirst = new TextBox { Watermark = "First commit SHA" };
                 relationshipFirst.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RelationshipFirstSha)) { Mode = BindingMode.TwoWay });
