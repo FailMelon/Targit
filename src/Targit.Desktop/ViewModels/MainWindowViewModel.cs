@@ -11,6 +11,12 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly RepositorySessionManager _sessions;
     private readonly GitWorkingTreeService _gitActions;
     private readonly GitDiffService _diffs = new();
+    private readonly GitWorkingTreeReviewService _workingReview = new();
+    [ObservableProperty] private string discardConfirmation = "";
+    [ObservableProperty] private string selectedDiffHunk = "";
+    [ObservableProperty] private string workingTreeReviewSummary = "Select a changed file to review its hunks.";
+    public ObservableCollection<string> UnstagedHunks { get; } = [];
+
     private readonly GitIdentityService _identity = new();
     private readonly GitTagService _tags = new();
     private readonly GitStashService _stashes = new();
@@ -247,6 +253,10 @@ public partial class MainWindowViewModel : ObservableObject
             if (revision != Interlocked.Read(ref _diffRevision) || selectionVersion != Interlocked.Read(ref _repositorySelectionVersion)) return;
             StagedDiffText = string.IsNullOrWhiteSpace(result.StagedPatch) ? "No staged changes for this file." : result.StagedPatch;
             UnstagedDiffText = string.IsNullOrWhiteSpace(result.UnstagedPatch) ? "No unstaged changes for this file." : result.UnstagedPatch;
+            UnstagedHunks.Clear();
+            foreach (var hunk in result.UnstagedPatch.Split('\n').Where(line => line.StartsWith("@@ ", StringComparison.Ordinal)))
+                UnstagedHunks.Add(hunk);
+            WorkingTreeReviewSummary = $"{UnstagedHunks.Count} unstaged hunk(s) · {path}";
         }
         catch (Exception e)
         {
@@ -1676,6 +1686,30 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e)
         {
             FileLog.Error(e, "Delete branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task DiscardSelectedUnstagedAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedChangeLine is not { } selected ||
+            !_changePaths.TryGetValue(selected, out var path)) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await _workingReview.DiscardUnstagedAsync(repo.Path, path, DiscardConfirmation);
+            DiscardConfirmation = "";
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            await RefreshAsync();
+            Status = $"Discarded unstaged changes in {path}; staged content preserved.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Discard unstaged changes");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
         }
         finally { _gitMutationLock.Release(); }
