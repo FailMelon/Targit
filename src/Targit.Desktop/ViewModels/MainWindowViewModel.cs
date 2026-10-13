@@ -33,6 +33,31 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitStashService _stashes = new();
     private readonly GitCommitAmendService _commitAmend = new();
     private readonly GitCherryPickService _cherryPick = new();
+    private readonly GitLinearRebaseService _linearRebase = new();
+    [ObservableProperty] private string rebaseTargetBranch = "";
+    [ObservableProperty] private string rebaseConfirmation = "";
+    [RelayCommand]
+    private async Task RebaseCurrentOntoTargetAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        if (!string.Equals(RebaseConfirmation, "REBASE", StringComparison.Ordinal))
+        {
+            Status = "Type REBASE to confirm rewriting local commit history.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _linearRebase.RebaseOntoAsync(repo.Path, RebaseTargetBranch);
+            RebaseConfirmation = "";
+            await RefreshAsync();
+            Status = $"Rebased current branch onto {RebaseTargetBranch}: {sha[..7]}";
+        }
+        catch (Exception e) { FileLog.Error(e, "Rebase branch"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
     private readonly GitMergeService _mergeOperation = new();
     private readonly GitMergeLifecycleService _mergeLifecycle = new();
     private readonly GitConflictResolutionService _conflictResolution = new();
