@@ -6,7 +6,10 @@ namespace Targit.Git;
 public sealed class GitLinearRebaseService
 {
     public Task<string> RebaseOntoAsync(string repositoryPath, string targetBranch,
-        CancellationToken cancellationToken = default) => Task.Run(() =>
+        CancellationToken cancellationToken = default) => RebaseWithPlanAsync(repositoryPath, targetBranch, null, cancellationToken);
+
+    public Task<string> RebaseWithPlanAsync(string repositoryPath, string targetBranch,
+        IReadOnlyList<GitRebaseStep>? plan, CancellationToken cancellationToken = default) => Task.Run(() =>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetBranch);
@@ -35,6 +38,17 @@ public sealed class GitLinearRebaseService
             throw new InvalidOperationException("This rebase supports only linear histories.");
         if (commits.Length == 0)
             throw new InvalidOperationException("There are no commits to replay.");
+        if (plan is not null)
+        {
+            GitRebasePlanService.ValidatePlan(plan);
+            if (plan.Count != commits.Length || !plan.Select(x => x.CommitSha).OrderBy(x => x, StringComparer.Ordinal)
+                .SequenceEqual(commits.Select(x => x.Sha).OrderBy(x => x, StringComparer.Ordinal)))
+                throw new InvalidOperationException("The rebase plan must contain each outgoing commit exactly once.");
+            if (plan.Any(x => x.Action is GitRebaseAction.Edit or GitRebaseAction.Reword or GitRebaseAction.Squash or GitRebaseAction.Fixup))
+                throw new NotSupportedException("This executor supports Pick, Drop, and reordered commits; interactive edit/squash requires a separate execution workflow.");
+            commits = plan.Where(x => x.Action == GitRebaseAction.Pick)
+                .Select(x => commits.Single(c => c.Sha == x.CommitSha)).ToArray();
+        }
         // Create a temporary replay branch so failure does not rewrite the source branch.
         var tempName = "targit-rebase-" + Guid.NewGuid().ToString("N");
         var originalBranch = repo.Head.FriendlyName;
