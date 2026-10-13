@@ -80,11 +80,13 @@ public sealed class GitLinearRebaseService
             }
             var rewritten = repo.Head.Tip
                 ?? throw new InvalidOperationException("Rebase produced no commit.");
-            // Move the source ref only after replay succeeded. Checkout the rewritten tree
-            // afterwards so the index and working directory match the new HEAD.
-            Commands.Checkout(repo, repo.Branches[originalBranch]);
+            // Move the original branch only after successful replay, then check out the
+            // rewritten branch to synchronize HEAD, index and working tree.
             repo.Refs.UpdateTarget(repo.Branches[originalBranch].Reference, rewritten.Id);
-            repo.Reset(ResetMode.Hard, rewritten);
+            Commands.Checkout(repo, repo.Branches[originalBranch], new CheckoutOptions
+            {
+                CheckoutModifiers = CheckoutModifiers.Force
+            });
             completed = true;
             return rewritten.Sha;
         }
@@ -97,7 +99,8 @@ public sealed class GitLinearRebaseService
                 {
                     CheckoutModifiers = CheckoutModifiers.Force
                 });
-            repo.Branches.Remove(tempName);
+            if (repo.Head.FriendlyName != tempName)
+                repo.Branches.Remove(tempName);
         }
     }, cancellationToken);
 }
