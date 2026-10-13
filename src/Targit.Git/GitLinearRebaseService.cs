@@ -70,7 +70,7 @@ public sealed class GitLinearRebaseService
             // Move the source ref only after replay succeeded. Checkout the rewritten tree
             // afterwards so the index and working directory match the new HEAD.
             Commands.Checkout(repo, repo.Branches[originalBranch]);
-            repo.Refs.UpdateTarget(repo.Head.Reference, rewritten.Id);
+            repo.Refs.UpdateTarget(repo.Branches[originalBranch].Reference, rewritten.Id);
             repo.Reset(ResetMode.Hard, rewritten);
             completed = true;
             return rewritten.Sha;
