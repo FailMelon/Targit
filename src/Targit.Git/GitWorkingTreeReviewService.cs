@@ -18,6 +18,44 @@ public sealed class GitWorkingTreeReviewService
         return new GitWorkingTreeReview(path, diff.StagedPatch, diff.UnstagedPatch, hunks);
     }
 
+    public static IReadOnlyList<GitDiffHunk> ParseHunks(string patch)
+    {
+        ArgumentNullException.ThrowIfNull(patch);
+        var result = new List<GitDiffHunk>();
+        var lines = patch.Split('\n');
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (!lines[i].StartsWith("@@ ", StringComparison.Ordinal)) continue;
+            var header = lines[i];
+            var body = new List<string>();
+            for (i++; i < lines.Length && !lines[i].StartsWith("@@ ", StringComparison.Ordinal) &&
+                 !lines[i].StartsWith("diff --git ", StringComparison.Ordinal); i++)
+                body.Add(lines[i]);
+            i--;
+            result.Add(new GitDiffHunk(header, string.Join("\n", body)));
+        }
+        return result;
+    }
+
+    public static GitSideBySideDiff SideBySide(string patch)
+    {
+        var left = new List<string>();
+        var right = new List<string>();
+        foreach (var hunk in ParseHunks(patch))
+        {
+            left.Add(hunk.Header);
+            right.Add(hunk.Header);
+            foreach (var line in hunk.Body.Split('\n'))
+            {
+                if (line.Length == 0) continue;
+                if (line[0] == '-') { left.Add(line); right.Add(""); }
+                else if (line[0] == '+') { left.Add(""); right.Add(line); }
+                else { left.Add(line); right.Add(line); }
+            }
+        }
+        return new GitSideBySideDiff(string.Join("\n", left), string.Join("\n", right));
+    }
+
     public Task DiscardUnstagedAsync(string repositoryPath, string path, string confirmation,
         CancellationToken cancellationToken = default) => Task.Run(() =>
     {
@@ -59,3 +97,6 @@ public sealed class GitWorkingTreeReviewService
         input.CopyTo(output);
     }, cancellationToken);
 }
+
+public sealed record GitDiffHunk(string Header, string Body);
+public sealed record GitSideBySideDiff(string Before, string After);
