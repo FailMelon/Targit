@@ -390,6 +390,22 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var hunks = new ListBox { MinHeight = 70 };
                 hunks.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.UnstagedHunks)));
                 root.Children.Add(hunks);
+                var sideBySide = new CheckBox { Content = "Show side-by-side diff" };
+                sideBySide.Bind(Avalonia.Controls.Primitives.ToggleButton.IsCheckedProperty,
+                    new Binding(nameof(workspace.SideBySideDiff)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(sideBySide);
+                var compare = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 8 };
+                var before = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 180,
+                    TextWrapping = TextWrapping.NoWrap, FontFamily = FontFamily.Parse("Consolas, Menlo, monospace") };
+                before.Bind(TextBox.TextProperty, new Binding(nameof(workspace.DiffBeforeText)));
+                var after = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 180,
+                    TextWrapping = TextWrapping.NoWrap, FontFamily = FontFamily.Parse("Consolas, Menlo, monospace") };
+                after.Bind(TextBox.TextProperty, new Binding(nameof(workspace.DiffAfterText)));
+                Grid.SetColumn(after, 1);
+                compare.Children.Add(before);
+                compare.Children.Add(after);
+                compare.Bind(Control.IsVisibleProperty, new Binding(nameof(workspace.SideBySideDiff)));
+                root.Children.Add(compare);
                 root.Children.Add(new TextBlock { Text = "Discard unstaged tracked changes for the selected file. Staged changes are preserved. This cannot be undone.", TextWrapping = TextWrapping.Wrap });
                 var discardConfirmation = new TextBox { Watermark = "Type DISCARD to confirm" };
                 discardConfirmation.Bind(TextBox.TextProperty, new Binding(nameof(workspace.DiscardConfirmation)) { Mode = BindingMode.TwoWay });
