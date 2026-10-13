@@ -44,9 +44,9 @@ public sealed class GitLinearRebaseService
             if (plan.Count != commits.Length || !plan.Select(x => x.CommitSha).OrderBy(x => x, StringComparer.Ordinal)
                 .SequenceEqual(commits.Select(x => x.Sha).OrderBy(x => x, StringComparer.Ordinal)))
                 throw new InvalidOperationException("The rebase plan must contain each outgoing commit exactly once.");
-            if (plan.Any(x => x.Action is GitRebaseAction.Edit or GitRebaseAction.Reword or GitRebaseAction.Squash or GitRebaseAction.Fixup))
-                throw new NotSupportedException("This executor supports Pick, Drop, and reordered commits; interactive edit/squash requires a separate execution workflow.");
-            commits = plan.Where(x => x.Action == GitRebaseAction.Pick)
+            if (plan.Any(x => x.Action is GitRebaseAction.Edit or GitRebaseAction.Reword))
+                throw new NotSupportedException("Edit and Reword require a separate message-editing workflow.");
+            commits = plan.Where(x => x.Action != GitRebaseAction.Drop)
                 .Select(x => commits.Single(c => c.Sha == x.CommitSha)).ToArray();
         }
         // Create a temporary replay branch so failure does not rewrite the source branch.
@@ -60,10 +60,23 @@ public sealed class GitLinearRebaseService
             foreach (var commit in commits)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var action = plan?.SingleOrDefault(x => x.CommitSha == commit.Sha)?.Action ?? GitRebaseAction.Pick;
                 var result = repo.CherryPick(commit, commit.Committer,
                     new CherryPickOptions { CommitOnSuccess = true });
                 if (result.Status != CherryPickStatus.CherryPicked)
                     throw new InvalidOperationException($"Rebase stopped at {commit.Sha[..7]}: {result.Status}. Original branch is unchanged.");
+                if (action is GitRebaseAction.Squash or GitRebaseAction.Fixup)
+                {
+                    var tip = repo.Head.Tip!;
+                    var previous = tip.Parents.Single();
+                    var combinedMessage = action == GitRebaseAction.Squash
+                        ? previous.Message.TrimEnd() + "\n\n" + commit.Message.TrimEnd()
+                        : previous.Message;
+                    var merged = repo.ObjectDatabase.CreateCommit(previous.Author, previous.Committer,
+                        combinedMessage, tip.Tree, previous.Parents, false);
+                    repo.Refs.UpdateTarget(repo.Head.Reference.ResolveToDirectReference(), merged.Id);
+                    repo.Reset(ResetMode.Hard, merged);
+                }
             }
             var rewritten = repo.Head.Tip
                 ?? throw new InvalidOperationException("Rebase produced no commit.");
