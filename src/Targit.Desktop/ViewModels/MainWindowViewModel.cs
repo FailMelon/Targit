@@ -33,6 +33,109 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitStashService _stashes = new();
     private readonly GitCommitAmendService _commitAmend = new();
     private readonly GitCherryPickService _cherryPick = new();
+    private readonly GitMergeService _mergeOperation = new();
+    private readonly GitMergeLifecycleService _mergeLifecycle = new();
+    private readonly GitConflictResolutionService _conflictResolution = new();
+    [ObservableProperty] private string mergeCommitMessage = "Merge branches";
+    [ObservableProperty] private string conflictPath = "";
+    [ObservableProperty] private string conflictSummary = "No conflicts inspected.";
+    public ObservableCollection<string> MergeConflicts { get; } = [];
+
+    [RelayCommand]
+    private async Task MergeSelectedBranchAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedBranchLine is not { } branch) return;
+        var name = branch.Trim().TrimStart('*').Trim();
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var result = await _mergeOperation.MergeAsync(repo.Path, name);
+            Status = $"Merge {name}: {result}";
+            await RefreshAsync();
+            await InspectMergeConflictsAsync();
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Merge branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+            await InspectMergeConflictsAsync();
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task InspectMergeConflictsAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        try
+        {
+            var result = await new GitConflictDetectionService().GetAsync(repo.Path);
+            MergeConflicts.Clear();
+            foreach (var conflict in result)
+                MergeConflicts.Add(conflict.ToString() ?? "");
+            ConflictSummary = $"{MergeConflicts.Count} unresolved conflict(s).";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect merge conflicts");
+            ConflictSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ResolveConflictUsingWorkingTreeAsync()
+    {
+        if (SelectedRepository is not { } repo || string.IsNullOrWhiteSpace(ConflictPath)) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _conflictResolution.ResolveUsingWorkingTreeAsync(repo.Path, ConflictPath);
+            await InspectMergeConflictsAsync();
+            Status = $"Marked {ConflictPath} resolved from working tree.";
+        }
+        catch (Exception e) { FileLog.Error(e, "Resolve conflict"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task ContinueMergeAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            var sha = await _mergeLifecycle.ContinueAsync(repo.Path, MergeCommitMessage);
+            await RefreshAsync();
+            Status = $"Merge completed: {sha[..7]}";
+        }
+        catch (Exception e) { FileLog.Error(e, "Continue merge"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task AbortMergeAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _mergeLifecycle.AbortAsync(repo.Path);
+            await RefreshAsync();
+            Status = "Merge aborted.";
+        }
+        catch (Exception e) { FileLog.Error(e, "Abort merge"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+
+
     private readonly GitRevertService _revert = new();
     private readonly GitSoftResetService _softReset = new();
     private readonly GitMixedResetService _mixedReset = new();
