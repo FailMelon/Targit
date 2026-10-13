@@ -62,6 +62,27 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitMergeLifecycleService _mergeLifecycle = new();
     private readonly GitConflictResolutionService _conflictResolution = new();
     private readonly GitThreeWayConflictService _threeWayConflict = new();
+    private readonly GitConflictChoiceService _conflictChoices = new();
+    [RelayCommand]
+    private Task AcceptOursAsync() => AcceptConflictSideAsync(GitConflictChoice.Ours);
+    [RelayCommand]
+    private Task AcceptTheirsAsync() => AcceptConflictSideAsync(GitConflictChoice.Theirs);
+    private async Task AcceptConflictSideAsync(GitConflictChoice choice)
+    {
+        if (SelectedRepository is not { } repo || string.IsNullOrWhiteSpace(ConflictPath)) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _conflictChoices.ResolveAsync(repo.Path, ConflictPath, choice);
+            await InspectMergeConflictsAsync();
+            Status = $"Resolved {ConflictPath} using {choice}.";
+        }
+        catch (Exception e) { FileLog.Error(e, "Accept conflict stage"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+
     [ObservableProperty] private string conflictBaseText = "";
     [ObservableProperty] private string conflictOursText = "";
     [ObservableProperty] private string conflictTheirsText = "";
