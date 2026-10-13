@@ -37,6 +37,20 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Commit file patch", FontWeight = FontWeight.SemiBold });
+                var filePatchCommit = new TextBox { Watermark = "Commit SHA" };
+                filePatchCommit.Bind(TextBox.TextProperty, new Binding(nameof(workspace.FilePatchCommitSha)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(filePatchCommit);
+                var filePatchPath = new TextBox { Watermark = "Repository-relative file path" };
+                filePatchPath.Bind(TextBox.TextProperty, new Binding(nameof(workspace.FilePatchPath)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(filePatchPath);
+                var filePatchAction = new Button { Content = "Inspect file patch" };
+                filePatchAction.Bind(Button.CommandProperty, new Binding(nameof(workspace.InspectFilePatchCommand)));
+                root.Children.Add(filePatchAction);
+                var filePatchResult = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 160, TextWrapping = TextWrapping.NoWrap };
+                filePatchResult.Bind(TextBox.TextProperty, new Binding(nameof(workspace.FilePatchSummary)));
+                root.Children.Add(filePatchResult);
+
                 root.Children.Add(new TextBlock { Text = "Per-file commit statistics", FontWeight = FontWeight.SemiBold });
                 var fileStatisticsInput = new TextBox { Watermark = "Commit SHA" };
                 fileStatisticsInput.Bind(TextBox.TextProperty, new Binding(nameof(workspace.FileStatisticsCommitSha)) { Mode = BindingMode.TwoWay });
