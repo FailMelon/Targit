@@ -72,6 +72,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string changedFilesSummary = "Enter a commit SHA to list changed files.";
     [ObservableProperty] private string fileStatisticsCommitSha = "";
     [ObservableProperty] private string fileStatisticsSummary = "Enter a commit SHA to inspect per-file changes.";
+    [ObservableProperty] private string filePatchCommitSha = "";
+    [ObservableProperty] private string filePatchPath = "";
+    [ObservableProperty] private string filePatchSummary = "Enter a commit SHA and changed file path to inspect its patch.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1394,6 +1397,25 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Inspect commit file statistics");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = FileStatisticsSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectFilePatchAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var result = await new GitCommitFilePatchService().GetAsync(repo.Path, FilePatchCommitSha, FilePatchPath);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            FilePatchSummary = $"File: {result.Path} (+{result.LinesAdded}/-{result.LinesDeleted}){Environment.NewLine}{result.PatchText}";
+            Status = "Commit file patch inspected.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect commit file patch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = FilePatchSummary = e.Message;
         }
     }
 
