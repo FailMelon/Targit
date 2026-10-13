@@ -472,6 +472,22 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var conflictPath = new TextBox { Watermark = "Repository-relative resolved file path" };
                 conflictPath.Bind(TextBox.TextProperty, new Binding(nameof(workspace.ConflictPath)) { Mode = BindingMode.TwoWay });
                 root.Children.Add(conflictPath);
+                root.Children.Add(new TextBlock { Text = "Three-way conflict stages (read-only)", FontWeight = FontWeight.SemiBold });
+                var conflictStages = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*,*"), ColumnSpacing = 8 };
+                var conflictBase = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 160, TextWrapping = TextWrapping.NoWrap };
+                conflictBase.Bind(TextBox.TextProperty, new Binding(nameof(workspace.ConflictBaseText)));
+                var conflictOurs = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 160, TextWrapping = TextWrapping.NoWrap };
+                conflictOurs.Bind(TextBox.TextProperty, new Binding(nameof(workspace.ConflictOursText)));
+                var conflictTheirs = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 160, TextWrapping = TextWrapping.NoWrap };
+                conflictTheirs.Bind(TextBox.TextProperty, new Binding(nameof(workspace.ConflictTheirsText)));
+                Grid.SetColumn(conflictOurs, 1);
+                Grid.SetColumn(conflictTheirs, 2);
+                conflictStages.Children.Add(conflictBase);
+                conflictStages.Children.Add(conflictOurs);
+                conflictStages.Children.Add(conflictTheirs);
+                root.Children.Add(new TextBlock { Text = "Base                 Ours                 Theirs" });
+                root.Children.Add(conflictStages);
+
                 var resolve = new Button { Content = "Mark edited working-tree file resolved" };
                 resolve.Bind(Button.CommandProperty, new Binding(nameof(workspace.ResolveConflictUsingWorkingTreeCommand)));
                 root.Children.Add(resolve);
