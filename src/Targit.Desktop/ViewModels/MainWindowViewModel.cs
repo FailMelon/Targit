@@ -39,6 +39,121 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private GitTagInfo? selectedTag;
     [ObservableProperty] private string tagDeletionConfirmation = "";
     [ObservableProperty] private string remoteTagDeletionConfirmation = "";
+    private readonly GitHistoryWorkspaceService _historyWorkspace = new();
+    private readonly GitCommitFilePatchService _historyPatch = new();
+    private readonly GitCommitFileContentService _historyContent = new();
+    private long _historySelectionRevision;
+    private long _historyFileRevision;
+    private readonly Dictionary<string, string> _historyFilePaths = new(StringComparer.Ordinal);
+    public ObservableCollection<string> HistoryGraphLines { get; } = [];
+    public ObservableCollection<string> HistoryFiles { get; } = [];
+    [ObservableProperty] private string historySearch = "";
+    [ObservableProperty] private string? selectedHistoryGraphLine;
+    [ObservableProperty] private string? selectedHistoryFile;
+    [ObservableProperty] private string historyCommitDetails = "Select a commit in History.";
+    [ObservableProperty] private string historyFilePreview = "Select a changed file to inspect its patch.";
+    [ObservableProperty] private bool historyShowContent;
+    private readonly Dictionary<string, string> _historyGraphShas = new(StringComparer.Ordinal);
+    private GitHistoryCommit? _activeHistoryCommit;
+
+    partial void OnHistorySearchChanged(string value) => FilterHistoryGraph();
+
+    private void FilterHistoryGraph()
+    {
+        HistoryGraphLines.Clear();
+        foreach (var line in _historyGraphShas.Keys.Where(line =>
+            string.IsNullOrWhiteSpace(HistorySearch) ||
+            line.Contains(HistorySearch, StringComparison.OrdinalIgnoreCase)))
+            HistoryGraphLines.Add(line);
+    }
+
+    partial void OnSelectedHistoryGraphLineChanged(string? line)
+    {
+        if (line is not null && _historyGraphShas.TryGetValue(line, out var sha))
+        {
+            var matching = _commitDetails.FirstOrDefault(entry => entry.Value.Sha == sha);
+            if (matching.Key is not null) SelectedCommitLine = matching.Key;
+            else _ = LoadHistoryCommitAsync(sha);
+        }
+    }
+
+    partial void OnSelectedHistoryFileChanged(string? line) => _ = LoadHistoryFileAsync(line);
+    partial void OnHistoryShowContentChanged(bool value) => _ = LoadHistoryFileAsync(SelectedHistoryFile);
+
+    private async Task LoadHistoryCommitAsync(string sha)
+    {
+        var revision = Interlocked.Increment(ref _historySelectionRevision);
+        var repository = SelectedRepository;
+        var selectionVersion = Interlocked.Read(ref _repositorySelectionVersion);
+        _activeHistoryCommit = null;
+        HistoryFiles.Clear();
+        _historyFilePaths.Clear();
+        SelectedHistoryFile = null;
+        HistoryFilePreview = "Select a changed file to inspect its patch.";
+        HistoryCommitDetails = "Loading commit...";
+        if (repository is null) return;
+        try
+        {
+            var commit = await _historyWorkspace.InspectAsync(repository.Path, sha);
+            if (revision != Interlocked.Read(ref _historySelectionRevision) ||
+                selectionVersion != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            _activeHistoryCommit = commit;
+            HistoryCommitDetails = $"Commit: {commit.Sha}{Environment.NewLine}Author: {commit.Author}{Environment.NewLine}" +
+                $"Date: {commit.Date:yyyy-MM-dd HH:mm:ss zzz}{Environment.NewLine}" +
+                $"Parents: {(commit.Parents.Count == 0 ? "(root)" : string.Join(", ", commit.Parents))}{Environment.NewLine}" +
+                $"Refs: {(commit.Labels.Count == 0 ? "(none)" : string.Join(", ", commit.Labels))}{Environment.NewLine}" +
+                $"Files: {commit.Files.Count}{Environment.NewLine}{commit.Message}";
+            foreach (var file in commit.Files)
+            {
+                var line = $"{file.Status}  +{file.Added}/-{file.Deleted}  {file.Path}";
+                HistoryFiles.Add(line);
+                _historyFilePaths[line] = file.Path;
+            }
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Load unified history commit");
+            if (revision == Interlocked.Read(ref _historySelectionRevision) &&
+                selectionVersion == Interlocked.Read(ref _repositorySelectionVersion))
+                HistoryCommitDetails = e.Message;
+        }
+    }
+
+    private async Task LoadHistoryFileAsync(string? line)
+    {
+        var revision = Interlocked.Increment(ref _historyFileRevision);
+        var repository = SelectedRepository;
+        var selectionVersion = Interlocked.Read(ref _repositorySelectionVersion);
+        var commit = _activeHistoryCommit;
+        HistoryFilePreview = "Select a changed file to inspect its patch.";
+        if (repository is null || commit is null || line is null ||
+            !_historyFilePaths.TryGetValue(line, out var path)) return;
+        try
+        {
+            string result;
+            if (HistoryShowContent)
+            {
+                var content = await _historyContent.GetAsync(repository.Path, commit.Sha, path);
+                result = content.Content;
+            }
+            else
+            {
+                var patch = await _historyPatch.GetAsync(repository.Path, commit.Sha, path);
+                result = patch.PatchText;
+            }
+            if (revision == Interlocked.Read(ref _historyFileRevision) &&
+                selectionVersion == Interlocked.Read(ref _repositorySelectionVersion))
+                HistoryFilePreview = result;
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Load history file preview");
+            if (revision == Interlocked.Read(ref _historyFileRevision) &&
+                selectionVersion == Interlocked.Read(ref _repositorySelectionVersion))
+                HistoryFilePreview = e.Message;
+        }
+    }
+
     private readonly GitCommitInspectionService _commitInspection = new();
     private readonly Dictionary<string, GitCommitSummary> _commitDetails = new(StringComparer.Ordinal);
     [ObservableProperty] private string configuredIdentity = "No repository selected";
@@ -109,6 +224,8 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (value is not null && _commitDetails.TryGetValue(value, out var commit))
             InspectorText = $"Commit: {commit.Sha}\nAuthor: {commit.Author}\nDate: {commit.When:yyyy-MM-dd HH:mm:ss zzz}\nSubject: {commit.Message}";
+        if (value is not null && _commitDetails.TryGetValue(value, out var historyCommit))
+            _ = LoadHistoryCommitAsync(historyCommit.Sha);
         else if (value is not null) InspectorText = value;
     }
     partial void OnSelectedChangeLineChanged(string? value)
@@ -306,6 +423,15 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var overview = await _sessions.GetSession(repo.Path).RefreshAsync();
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+            Interlocked.Increment(ref _historySelectionRevision);
+            Interlocked.Increment(ref _historyFileRevision);
+            _activeHistoryCommit = null;
+            HistoryCommitDetails = "Select a commit in History.";
+            HistoryFilePreview = "Select a changed file to inspect its patch.";
+            HistoryFiles.Clear();
+            _historyFilePaths.Clear();
+            SelectedHistoryFile = null;
+            SelectedHistoryGraphLine = null;
             SelectedCommitLine = null;
             SelectedChangeLine = null;
             SelectedBranchLine = null;
@@ -320,6 +446,20 @@ public partial class MainWindowViewModel : ObservableObject
                 CommitLines.Add(line);
                 _commitDetails[line] = commit;
             }
+            var graphNodes = await _commitGraph.GetAsync(repo.Path, 200);
+            var graphLanes = await new GitGraphLaneService().GetAsync(repo.Path, 200);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) ||
+                refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+            _historyGraphShas.Clear();
+            foreach (var node in graphNodes)
+            {
+                var lane = graphLanes.FirstOrDefault(l => l.Sha == node.Sha);
+                var prefix = new string(' ', Math.Min(lane?.Lane ?? 0, 20) * 2);
+                var symbol = node.Parents.Count > 1 ? "◆" : "●";
+                var line = $"{prefix}{symbol} {node.Sha[..7]}  {node.Subject}  {string.Join(" ", node.Labels)}";
+                _historyGraphShas[line] = node.Sha;
+            }
+            FilterHistoryGraph();
             ChangeLines.Clear();
             _changePaths.Clear();
             foreach (var change in overview.Changes)

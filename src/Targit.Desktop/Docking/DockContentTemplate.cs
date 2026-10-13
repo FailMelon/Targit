@@ -36,6 +36,33 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 root.Children.Add(repositories);
                 break;
             case "history":
+                root.Children.Add(new TextBlock { Text = "Unified history · phases 51–55", FontWeight = FontWeight.Bold });
+                var historySearch = new TextBox { Watermark = "Filter commit graph by SHA, subject or ref" };
+                historySearch.Bind(TextBox.TextProperty, new Binding(nameof(workspace.HistorySearch)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(historySearch);
+                var historyGraph = new ListBox { MinHeight = 190 };
+                historyGraph.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.HistoryGraphLines)));
+                historyGraph.Bind(Avalonia.Controls.Primitives.SelectingItemsControl.SelectedItemProperty,
+                    new Binding(nameof(workspace.SelectedHistoryGraphLine)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(historyGraph);
+                root.Children.Add(new TextBlock { Text = "Selected commit", FontWeight = FontWeight.SemiBold });
+                var historyDetails = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 120, TextWrapping = TextWrapping.Wrap };
+                historyDetails.Bind(TextBox.TextProperty, new Binding(nameof(workspace.HistoryCommitDetails)));
+                root.Children.Add(historyDetails);
+                root.Children.Add(new TextBlock { Text = "Changed files · select to preview", FontWeight = FontWeight.SemiBold });
+                var historyFiles = new ListBox { MinHeight = 110 };
+                historyFiles.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.HistoryFiles)));
+                historyFiles.Bind(Avalonia.Controls.Primitives.SelectingItemsControl.SelectedItemProperty,
+                    new Binding(nameof(workspace.SelectedHistoryFile)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(historyFiles);
+                var historyContentToggle = new CheckBox { Content = "Show historical file content instead of patch" };
+                historyContentToggle.Bind(Avalonia.Controls.Primitives.ToggleButton.IsCheckedProperty,
+                    new Binding(nameof(workspace.HistoryShowContent)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(historyContentToggle);
+                var historyPreview = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 220, TextWrapping = TextWrapping.NoWrap };
+                historyPreview.Bind(TextBox.TextProperty, new Binding(nameof(workspace.HistoryFilePreview)));
+                root.Children.Add(historyPreview);
+                root.Children.Add(new TextBlock { Text = "Advanced history operations", FontWeight = FontWeight.SemiBold });
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
                 root.Children.Add(new TextBlock { Text = "Historical file content", FontWeight = FontWeight.SemiBold });
                 var fileContentCommit = new TextBox { Watermark = "Commit SHA" };
