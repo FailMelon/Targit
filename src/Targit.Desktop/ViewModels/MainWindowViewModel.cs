@@ -60,6 +60,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string ancestrySummary = "Enter a commit SHA to inspect its parents.";
     [ObservableProperty] private string descendantCommitSha = "";
     [ObservableProperty] private string descendantSummary = "Enter a commit SHA to inspect its descendants.";
+    [ObservableProperty] private string mergeBaseFirstSha = "";
+    [ObservableProperty] private string mergeBaseSecondSha = "";
+    [ObservableProperty] private string mergeBaseSummary = "Enter two commit SHAs to find their common ancestor.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1283,6 +1286,27 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Inspect commit descendants");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = DescendantSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectMergeBaseAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var result = await new GitMergeBaseInspectionService().InspectAsync(repo.Path, MergeBaseFirstSha, MergeBaseSecondSha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            MergeBaseSummary = result.BaseSha is null
+                ? "No common ancestor found."
+                : $"Common ancestor: {result.BaseSha}{Environment.NewLine}Subject: {result.BaseSubject}";
+            Status = "Merge base inspected.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect merge base");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = MergeBaseSummary = e.Message;
         }
     }
 
