@@ -66,6 +66,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string relationshipFirstSha = "";
     [ObservableProperty] private string relationshipSecondSha = "";
     [ObservableProperty] private string relationshipSummary = "Enter two commit SHAs to compare their ancestry.";
+    [ObservableProperty] private string diffStatisticsCommitSha = "";
+    [ObservableProperty] private string diffStatisticsSummary = "Enter a commit SHA to inspect its change statistics.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1329,6 +1331,25 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Inspect commit relationship");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = RelationshipSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectDiffStatisticsAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var result = await new GitCommitDiffStatisticsService().InspectAsync(repo.Path, DiffStatisticsCommitSha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            DiffStatisticsSummary = $"Commit: {result.Sha}{Environment.NewLine}Subject: {result.Subject}{Environment.NewLine}Files changed: {result.FilesChanged}{Environment.NewLine}Lines added: {result.LinesAdded}{Environment.NewLine}Lines deleted: {result.LinesDeleted}{Environment.NewLine}Root commit: {result.IsRoot}";
+            Status = "Commit diff statistics inspected.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect commit diff statistics");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = DiffStatisticsSummary = e.Message;
         }
     }
 
