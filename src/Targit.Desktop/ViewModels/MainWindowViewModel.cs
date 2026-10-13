@@ -45,6 +45,7 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string localIdentityName = "";
     [ObservableProperty] private string localIdentityEmail = "";
     private readonly GitBranchService _branches = new();
+    [ObservableProperty] private string tagInspectionSummary = "Select an action to inspect.";
     [ObservableProperty] private string fileHistoryPath = "";
     [ObservableProperty] private string fileHistorySummary = "Select an action to inspect.";
     [ObservableProperty] private string blameSummary = "Select an action to inspect.";
@@ -1219,6 +1220,26 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Load file history");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = FileHistorySummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectTagsAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            string output;
+            var tags = await new GitTagInspectionService().GetAsync(repo.Path); output = tags.Count == 0 ? "No tags." : string.Join(Environment.NewLine, tags.Select(tag => $"{tag.Name} -> {tag.TargetSha[..7]} {(tag.IsAnnotated ? "(annotated)" : "(lightweight)")}"));
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            TagInspectionSummary = output;
+            Status = "Inspect tags completed.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect tags");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = TagInspectionSummary = e.Message;
         }
     }
 
