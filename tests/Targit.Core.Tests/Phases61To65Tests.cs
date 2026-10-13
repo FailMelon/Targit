@@ -32,7 +32,7 @@ public sealed class Phases61To65Tests
             var result = await new GitMergeService().MergeAsync(path, "feature");
             Assert.Equal(MergeStatus.FastForward, result);
             Assert.Empty(await new GitConflictDetectionService().ListAsync(path));
-            Assert.Equal("feature\n", File.ReadAllText(Path.Combine(path, "file.txt")));
+            Assert.Equal("feature\n", File.ReadAllText(Path.Combine(path, "file.txt")).Replace("\r\n", "\n"));
         }
         finally
         {
