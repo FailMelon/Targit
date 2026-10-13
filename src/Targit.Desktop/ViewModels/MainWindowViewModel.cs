@@ -75,6 +75,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string filePatchCommitSha = "";
     [ObservableProperty] private string filePatchPath = "";
     [ObservableProperty] private string filePatchSummary = "Enter a commit SHA and changed file path to inspect its patch.";
+    [ObservableProperty] private string fileContentCommitSha = "";
+    [ObservableProperty] private string fileContentPath = "";
+    [ObservableProperty] private string fileContentSummary = "Enter a commit SHA and path to preview a historical file.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1416,6 +1419,25 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Inspect commit file patch");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = FilePatchSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectFileContentAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var result = await new GitCommitFileContentService().GetAsync(repo.Path, FileContentCommitSha, FileContentPath);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            FileContentSummary = $"File: {result.Path} ({result.Size} bytes){Environment.NewLine}{result.Content}";
+            Status = "Historical file content inspected.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect historical file content");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = FileContentSummary = e.Message;
         }
     }
 
