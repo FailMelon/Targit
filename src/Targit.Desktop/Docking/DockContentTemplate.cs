@@ -484,6 +484,16 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var abortMerge = new Button { Content = "Abort merge (discards merge working-tree changes)" };
                 abortMerge.Bind(Button.CommandProperty, new Binding(nameof(workspace.AbortMergeCommand)));
                 root.Children.Add(abortMerge);
+                root.Children.Add(new TextBlock { Text = "Linear rebase (rewrites local history)", FontWeight = FontWeight.SemiBold });
+                var rebaseTarget = new TextBox { Watermark = "Local target branch name" };
+                rebaseTarget.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RebaseTargetBranch)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(rebaseTarget);
+                var rebaseConfirm = new TextBox { Watermark = "Type REBASE to confirm" };
+                rebaseConfirm.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RebaseConfirmation)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(rebaseConfirm);
+                var rebaseAction = new Button { Content = "Rebase current branch onto target" };
+                rebaseAction.Bind(Button.CommandProperty, new Binding(nameof(workspace.RebaseCurrentOntoTargetCommand)));
+                root.Children.Add(rebaseAction);
                 break;
             case "remotes":
                 var remoteList = new ListBox { MinHeight = 150 };
