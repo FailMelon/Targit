@@ -62,6 +62,8 @@ public sealed class GitLinearRebaseService
         // Create a temporary replay branch so failure does not rewrite the source branch.
         var tempName = "targit-rebase-" + Guid.NewGuid().ToString("N");
         var originalBranch = repo.Head.FriendlyName;
+        var originalCommitId = source.Id;
+        var originalMoved = false;
         var temporary = repo.CreateBranch(tempName, target.Tip);
         var completed = false;
         try
@@ -102,6 +104,7 @@ public sealed class GitLinearRebaseService
             // Move the original branch only after successful replay, then check out the
             // rewritten branch to synchronize HEAD, index and working tree.
             repo.Refs.UpdateTarget(repo.Branches[originalBranch].Reference, rewritten.Id);
+            originalMoved = true;
             Commands.Checkout(repo, repo.Branches[originalBranch], new CheckoutOptions
             {
                 CheckoutModifiers = CheckoutModifiers.Force
@@ -111,6 +114,8 @@ public sealed class GitLinearRebaseService
         }
         finally
         {
+            if (!completed && originalMoved)
+                repo.Refs.UpdateTarget(repo.Branches[originalBranch].Reference, originalCommitId);
             if (!completed && repo.Info.CurrentOperation != CurrentOperation.None)
                 repo.Reset(ResetMode.Hard, repo.Head.Tip);
             if (repo.Head.FriendlyName == tempName)
