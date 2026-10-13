@@ -454,6 +454,36 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var renameBranch = new Button { Content = "Rename selected local branch" };
                 renameBranch.Bind(Button.CommandProperty, new Binding(nameof(workspace.RenameBranchCommand)));
                 root.Children.Add(renameBranch);
+                root.Children.Add(new TextBlock { Text = "Merge and conflict resolution", FontWeight = FontWeight.SemiBold });
+                var merge = new Button { Content = "Merge selected branch into current branch" };
+                merge.Bind(Button.CommandProperty, new Binding(nameof(workspace.MergeSelectedBranchCommand)));
+                root.Children.Add(merge);
+                var inspectConflicts = new Button { Content = "Refresh unresolved conflicts" };
+                inspectConflicts.Bind(Button.CommandProperty, new Binding(nameof(workspace.InspectMergeConflictsCommand)));
+                root.Children.Add(inspectConflicts);
+                var conflictSummary = new TextBlock { TextWrapping = TextWrapping.Wrap };
+                conflictSummary.Bind(TextBlock.TextProperty, new Binding(nameof(workspace.ConflictSummary)));
+                root.Children.Add(conflictSummary);
+                var conflictList = new ListBox { MinHeight = 80 };
+                conflictList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.MergeConflicts)));
+                conflictList.Bind(Avalonia.Controls.Primitives.SelectingItemsControl.SelectedItemProperty,
+                    new Binding(nameof(workspace.ConflictPath)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(conflictList);
+                var conflictPath = new TextBox { Watermark = "Repository-relative resolved file path" };
+                conflictPath.Bind(TextBox.TextProperty, new Binding(nameof(workspace.ConflictPath)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(conflictPath);
+                var resolve = new Button { Content = "Mark edited working-tree file resolved" };
+                resolve.Bind(Button.CommandProperty, new Binding(nameof(workspace.ResolveConflictUsingWorkingTreeCommand)));
+                root.Children.Add(resolve);
+                var mergeMessage = new TextBox { Watermark = "Merge commit message" };
+                mergeMessage.Bind(TextBox.TextProperty, new Binding(nameof(workspace.MergeCommitMessage)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(mergeMessage);
+                var continueMerge = new Button { Content = "Complete merge after resolving conflicts" };
+                continueMerge.Bind(Button.CommandProperty, new Binding(nameof(workspace.ContinueMergeCommand)));
+                root.Children.Add(continueMerge);
+                var abortMerge = new Button { Content = "Abort merge (discards merge working-tree changes)" };
+                abortMerge.Bind(Button.CommandProperty, new Binding(nameof(workspace.AbortMergeCommand)));
+                root.Children.Add(abortMerge);
                 break;
             case "remotes":
                 var remoteList = new ListBox { MinHeight = 150 };
