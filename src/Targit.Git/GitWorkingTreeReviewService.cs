@@ -40,8 +40,22 @@ public sealed class GitWorkingTreeReviewService
                        FileStatus.TypeChangeInWorkdir | FileStatus.RenamedInWorkdir)) == 0)
             throw new InvalidOperationException("No unstaged tracked changes to discard.");
         cancellationToken.ThrowIfCancellationRequested();
-        // Restore the working tree from the index, preserving staged changes.
-        repo.CheckoutPaths(repo.Head.FriendlyName, new[] { normalized },
-            new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force });
+        // The index is the source of truth: never restore from HEAD, which would erase staged edits.
+        var entry = repo.Index[normalized];
+        if (entry is null)
+            throw new InvalidOperationException("The path is not present in the index; deletion recovery is not supported.");
+        if (repo.Lookup<Blob>(entry.Id) is not { } blob)
+            throw new InvalidOperationException("Unable to read staged file content.");
+        var root = Path.GetFullPath(repo.Info.WorkingDirectory);
+        var destination = Path.GetFullPath(Path.Combine(root, normalized.Replace('/', Path.DirectorySeparatorChar)));
+        if (!destination.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar,
+                StringComparison.Ordinal))
+            throw new ArgumentException("Path escapes repository root.", nameof(path));
+        if (File.Exists(destination) && (File.GetAttributes(destination) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidOperationException("Refusing to overwrite a symbolic link.");
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        using var input = blob.GetContentStream();
+        using var output = File.Create(destination);
+        input.CopyTo(output);
     }, cancellationToken);
 }
