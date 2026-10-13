@@ -487,6 +487,14 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 conflictStages.Children.Add(conflictTheirs);
                 root.Children.Add(new TextBlock { Text = "Base                 Ours                 Theirs" });
                 root.Children.Add(conflictStages);
+                var chooseSides = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                var acceptOurs = new Button { Content = "Accept ours" };
+                acceptOurs.Bind(Button.CommandProperty, new Binding(nameof(workspace.AcceptOursCommand)));
+                var acceptTheirs = new Button { Content = "Accept theirs" };
+                acceptTheirs.Bind(Button.CommandProperty, new Binding(nameof(workspace.AcceptTheirsCommand)));
+                chooseSides.Children.Add(acceptOurs);
+                chooseSides.Children.Add(acceptTheirs);
+                root.Children.Add(chooseSides);
 
                 var resolve = new Button { Content = "Mark edited working-tree file resolved" };
                 resolve.Bind(Button.CommandProperty, new Binding(nameof(workspace.ResolveConflictUsingWorkingTreeCommand)));
