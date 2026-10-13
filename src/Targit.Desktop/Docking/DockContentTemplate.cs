@@ -518,6 +518,16 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 var rebaseAction = new Button { Content = "Rebase current branch onto target" };
                 rebaseAction.Bind(Button.CommandProperty, new Binding(nameof(workspace.RebaseCurrentOntoTargetCommand)));
                 root.Children.Add(rebaseAction);
+                root.Children.Add(new TextBlock { Text = "Cherry-pick / revert recovery", FontWeight = FontWeight.SemiBold });
+                var recoveryMessage = new TextBox { Watermark = "Commit message after resolving conflicts" };
+                recoveryMessage.Bind(TextBox.TextProperty, new Binding(nameof(workspace.SequencerCommitMessage)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(recoveryMessage);
+                var continueOperation = new Button { Content = "Continue cherry-pick / revert" };
+                continueOperation.Bind(Button.CommandProperty, new Binding(nameof(workspace.ContinueSequencerCommand)));
+                root.Children.Add(continueOperation);
+                var abortOperation = new Button { Content = "Abort cherry-pick / revert (discards operation changes)" };
+                abortOperation.Bind(Button.CommandProperty, new Binding(nameof(workspace.AbortSequencerCommand)));
+                root.Children.Add(abortOperation);
                 break;
             case "remotes":
                 var remoteList = new ListBox { MinHeight = 150 };
