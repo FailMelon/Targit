@@ -44,8 +44,8 @@ public sealed class GitLinearRebaseService
             if (plan.Count != commits.Length || !plan.Select(x => x.CommitSha).OrderBy(x => x, StringComparer.Ordinal)
                 .SequenceEqual(commits.Select(x => x.Sha).OrderBy(x => x, StringComparer.Ordinal)))
                 throw new InvalidOperationException("The rebase plan must contain each outgoing commit exactly once.");
-            if (plan.Any(x => x.Action == GitRebaseAction.Edit))
-                throw new NotSupportedException("Edit requires a separate paused rebase workflow.");
+            if (plan.Any(x => x.Action is GitRebaseAction.Edit or GitRebaseAction.Reword))
+                throw new NotSupportedException("Edit and Reword require user-supplied content and are not supported by this executor.");
             commits = plan.Where(x => x.Action != GitRebaseAction.Drop)
                 .Select(x => commits.Single(c => c.Sha == x.CommitSha)).ToArray();
             if (commits.Length == 0)
@@ -67,14 +67,6 @@ public sealed class GitLinearRebaseService
                     new CherryPickOptions { CommitOnSuccess = true });
                 if (result.Status != CherryPickStatus.CherryPicked)
                     throw new InvalidOperationException($"Rebase stopped at {commit.Sha[..7]}: {result.Status}. Original branch is unchanged.");
-                if (action == GitRebaseAction.Reword)
-                {
-                    var current = repo.Head.Tip!;
-                    var reworded = repo.ObjectDatabase.CreateCommit(current.Author, current.Committer,
-                        "Reworded: " + current.Message.TrimEnd(), current.Tree, current.Parents, false);
-                    repo.Refs.UpdateTarget(repo.Head.Reference.ResolveToDirectReference(), reworded.Id);
-                    repo.Reset(ResetMode.Hard, reworded);
-                }
                 if (action is GitRebaseAction.Squash or GitRebaseAction.Fixup)
                 {
                     var tip = repo.Head.Tip!;
