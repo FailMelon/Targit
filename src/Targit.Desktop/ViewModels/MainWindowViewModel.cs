@@ -58,6 +58,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty] private string ancestryCommitSha = "";
     [ObservableProperty] private string ancestrySummary = "Enter a commit SHA to inspect its parents.";
+    [ObservableProperty] private string descendantCommitSha = "";
+    [ObservableProperty] private string descendantSummary = "Enter a commit SHA to inspect its descendants.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1261,6 +1263,26 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Inspect commit ancestry");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = AncestrySummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectDescendantsAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var descendants = await new GitCommitDescendantService().GetAsync(repo.Path, DescendantCommitSha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            DescendantSummary = descendants.Count == 0 ? "No reachable descendants." :
+                string.Join(Environment.NewLine, descendants.Select(c => $"Distance {c.Distance}: {c.Sha[..7]} {c.Subject}"));
+            Status = "Commit descendants inspected.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect commit descendants");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = DescendantSummary = e.Message;
         }
     }
 
