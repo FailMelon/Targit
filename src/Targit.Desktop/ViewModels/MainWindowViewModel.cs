@@ -48,6 +48,7 @@ public partial class MainWindowViewModel : ObservableObject
             var lines = EditableRebasePlan.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
             var steps = new List<GitRebaseStep>();
             var messages = new Dictionary<string, string>(StringComparer.Ordinal);
+            var edits = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
             foreach (var line in lines)
             {
                 var parts = line.Trim().Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
@@ -57,8 +58,18 @@ public partial class MainWindowViewModel : ObservableObject
                     throw new ArgumentException("Use full 40-character commit SHAs.");
                 steps.Add(new GitRebaseStep(parts[1], parts.Length > 2 ? parts[2] : "", action));
                 if (action == GitRebaseAction.Reword && parts.Length > 2) messages[parts[1]] = parts[2];
+                if (action == GitRebaseAction.Edit)
+                {
+                    // Format: edit FULL_SHA relative/path.txt|BASE64_UTF8
+                    if (parts.Length < 3) throw new ArgumentException("Edit needs path|base64-utf8-content.");
+                    var separator = parts[2].IndexOf('|');
+                    if (separator <= 0) throw new ArgumentException("Edit needs path|base64-utf8-content.");
+                    var relativePath = parts[2][..separator];
+                    var content = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[2][(separator + 1)..]));
+                    edits[parts[1]] = new Dictionary<string, string> { [relativePath] = content };
+                }
             }
-            var sha = await _linearRebase.RebaseWithMessagesAsync(repo.Path, RebaseTargetBranch, steps, messages);
+            var sha = await _linearRebase.RebaseWithEditsAsync(repo.Path, RebaseTargetBranch, steps, messages, edits);
             RebaseConfirmation = "";
             await RefreshAsync();
             Status = $"Rebase complete: {sha[..7]}";
