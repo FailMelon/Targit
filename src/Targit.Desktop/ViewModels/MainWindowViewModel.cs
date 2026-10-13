@@ -70,6 +70,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string diffStatisticsSummary = "Enter a commit SHA to inspect its change statistics.";
     [ObservableProperty] private string changedFilesCommitSha = "";
     [ObservableProperty] private string changedFilesSummary = "Enter a commit SHA to list changed files.";
+    [ObservableProperty] private string fileStatisticsCommitSha = "";
+    [ObservableProperty] private string fileStatisticsSummary = "Enter a commit SHA to inspect per-file changes.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1372,6 +1374,26 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Inspect commit changed files");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = ChangedFilesSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectFileStatisticsAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var files = await new GitCommitFileStatisticsService().GetAsync(repo.Path, FileStatisticsCommitSha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            FileStatisticsSummary = files.Count == 0 ? "No changed files." :
+                string.Join(Environment.NewLine, files.Select(file => $"{file.Status}: {file.Path} (+{file.LinesAdded}/-{file.LinesDeleted})"));
+            Status = "Commit file statistics inspected.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect commit file statistics");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = FileStatisticsSummary = e.Message;
         }
     }
 
