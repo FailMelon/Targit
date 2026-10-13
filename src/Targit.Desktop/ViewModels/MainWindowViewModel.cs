@@ -34,6 +34,39 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitCommitAmendService _commitAmend = new();
     private readonly GitCherryPickService _cherryPick = new();
     private readonly GitLinearRebaseService _linearRebase = new();
+    [ObservableProperty] private string editableRebasePlan = "";
+    [RelayCommand]
+    private async Task ExecuteEditableRebasePlanAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            if (RebaseConfirmation != "REBASE") throw new InvalidOperationException("Type REBASE to confirm.");
+            var lines = EditableRebasePlan.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            var steps = new List<GitRebaseStep>();
+            var messages = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var line in lines)
+            {
+                var parts = line.Trim().Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 2 || !Enum.TryParse<GitRebaseAction>(parts[0], true, out var action))
+                    throw new ArgumentException("Each plan line must be: action full-sha [message for reword].");
+                if (parts[1].Length != 40 || !parts[1].All(Uri.IsHexDigit))
+                    throw new ArgumentException("Use full 40-character commit SHAs.");
+                steps.Add(new GitRebaseStep(parts[1], parts.Length > 2 ? parts[2] : "", action));
+                if (action == GitRebaseAction.Reword && parts.Length > 2) messages[parts[1]] = parts[2];
+            }
+            var sha = await _linearRebase.RebaseWithMessagesAsync(repo.Path, RebaseTargetBranch, steps, messages);
+            RebaseConfirmation = "";
+            await RefreshAsync();
+            Status = $"Rebase complete: {sha[..7]}";
+        }
+        catch (Exception e) { FileLog.Error(e, "Execute editable rebase plan"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+
     [ObservableProperty] private string rebaseTargetBranch = "";
     [ObservableProperty] private string rebaseConfirmation = "";
     [RelayCommand]
@@ -1475,6 +1508,7 @@ public partial class MainWindowViewModel : ObservableObject
             var steps = await _rebasePlanner.PlanAsync(repo.Path, RebaseUpstreamSha.Trim());
             GitRebasePlanService.ValidatePlan(steps);
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            EditableRebasePlan = string.Join(Environment.NewLine, steps.Select(step => $"pick {step.CommitSha} {step.Subject}"));
             RebasePlanPreview = steps.Count == 0 ? "No commits to rebase." :
                 string.Join(Environment.NewLine, steps.Select(step => $"pick {step.CommitSha[..7]} {step.Subject}"));
             Status = $"Previewed {steps.Count} rebase steps. No commits were modified.";
