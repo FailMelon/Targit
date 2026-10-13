@@ -63,6 +63,9 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string mergeBaseFirstSha = "";
     [ObservableProperty] private string mergeBaseSecondSha = "";
     [ObservableProperty] private string mergeBaseSummary = "Enter two commit SHAs to find their common ancestor.";
+    [ObservableProperty] private string relationshipFirstSha = "";
+    [ObservableProperty] private string relationshipSecondSha = "";
+    [ObservableProperty] private string relationshipSummary = "Enter two commit SHAs to compare their ancestry.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1307,6 +1310,25 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Inspect merge base");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = MergeBaseSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectRelationshipAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var result = await new GitCommitRelationshipService().InspectAsync(repo.Path, RelationshipFirstSha, RelationshipSecondSha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            RelationshipSummary = $"Relationship: {result.Relationship}{Environment.NewLine}Common ancestor: {result.MergeBaseSha ?? "(none)"}";
+            Status = "Commit relationship inspected.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect commit relationship");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = RelationshipSummary = e.Message;
         }
     }
 

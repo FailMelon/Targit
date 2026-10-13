@@ -37,6 +37,20 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Commit relationship inspection", FontWeight = FontWeight.SemiBold });
+                var relationshipFirst = new TextBox { Watermark = "First commit SHA" };
+                relationshipFirst.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RelationshipFirstSha)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(relationshipFirst);
+                var relationshipSecond = new TextBox { Watermark = "Second commit SHA" };
+                relationshipSecond.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RelationshipSecondSha)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(relationshipSecond);
+                var relationshipAction = new Button { Content = "Compare commits" };
+                relationshipAction.Bind(Button.CommandProperty, new Binding(nameof(workspace.InspectRelationshipCommand)));
+                root.Children.Add(relationshipAction);
+                var relationshipResult = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 100, TextWrapping = TextWrapping.Wrap };
+                relationshipResult.Bind(TextBox.TextProperty, new Binding(nameof(workspace.RelationshipSummary)));
+                root.Children.Add(relationshipResult);
+
                 root.Children.Add(new TextBlock { Text = "Merge base inspection", FontWeight = FontWeight.SemiBold });
                 var mergeBaseFirst = new TextBox { Watermark = "First commit SHA" };
                 mergeBaseFirst.Bind(TextBox.TextProperty, new Binding(nameof(workspace.MergeBaseFirstSha)) { Mode = BindingMode.TwoWay });
