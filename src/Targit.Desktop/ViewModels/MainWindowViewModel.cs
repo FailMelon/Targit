@@ -33,6 +33,255 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitStashService _stashes = new();
     private readonly GitCommitAmendService _commitAmend = new();
     private readonly GitCherryPickService _cherryPick = new();
+    private readonly GitLinearRebaseService _linearRebase = new();
+    [ObservableProperty] private string editableRebasePlan = "";
+    [RelayCommand]
+    private async Task ExecuteEditableRebasePlanAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            if (RebaseConfirmation != "REBASE") throw new InvalidOperationException("Type REBASE to confirm.");
+            var lines = EditableRebasePlan.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            var steps = new List<GitRebaseStep>();
+            var messages = new Dictionary<string, string>(StringComparer.Ordinal);
+            var edits = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
+            foreach (var line in lines)
+            {
+                var parts = line.Trim().Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length < 2 || !Enum.TryParse<GitRebaseAction>(parts[0], true, out var action))
+                    throw new ArgumentException("Each plan line must be: action full-sha [message for reword].");
+                if (parts[1].Length != 40 || !parts[1].All(Uri.IsHexDigit))
+                    throw new ArgumentException("Use full 40-character commit SHAs.");
+                steps.Add(new GitRebaseStep(parts[1], parts.Length > 2 ? parts[2] : "", action));
+                if (action == GitRebaseAction.Reword && parts.Length > 2) messages[parts[1]] = parts[2];
+                if (action == GitRebaseAction.Edit)
+                {
+                    // Format: edit FULL_SHA relative/path.txt|BASE64_UTF8
+                    if (parts.Length < 3) throw new ArgumentException("Edit needs path|base64-utf8-content.");
+                    var separator = parts[2].IndexOf('|');
+                    if (separator <= 0) throw new ArgumentException("Edit needs path|base64-utf8-content.");
+                    var relativePath = parts[2][..separator];
+                    var content = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[2][(separator + 1)..]));
+                    edits[parts[1]] = new Dictionary<string, string> { [relativePath] = content };
+                }
+            }
+            var sha = await _linearRebase.RebaseWithEditsAsync(repo.Path, RebaseTargetBranch, steps, messages, edits);
+            RebaseConfirmation = "";
+            await RefreshAsync();
+            Status = $"Rebase complete: {sha[..7]}";
+        }
+        catch (Exception e) { FileLog.Error(e, "Execute editable rebase plan"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [ObservableProperty] private string rebaseTargetBranch = "";
+    [ObservableProperty] private string rebaseConfirmation = "";
+    [RelayCommand]
+    private async Task RebaseCurrentOntoTargetAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        if (!string.Equals(RebaseConfirmation, "REBASE", StringComparison.Ordinal))
+        {
+            Status = "Type REBASE to confirm rewriting local commit history.";
+            return;
+        }
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var sha = await _linearRebase.RebaseOntoAsync(repo.Path, RebaseTargetBranch);
+            RebaseConfirmation = "";
+            await RefreshAsync();
+            Status = $"Rebased current branch onto {RebaseTargetBranch}: {sha[..7]}";
+        }
+        catch (Exception e) { FileLog.Error(e, "Rebase branch"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+    private readonly GitSequencerRecoveryService _sequencerRecovery = new();
+    [ObservableProperty] private string sequencerCommitMessage = "Resolve operation";
+    [RelayCommand]
+    private async Task ContinueSequencerAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            var sha = await _sequencerRecovery.ContinueAsync(repo.Path, SequencerCommitMessage);
+            await RefreshAsync();
+            Status = $"Operation committed: {sha[..7]}";
+        }
+        catch (Exception e) { FileLog.Error(e, "Continue cherry-pick/revert"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+    [RelayCommand]
+    private async Task AbortSequencerAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            await _sequencerRecovery.AbortAsync(repo.Path);
+            await RefreshAsync();
+            Status = "Cherry-pick/revert aborted.";
+        }
+        catch (Exception e) { FileLog.Error(e, "Abort cherry-pick/revert"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+    private readonly GitMergeService _mergeOperation = new();
+    private readonly GitMergeLifecycleService _mergeLifecycle = new();
+    private readonly GitConflictResolutionService _conflictResolution = new();
+    private readonly GitThreeWayConflictService _threeWayConflict = new();
+    private readonly GitConflictChoiceService _conflictChoices = new();
+    [RelayCommand]
+    private Task AcceptOursAsync() => AcceptConflictSideAsync(GitConflictChoice.Ours);
+    [RelayCommand]
+    private Task AcceptTheirsAsync() => AcceptConflictSideAsync(GitConflictChoice.Theirs);
+    private async Task AcceptConflictSideAsync(GitConflictChoice choice)
+    {
+        if (SelectedRepository is not { } repo || string.IsNullOrWhiteSpace(ConflictPath)) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _conflictChoices.ResolveAsync(repo.Path, ConflictPath, choice);
+            await InspectMergeConflictsAsync();
+            Status = $"Resolved {ConflictPath} using {choice}.";
+        }
+        catch (Exception e) { FileLog.Error(e, "Accept conflict stage"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [ObservableProperty] private string conflictBaseText = "";
+    [ObservableProperty] private string conflictOursText = "";
+    [ObservableProperty] private string conflictTheirsText = "";
+    partial void OnConflictPathChanged(string value) => _ = InspectThreeWayConflictAsync(value);
+    private async Task InspectThreeWayConflictAsync(string path)
+    {
+        ConflictBaseText = ConflictOursText = ConflictTheirsText = "";
+        if (SelectedRepository is not { } repo || string.IsNullOrWhiteSpace(path)) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var stages = await _threeWayConflict.InspectAsync(repo.Path, path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || ConflictPath != path) return;
+            ConflictBaseText = stages.Base ?? "(file absent in base)";
+            ConflictOursText = stages.Ours ?? "(file absent in ours)";
+            ConflictTheirsText = stages.Theirs ?? "(file absent in theirs)";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect three-way conflict");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion) && ConflictPath == path)
+                ConflictBaseText = e.Message;
+        }
+    }
+
+    [ObservableProperty] private string mergeCommitMessage = "Merge branches";
+    [ObservableProperty] private string conflictPath = "";
+    [ObservableProperty] private string conflictSummary = "No conflicts inspected.";
+    public ObservableCollection<string> MergeConflicts { get; } = [];
+
+    [RelayCommand]
+    private async Task MergeSelectedBranchAsync()
+    {
+        if (SelectedRepository is not { } repo || SelectedBranchLine is not { } branch) return;
+        var name = branch.Trim().TrimStart('*').Trim();
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            var result = await _mergeOperation.MergeAsync(repo.Path, name);
+            Status = $"Merge {name}: {result}";
+            await RefreshAsync();
+            await InspectMergeConflictsAsync();
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Merge branch");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = e.Message;
+            await InspectMergeConflictsAsync();
+        }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task InspectMergeConflictsAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        try
+        {
+            var result = await new GitConflictDetectionService().ListAsync(repo.Path);
+            MergeConflicts.Clear();
+            foreach (var conflict in result)
+                MergeConflicts.Add(conflict.Path);
+            ConflictSummary = $"{MergeConflicts.Count} unresolved conflict(s).";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect merge conflicts");
+            ConflictSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ResolveConflictUsingWorkingTreeAsync()
+    {
+        if (SelectedRepository is not { } repo || string.IsNullOrWhiteSpace(ConflictPath)) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _conflictResolution.ResolveUsingWorkingTreeAsync(repo.Path, ConflictPath);
+            await InspectMergeConflictsAsync();
+            Status = $"Marked {ConflictPath} resolved from working tree.";
+        }
+        catch (Exception e) { FileLog.Error(e, "Resolve conflict"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task ContinueMergeAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            var sha = await _mergeLifecycle.ContinueAsync(repo.Path, MergeCommitMessage);
+            await RefreshAsync();
+            Status = $"Merge completed: {sha[..7]}";
+        }
+        catch (Exception e) { FileLog.Error(e, "Continue merge"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+
+    [RelayCommand]
+    private async Task AbortMergeAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            await _mergeLifecycle.AbortAsync(repo.Path);
+            await RefreshAsync();
+            Status = "Merge aborted.";
+        }
+        catch (Exception e) { FileLog.Error(e, "Abort merge"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+
+
     private readonly GitRevertService _revert = new();
     private readonly GitSoftResetService _softReset = new();
     private readonly GitMixedResetService _mixedReset = new();
@@ -1270,6 +1519,7 @@ public partial class MainWindowViewModel : ObservableObject
             var steps = await _rebasePlanner.PlanAsync(repo.Path, RebaseUpstreamSha.Trim());
             GitRebasePlanService.ValidatePlan(steps);
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            EditableRebasePlan = string.Join(Environment.NewLine, steps.Select(step => $"pick {step.CommitSha} {step.Subject}"));
             RebasePlanPreview = steps.Count == 0 ? "No commits to rebase." :
                 string.Join(Environment.NewLine, steps.Select(step => $"pick {step.CommitSha[..7]} {step.Subject}"));
             Status = $"Previewed {steps.Count} rebase steps. No commits were modified.";
