@@ -53,9 +53,11 @@ public sealed class GitLinearRebaseService
             }
             var rewritten = repo.Head.Tip
                 ?? throw new InvalidOperationException("Rebase produced no commit.");
-            // Update source ref only after the entire replay succeeds.
+            // Move the source ref only after replay succeeded. Checkout the rewritten tree
+            // afterwards so the index and working directory match the new HEAD.
             Commands.Checkout(repo, repo.Branches[originalBranch]);
             repo.Refs.UpdateTarget(repo.Head.Reference, rewritten.Id);
+            repo.Reset(ResetMode.Hard, rewritten);
             completed = true;
             return rewritten.Sha;
         }
