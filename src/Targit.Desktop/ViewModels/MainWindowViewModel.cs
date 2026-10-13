@@ -68,6 +68,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string relationshipSummary = "Enter two commit SHAs to compare their ancestry.";
     [ObservableProperty] private string diffStatisticsCommitSha = "";
     [ObservableProperty] private string diffStatisticsSummary = "Enter a commit SHA to inspect its change statistics.";
+    [ObservableProperty] private string changedFilesCommitSha = "";
+    [ObservableProperty] private string changedFilesSummary = "Enter a commit SHA to list changed files.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1350,6 +1352,26 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Inspect commit diff statistics");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = DiffStatisticsSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectChangedFilesAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var files = await new GitCommitChangedFilesService().GetAsync(repo.Path, ChangedFilesCommitSha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            ChangedFilesSummary = files.Count == 0 ? "No changed files." :
+                string.Join(Environment.NewLine, files.Select(file => $"{file.Status}: {file.Path}"));
+            Status = "Commit changed files inspected.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect commit changed files");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = ChangedFilesSummary = e.Message;
         }
     }
 
