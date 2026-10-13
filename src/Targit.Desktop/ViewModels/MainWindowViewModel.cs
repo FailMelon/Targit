@@ -71,10 +71,10 @@ public partial class MainWindowViewModel : ObservableObject
         if (SelectedRepository is not { } repo) return;
         try
         {
-            var result = await new GitConflictDetectionService().GetAsync(repo.Path);
+            var result = await new GitConflictDetectionService().ListAsync(repo.Path);
             MergeConflicts.Clear();
             foreach (var conflict in result)
-                MergeConflicts.Add(conflict.ToString() ?? "");
+                MergeConflicts.Add(conflict.Path);
             ConflictSummary = $"{MergeConflicts.Count} unresolved conflict(s).";
         }
         catch (Exception e)
