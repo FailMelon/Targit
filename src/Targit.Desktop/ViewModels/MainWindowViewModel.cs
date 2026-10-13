@@ -12,6 +12,17 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly GitWorkingTreeService _gitActions;
     private readonly GitDiffService _diffs = new();
     private readonly GitWorkingTreeReviewService _workingReview = new();
+    [ObservableProperty] private bool sideBySideDiff;
+    [ObservableProperty] private string diffBeforeText = "";
+    [ObservableProperty] private string diffAfterText = "";
+    partial void OnSideBySideDiffChanged(bool value) => UpdateSideBySideDiff();
+    private void UpdateSideBySideDiff()
+    {
+        var source = UnstagedDiffText == "No unstaged changes for this file." ? StagedDiffText : UnstagedDiffText;
+        var projection = GitWorkingTreeReviewService.SideBySide(source);
+        DiffBeforeText = projection.Before;
+        DiffAfterText = projection.After;
+    }
     [ObservableProperty] private string discardConfirmation = "";
     [ObservableProperty] private string selectedDiffHunk = "";
     [ObservableProperty] private string workingTreeReviewSummary = "Select a changed file to review its hunks.";
@@ -257,6 +268,7 @@ public partial class MainWindowViewModel : ObservableObject
             foreach (var hunk in result.UnstagedPatch.Split('\n').Where(line => line.StartsWith("@@ ", StringComparison.Ordinal)))
                 UnstagedHunks.Add(hunk);
             WorkingTreeReviewSummary = $"{UnstagedHunks.Count} unstaged hunk(s) · {path}";
+            UpdateSideBySideDiff();
         }
         catch (Exception e)
         {
