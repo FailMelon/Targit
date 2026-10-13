@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:GitLlama.Desktop.Controls" x:Class="GitLlama.Desktop.Views.RepositoryView">
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="20" Spacing="16">
+    <DockPanel><Button DockPanel.Dock="Right" Classes="workspace" Content="Browse for a repository…" Click="BrowseExisting_Click"/><StackPanel Orientation="Horizontal" Spacing="12"><controls:LlamaIcon Width="38" Height="38"/><StackPanel><TextBlock Text="GitLlama" FontSize="22" FontWeight="SemiBold"/><TextBlock Text="Your repositories" Classes="muted"/></StackPanel></StackPanel></DockPanel>
+    <TextBox Text="{Binding RepositorySearch}" Watermark="Search your repositories…"/>
+    <ListBox ItemsSource="{Binding FilteredRepositories}" MaxHeight="240"><ListBox.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,3"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="12"><StackPanel Spacing="4"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding Path}" Classes="muted" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/></StackPanel><Button Grid.Column="1" Classes="workspace" Content="Open" Tag="{Binding}" Click="OpenExisting_Click" VerticalAlignment="Center"/></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+    <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0"/>
+    <TextBlock Text="Add a repository" FontSize="18" FontWeight="SemiBold"/>
+    <TextBlock Text="Open an existing Git folder, clone from a website, or initialize a new repository in a local folder." Classes="muted" TextWrapping="Wrap"/>
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+      <Border Classes="card"><StackPanel Spacing="12"><TextBlock Text="Initialize a local folder" FontWeight="SemiBold"/><TextBlock Text="Start a repository for a new or existing project." Classes="muted" TextWrapping="Wrap"/><Button x:Name="InitializeRepositoryButton" Classes="workspace" Content="Initialize repository" Click="Initialize_Click" HorizontalAlignment="Left"/></StackPanel></Border>
+      <Border Grid.Column="1" Classes="card"><StackPanel Spacing="12"><TextBlock Text="Clone from a website" FontWeight="SemiBold"/><TextBlock Text="Download a repository from its Git URL." Classes="muted" TextWrapping="Wrap"/><Button x:Name="CloneRepositoryButton" Classes="workspace" Content="Clone repository" Click="Clone_Click" HorizontalAlignment="Left"/></StackPanel></Border>
+    </Grid>
+    <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
+    <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,16,0,0"><StackPanel Spacing="12">
+      <WrapPanel ItemSpacing="14"><TextBlock Text="Clone from your accounts" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"/><Button Classes="workspace" Content="Refresh repositories" Command="{Binding RefreshCloneableRepositoriesCommand}" IsEnabled="{Binding !IsCloneableRepositoriesBusy}"/></WrapPanel>
+      <TextBox Text="{Binding CloneableRepositorySearch}" Watermark="Search repositories, organizations or providers…"/>
+      <TextBlock Text="{Binding CloneableRepositoryFeedback}" Classes="muted" TextWrapping="Wrap"/>
+      <ListBox x:Name="CloneableRepositoriesList" ItemsSource="{Binding FilteredCloneableRepositories}" MaxHeight="420"><ListBox.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,3"><Grid ColumnDefinitions="*,Auto" ColumnSpacing="14"><StackPanel Spacing="4"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Source}" Classes="muted" TextTrimming="CharacterEllipsis"/></StackPanel><Button Grid.Column="1" Classes="workspace primary" Content="Clone…" Tag="{Binding}" Click="CloneHostedRepository_Click" VerticalAlignment="Center"/></Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+    </StackPanel></Border>
+  </StackPanel></ScrollViewer>
+</UserControl>

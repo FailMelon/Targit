@@ -1,0 +1,31 @@
+name: Build portable packages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, rid: win-x64 }
+          - { os: windows-latest, rid: win-arm64 }
+          - { os: ubuntu-latest, rid: linux-x64 }
+          - { os: ubuntu-latest, rid: linux-arm64 }
+          - { os: macos-latest, rid: osx-x64 }
+          - { os: macos-latest, rid: osx-arm64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet test tests/GitLlama.Core.Tests/GitLlama.Core.Tests.csproj -c Release
+      - run: dotnet test tests/GitLlama.Desktop.Tests/GitLlama.Desktop.Tests.csproj -c Release
+      - run: dotnet publish src/GitLlama.Desktop/GitLlama.Desktop.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o artifacts/GitLlama-${{ matrix.rid }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GitLlama-${{ matrix.rid }}
+          path: artifacts/GitLlama-${{ matrix.rid }}
+          if-no-files-found: error

@@ -1,0 +1,24 @@
+name: Bug report
+description: Report a reproducible problem without credentials or private repository contents.
+body:
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Include expected and actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reproduction
+      description: Prefer steps using a disposable repository.
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Platform and GitLlama version
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Redacted diagnostics
+      description: Remove tokens, personal data, and private repository contents before sharing.

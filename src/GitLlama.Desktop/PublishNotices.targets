@@ -1,0 +1,8 @@
+<Project>
+  <ItemGroup>
+    <None Include="../../LICENSE;../../README.md;../../THIRD_PARTY_NOTICES.md;../../CONTRIBUTING.md;../../SECURITY.md;../../CODE_OF_CONDUCT.md;../../CHANGELOG.md" Link="%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest"/>
+    <None Include="../../licenses/**/*" Link="licenses/%(RecursiveDir)%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest"/>
+    <None Include="../../docs/release-acceptance.md;../../docs/completion-checklist.md;../../docs/github-oauth.md;../../docs/azure-devops.md" Link="docs/%(Filename)%(Extension)" CopyToPublishDirectory="PreserveNewest"/>
+  </ItemGroup>
+</Project>
+

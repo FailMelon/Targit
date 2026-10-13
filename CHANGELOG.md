@@ -1,0 +1,54 @@
+# Changelog
+
+## Unreleased
+- Add Azure DevOps Services integration through Microsoft Entra/MSAL device sign-in, silent renewal, encrypted per-profile cache restore, organization repository discovery and clone actions. Scope bearer credentials to the connected organization's HTTPS URLs for Git operations; keep SSH separate. Azure pull requests/Boards and on-premises Azure DevOps Server are outside this integration's current scope.
+- Fix silent push feedback: report missing selections and server-side rejection, show persistent progress/results, select newly added remotes, and add target-specific push context actions. Publish an initial branch to an empty remote and set upstream only when none is configured; preserve existing tracking and non-force behavior.
+- Keep GitHub OAuth accounts signed in with automatic access/refresh token rotation, encrypted per-profile Windows storage, restoration after restart, offline retry and revoked-authorization recovery. Replace the connected sign-in button with account status/Disconnect and remove the misleading expiry warning.
+- Remove the redundant layout dropdown and Open repository button from the repository toolbar; keep repository tabs and File menu access.
+- Replace the GitHub settings section with Integrations; add browser/device OAuth sign-in using the GitLlama Client ID, approval-code display/copy, cancellation, private-repository scope opt-in, verified accounts and session expiry. GitHub HTTPS operations can use the integration token; other hosts and SSH remain scoped separately. GitLab, Bitbucket and Azure DevOps are marked as planned.
+- Group remote-tracking branches beneath named remotes in the sidebar and Remote screen; add nested prefix folders, branch counts, vector icons and remote context actions. Preserve tree expansion and unchanged nodes during refresh.
+- Add named settings profiles with a current-profile card, creation/rename/switch/removal, separate commit identities and SSH/connection preferences. Migrate existing preferences to Default and restore the active profile on restart; clear session tokens on switching.
+- Open Settings from the title-bar cogwheel or File menu; load private/public SSH key paths, preview and copy the public key, and show its SHA256 fingerprint.
+- Label repository-open diagnostics explicitly so repository names are not confused with app branding.
+- Reserve scrollbar space in inspector file lists so file names and change totals remain visible.
+- Reconcile file rows during refresh instead of clearing/rebuilding them; preserve unchanged rows, selections and existing commit inspection while reloading.
+- Rename the app, solution and projects to GitLlama; publish GitLlama.exe with the supplied llama SVG as its executable/window icon and in-app branding.
+- Import existing TaRGit settings and workspace once, preserving original files and existing GitLlama preferences.
+- Settings becomes a centered modal with a dimmed workspace and General, Authentication, SSH, GitHub, identity and diagnostics sections.
+- HTTPS integrates with the configured system Git credential helper; scoped session tokens, account verification, access checks and stale-login recovery remain available.
+- SSH clone/fetch/pull/push/tag/submodule operations use system Git/OpenSSH with agent or key-file configuration and required host verification.
+- Replace the small line-by-line regex highlighter with AvaloniaEdit language grammars, multiline parsing, modern C# additions and dark-theme token colors. Diff sides retain independent parsing state.
+- Restrained desaturated-blue selection/focus/primary accents on the charcoal palette, stronger panel contrast, and selected-file left indicators.
+- Quieter file navigation; contextual Stage/Unstage line and hunk actions enable only for applicable diff selections.
+- Clicking a sidebar branch returns to the full history graph, clears hiding filters, loads older history as needed, and selects/scrolls to the branch tip. Double-click checkout remains available.
+- Remove title-bar commit search; Ctrl+F focuses the existing History search.
+- Use vector window controls and stronger labeled Fetch, Pull, Push and Refresh buttons.
+- Remove transparent capture padding; request the Windows compositor shadow outside the client surface.
+- Empty repository tabs become opened, cloned or initialized repositories in place; tab styles and selection are consistent, and closing tabs preserves recents.
+- Clone and initialization use modal forms instead of inline destination-first fields.
+- Thin window outline and soft shadow; maximized windows remove the shadow margin.
+- Double-click local branches to check them out; remote branches open the tracking-branch checkout prompt.
+- Repository manager opens in a dedicated full-workspace tab, hiding navigation and inspector panes while preserving the repository review and draft.
+- Repository + moves beside the tabs and opens a repository manager with browse/open, clone and initialization.
+- Initialize existing project folders without deleting files or reinitializing existing Git repositories.
+- Editor-style diffs hide patch metadata, use compact contiguous rows, a separate +/− gutter and language-aware syntax colors.
+- Fix context flicker by suppressing refresh-driven navigation, coalescing view changes and retaining center controls.
+- Restore a Discord-inspired charcoal/gray palette with neutral buttons and selections.
+- Modern slate/blue theme, larger typography, file-type badges and a prominent commit action.
+- Separate staged/unstaged groups with checkboxes; pinned commit summary and description form.
+- Contextual center replaces document tabs; selected file diffs/content/history/blame appear centrally.
+- Repository tabs at the top, independently collapsible sidebar categories and visible pane borders.
+- Line-numbered, syntax-highlighted file view and red/green diff backgrounds.
+- Borderless draggable title bar with window controls and resizing; full-height history without Output.
+- Contextual inspector without tabs; local/remote sidebar groups and branch/tag/commit menus.
+- Floating-document docking and closed History recovery; backed-up workspace schema migration.
+- Ignored files excluded from status and untracked directories expanded into individual files.
+
+- Neutral charcoal workspace with compact menus/toolbars, graph rows, contextual commit inspector, and named layout presets.
+- Repository clone/init, branch and tag management, stash workflows, reflog recovery, worktrees, and submodule updates.
+- Paged multi-branch history, author/date/text filters, commit context actions, file history and blame.
+- Colored diff review, selected line/hunk staging and unstaging, patch export, whole-file/bulk staging, and staged-content amend.
+- Three-way conflict result editing and guarded merge/rebase/history operations.
+- Host-scoped session credentials, network progress/cancellation, automatic repository refresh, command palette, settings, and redacted diagnostics.
+- Provider-isolated GitHub PR/issues lists, comments, creation, reviews, merging, and issue state changes with offline handling.
+- Core/provider integration tests, headless desktop workflow checks, and portable packaging workflow.

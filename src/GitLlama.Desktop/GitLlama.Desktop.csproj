@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>GitLlama</AssemblyName>
+    <RootNamespace>GitLlama.Desktop</RootNamespace>
+    <Product>GitLlama</Product>
+    <Title>GitLlama</Title>
+    <ApplicationIcon>Assets/gitllama.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.3.0" />
+    <PackageReference Include="Dock.Avalonia" Version="11.3.12.1" />
+    <PackageReference Include="Dock.Serializer.Newtonsoft" Version="11.3.12.1" />
+    <PackageReference Include="Dock.Model.Mvvm" Version="11.3.12.1" />
+    <PackageReference Include="Dock.Avalonia.Themes.Fluent" Version="11.3.12.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <ProjectReference Include="../GitLlama.Application/GitLlama.Application.csproj" />
+    <ProjectReference Include="../GitLlama.Git/GitLlama.Git.csproj" />
+    <ProjectReference Include="../GitLlama.Infrastructure/GitLlama.Infrastructure.csproj" />
+    <ProjectReference Include="../GitLlama.Providers/GitLlama.Providers.csproj" />
+  </ItemGroup>
+  <Import Project="PublishNotices.targets" />
+  <ItemGroup><AvaloniaResource Include="Assets/**" /></ItemGroup>
+</Project>

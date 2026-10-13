@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GitLlama.Desktop.Views.RepositoryCreationDialog" Width="600" SizeToContent="Height" CanResize="False" WindowStartupLocation="CenterOwner" Background="{StaticResource SurfaceBrush}">
+  <StackPanel Margin="24" Spacing="14">
+    <TextBlock x:Name="Heading" FontSize="22" FontWeight="SemiBold"/>
+    <TextBlock x:Name="Description" Classes="muted" TextWrapping="Wrap"/>
+    <StackPanel x:Name="CloneFields" Spacing="8"><TextBlock Text="Repository URL" Classes="section"/><TextBox x:Name="RepositoryUrl" Text="{Binding CloneUrl}" Watermark="https://github.com/owner/repository.git"/></StackPanel>
+    <TextBlock Text="Local folder" Classes="section"/>
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="DestinationFolder" Text="{Binding NewRepositoryDestination}" Watermark="Full path to the repository folder"/><Button Grid.Column="1" Classes="workspace" Content="Browse…" Click="Browse_Click"/></Grid>
+    <Expander x:Name="Credentials" Classes="navigation" Header="Private repository credentials (optional)"><StackPanel Margin="0,8" Spacing="8"><TextBox Text="{Binding NetworkUsername}" Watermark="HTTPS username"/><TextBox Text="{Binding NetworkSecret}" PasswordChar="●" Watermark="Token/password (this session only)"/></StackPanel></Expander>
+    <TextBlock x:Name="Feedback" TextWrapping="Wrap" Classes="muted" MaxHeight="100"/>
+    <TextBlock Text="{Binding NetworkProgressText}" TextWrapping="Wrap" Classes="muted" IsVisible="{Binding IsNetworkBusy}"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10"><Button Classes="workspace" Content="Cancel" Click="Cancel_Click"/><Button x:Name="Submit" Classes="workspace" Click="Submit_Click"/></StackPanel>
+  </StackPanel>
+</Window>

@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GitLlama.Desktop.Views.InspectorView">
+  <Border Background="{StaticResource InspectorBrush}" BorderBrush="#393E47" BorderThickness="1" CornerRadius="6">
+    <Grid>
+      <ScrollViewer AllowAutoHide="False" IsVisible="{Binding !IsWorkingTreeInspector}" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="16" Spacing="14">
+          <Button Classes="workspace" Click="ViewChanges_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"><TextBlock Text="{Binding WorkingChangesCaption}"/></Button>
+          <TextBlock Text="{Binding HistorySubject}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"/>
+          <Border Classes="card"><SelectableTextBlock Text="{Binding HistoryMessage}" TextWrapping="Wrap"/></Border>
+          <Grid ColumnDefinitions="38,*" ColumnSpacing="12"><Border Background="#41434A" CornerRadius="19" Width="36" Height="36"><TextBlock Text="●" FontSize="22" Foreground="#DBDEE1" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding HistoryAuthor}"/><TextBlock Text="{Binding HistoryDate}" FontSize="11" Classes="muted"/><SelectableTextBlock Text="{Binding HistorySha}" FontSize="11" Classes="muted"/></StackPanel></Grid>
+          <TextBlock Text="Changed files" Classes="section"/>
+          <ListBox Classes="file-list" ItemsSource="{Binding HistoryFileRows}" SelectedItem="{Binding SelectedHistoryFileRow}" MaxHeight="300"/>
+          <Expander Classes="navigation" Header="Commit metadata"><SelectableTextBlock Text="{Binding HistoryCommitDetails}" TextWrapping="Wrap" Margin="0,8"/></Expander>
+        </StackPanel>
+      </ScrollViewer>
+      <Grid IsVisible="{Binding IsWorkingTreeInspector}" RowDefinitions="Auto,*,Auto">
+        <Border BorderBrush="#393E47" BorderThickness="0,0,0,1" Padding="16,14"><StackPanel Spacing="7"><DockPanel><Border DockPanel.Dock="Right" Background="#404249" CornerRadius="5" Padding="8,3"><TextBlock Text="{Binding ChangeCount}" Foreground="#DBDEE1"/></Border><TextBlock Text="Commit changes" FontSize="20" FontWeight="SemiBold"/></DockPanel><TextBlock Text="{Binding StagingSummary}" Classes="muted"/><WrapPanel ItemSpacing="8"><Button Classes="workspace toolbar" Content="✓ Stage all" Command="{Binding StageAllCommand}"/><Button Classes="workspace toolbar" Content="Unstage all" Command="{Binding UnstageAllCommand}"/></WrapPanel></StackPanel></Border>
+        <ScrollViewer AllowAutoHide="False" Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel Margin="8" Spacing="8">
+            <TextBlock Text="Everything is up to date." IsVisible="{Binding HasNoChanges}" Classes="muted" Margin="8,10"/>
+            <Expander Classes="navigation" Header="{Binding StagedFilesCaption}" IsExpanded="True">
+              <ListBox Classes="file-list" ItemsSource="{Binding StagedFiles}" SelectedItem="{Binding SelectedStagedFile, Mode=OneWay}" SelectionChanged="StagedFile_SelectionChanged" MaxHeight="300"><ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="26,30,*,20" ColumnSpacing="6"><CheckBox IsChecked="True" Tag="unstage" Click="StageCheckbox_Click" ToolTip.Tip="Unstage this file" VerticalAlignment="Center"/><Border Grid.Column="1" Background="#454750" CornerRadius="4" Padding="3" Width="27" Height="26"><TextBlock Text="{Binding FileIcon}" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><TextBlock Grid.Column="2" Text="{Binding Path}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Path}"/><TextBlock Grid.Column="3" Text="{Binding StatusCode}" Foreground="#76D999" VerticalAlignment="Center"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
+            </Expander>
+            <Border BorderBrush="#393E47" BorderThickness="0,1,0,0"/>
+            <Expander Classes="navigation" Header="{Binding UnstagedFilesCaption}" IsExpanded="True">
+              <ListBox Classes="file-list" ItemsSource="{Binding UnstagedFiles}" SelectedItem="{Binding SelectedUnstagedFile, Mode=OneWay}" SelectionChanged="UnstagedFile_SelectionChanged" MaxHeight="300"><ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="26,30,*,20" ColumnSpacing="6"><CheckBox IsChecked="False" Tag="stage" Click="StageCheckbox_Click" ToolTip.Tip="Stage this file" VerticalAlignment="Center"/><Border Grid.Column="1" Background="#383A40" CornerRadius="4" Padding="3" Width="27" Height="26"><TextBlock Text="{Binding FileIcon}" FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><TextBlock Grid.Column="2" Text="{Binding Path}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Path}"/><TextBlock Grid.Column="3" Text="{Binding StatusCode}" Foreground="{Binding StatusColor}" VerticalAlignment="Center"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
+            </Expander>
+            <Expander Classes="navigation" Header="Selected file actions" IsVisible="{Binding HasSelectedWorkingFile}"><StackPanel Margin="8" Spacing="8"><Button Classes="workspace" Content="Export patch…" Click="ExportPatch_Click" HorizontalAlignment="Left"/><TextBlock Text="Discard restores staged content and loses unstaged edits." Classes="muted" TextWrapping="Wrap"/><TextBox Text="{Binding DiscardConfirmation}" Watermark="Type DISCARD to confirm"/><Button Classes="workspace" Content="Discard unstaged edits" Command="{Binding DiscardSelectedUnstagedCommand}"/></StackPanel></Expander>
+          </StackPanel>
+        </ScrollViewer>
+        <Border Grid.Row="2" Background="#313338" BorderBrush="#393E47" BorderThickness="0,1,0,0" Padding="14"><StackPanel Spacing="9">
+          <TextBlock Text="Create a commit" FontSize="15" FontWeight="SemiBold"/>
+          <TextBox Text="{Binding CommitSummaryText}" Watermark="Commit summary"/>
+          <TextBox Text="{Binding CommitDescriptionText}" Watermark="Description (optional)" AcceptsReturn="True" TextWrapping="Wrap" Height="76"/>
+          <CheckBox Content="Amend latest unpublished commit" IsChecked="{Binding AmendStagedCommit}"/>
+          <Expander Classes="navigation" Header="Author identity"><StackPanel Spacing="6" Margin="0,6"><TextBox Watermark="Author name" Text="{Binding AuthorName}"/><TextBox Watermark="Author email" Text="{Binding AuthorEmail}"/><TextBlock Text="{Binding ConfiguredIdentity}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Expander>
+          <Button Content="{Binding CommitButtonText}" Command="{Binding CommitCommand}" Classes="workspace primary" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" MinHeight="40"/>
+        </StackPanel></Border>
+      </Grid>
+    </Grid>
+  </Border>
+</UserControl>

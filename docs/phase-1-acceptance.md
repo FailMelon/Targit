@@ -5,8 +5,8 @@ Phase 1 establishes the desktop shell, persistence, repository navigation and in
 ## Automated checks
 
 ```sh
-dotnet build src/Targit.Desktop/Targit.Desktop.csproj -c Release
-dotnet test tests/Targit.Core.Tests/Targit.Core.Tests.csproj -c Release
+dotnet build src/GitLlama.Desktop/GitLlama.Desktop.csproj -c Release
+dotnet test tests/GitLlama.Core.Tests/GitLlama.Core.Tests.csproj -c Release
 ```
 
 The GitHub Actions workflow runs these checks on Windows, Linux and macOS.
@@ -17,7 +17,7 @@ Automated CI passing confirms compilation and unit/integration tests, **not** in
 
 Perform on Windows, macOS and Linux:
 
-- [ ] Launch Targit and confirm charcoal backgrounds and readable text.
+- [ ] Launch GitLlama and confirm charcoal backgrounds and readable text.
 - [ ] Use **Open folder...** to select an existing Git repository.
 - [ ] Confirm current branch, recent commits, changes and branches load.
 - [ ] Open an empty repository, a repository with commits, and a bare repository without crashes.
@@ -29,13 +29,13 @@ Perform on Windows, macOS and Linux:
 - [ ] Resize dock panes; restart; confirm workspace restores.
 - [ ] Save a named layout, change the arrangement, load it and confirm restoration.
 - [ ] Reset to the default layout.
-- [ ] Close and reopen Targit; verify recent repositories remain.
-- [ ] Close and reopen Targit after opening/closing document tabs; verify tab visibility and active tab persist.
-- [ ] Corrupt the settings JSON and verify Targit starts, retains a diagnostic backup, and saves fresh settings.
+- [ ] Close and reopen GitLlama; verify recent repositories remain.
+- [ ] Close and reopen GitLlama after opening/closing document tabs; verify tab visibility and active tab persist.
+- [ ] Corrupt the settings JSON and verify GitLlama starts, retains a diagnostic backup, and saves fresh settings.
 - [ ] Select a non-repository folder and confirm a visible, nonfatal error.
 - [ ] Corrupt the workspace JSON and verify the application opens with a default layout.
 - [ ] Switch repositories quickly during a refresh and verify old repository data does not overwrite the new selection.
-- [ ] Inspect the app-data `Targit/targit.log` file for recorded errors.
+- [ ] Inspect the app-data `GitLlama/gitllama.log` file for recorded errors.
 
 ## Scope notes
 

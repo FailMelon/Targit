@@ -1,0 +1,7 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GitLlama.Desktop.Views.FilesView">
+  <Grid Margin="12" RowDefinitions="Auto,Auto,*" RowSpacing="10">
+    <DockPanel><TextBlock Text="Repository files" FontSize="18" FontWeight="SemiBold"/><Button DockPanel.Dock="Right" Classes="workspace" Content="Open selected file" Click="OpenSelectedFile_Click"/></DockPanel>
+    <TextBox Grid.Row="1" Text="{Binding FileSearch}" Watermark="Search repository files…"/>
+    <ListBox Grid.Row="2" ItemsSource="{Binding FilteredRepositoryFiles}" SelectedItem="{Binding SelectedRepositoryFile}"><ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="*,Auto" ColumnSpacing="12"><TextBlock Text="{Binding Path}"/><TextBlock Grid.Column="1" Text="{Binding Status}" Classes="muted" FontSize="11"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
+  </Grid>
+</UserControl>

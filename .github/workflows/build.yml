@@ -17,6 +17,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-      - run: dotnet restore src/Targit.Desktop/Targit.Desktop.csproj
-      - run: dotnet build src/Targit.Desktop/Targit.Desktop.csproj --no-restore -c Release
-      - run: dotnet test tests/Targit.Core.Tests/Targit.Core.Tests.csproj -c Release
+      - run: dotnet restore src/GitLlama.Desktop/GitLlama.Desktop.csproj
+      - run: dotnet build src/GitLlama.Desktop/GitLlama.Desktop.csproj --no-restore -c Release
+      - run: dotnet test tests/GitLlama.Core.Tests/GitLlama.Core.Tests.csproj -c Release
+      - run: dotnet test tests/GitLlama.Desktop.Tests/GitLlama.Desktop.Tests.csproj -c Release

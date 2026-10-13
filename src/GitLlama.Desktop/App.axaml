@@ -1,0 +1,128 @@
+<Application xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:dock="clr-namespace:Dock.Avalonia.Controls;assembly=Dock.Avalonia" xmlns:vm="clr-namespace:GitLlama.Desktop.ViewModels" x:Class="GitLlama.Desktop.App" RequestedThemeVariant="Dark">
+  <Application.DataTemplates>
+    <DataTemplate DataType="{x:Type vm:WorkingFileRow}">
+      <Grid ColumnDefinitions="22,*,65" ColumnSpacing="6" ToolTip.Tip="{Binding State}">
+        <TextBlock Text="{Binding StageIndicator}" Foreground="#B5BAC1"/>
+        <TextBlock Grid.Column="1" Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
+        <TextBlock Grid.Column="2" Text="{Binding Status}" Foreground="{Binding StatusColor}" FontSize="10" HorizontalAlignment="Right"/>
+      </Grid>
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:HistoryFileRow}">
+      <Grid ColumnDefinitions="*,40,40" ColumnSpacing="6" ToolTip.Tip="{Binding Status}">
+        <TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}"/>
+        <TextBlock Grid.Column="1" Text="{Binding AddedText}" Foreground="#4EC9B0" HorizontalAlignment="Right"/>
+        <TextBlock Grid.Column="2" Text="{Binding DeletedText}" Foreground="#F48771" HorizontalAlignment="Right"/>
+      </Grid>
+    </DataTemplate>
+  </Application.DataTemplates>
+  <Application.Resources>
+    <SolidColorBrush x:Key="SurfaceBrush">#1E1F22</SolidColorBrush>
+    <SolidColorBrush x:Key="PanelBrush">#2B2D31</SolidColorBrush>
+    <SolidColorBrush x:Key="BorderBrush">#41434A</SolidColorBrush>
+    <SolidColorBrush x:Key="MutedBrush">#B5BAC1</SolidColorBrush>
+    <SolidColorBrush x:Key="AccentBrush">#7F9FC9</SolidColorBrush>
+    <SolidColorBrush x:Key="SelectionBrush">#2B3B50</SolidColorBrush>
+    <SolidColorBrush x:Key="SidebarBrush">#222428</SolidColorBrush>
+    <SolidColorBrush x:Key="ToolbarBrush">#30333A</SolidColorBrush>
+    <SolidColorBrush x:Key="InspectorBrush">#292C32</SolidColorBrush>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme><FluentTheme.Palettes><ColorPaletteResources x:Key="Dark" Accent="#7F9FC9"/></FluentTheme.Palettes></FluentTheme>
+    <StyleInclude Source="avares://Dock.Avalonia.Themes.Fluent/DockFluentTheme.axaml"/>
+    <Style Selector="Window">
+      <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+      <Setter Property="Foreground" Value="#E5E5E5"/>
+      <Setter Property="FontFamily" Value="Segoe UI, Inter, sans-serif"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="Button.workspace">
+      <Setter Property="Background" Value="#383A40"/>
+      <Setter Property="Foreground" Value="#E5E5E5"/>
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="CornerRadius" Value="5"/>
+      <Setter Property="Padding" Value="10,5"/>
+      <Setter Property="MinHeight" Value="30"/>
+    </Style>
+    <Style Selector="Button.toolbar"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/></Style>
+    <Style Selector="Button.window-control"><Setter Property="Width" Value="46"/><Setter Property="Height" Value="34"/><Setter Property="MinHeight" Value="0"/><Setter Property="Padding" Value="0"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="CornerRadius" Value="0"/><Setter Property="Foreground" Value="#DBDEE1"/></Style>
+    <Style Selector="Button.window-control:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="#383A40"/></Style>
+    <Style Selector="Button.window-control.close:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="#C42B1C"/></Style>
+    <Style Selector="Button.window-control.close:pressed /template/ ContentPresenter"><Setter Property="Background" Value="#A92317"/></Style>
+    <Style Selector="Button.repository-action"><Setter Property="Background" Value="#404249"/><Setter Property="BorderBrush" Value="#696B75"/><Setter Property="MinHeight" Value="36"/><Setter Property="Padding" Value="12,7"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+    <Style Selector="Button.repository-action:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="#53555F"/><Setter Property="BorderBrush" Value="#9597A2"/></Style>
+    <Style Selector="dock|ToolChromeControl /template/ Button, dock|DocumentTabStripItem /template/ Button, dock|DocumentTabStrip /template/ Button">
+      <Setter Property="Padding" Value="0"/><Setter Property="MinHeight" Value="0"/>
+      <Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="dock|DocumentTabStripItem:selected">
+      <Setter Property="Background" Value="#404249"/><Setter Property="BorderBrush" Value="#B5BAC1"/>
+    </Style>
+    <Style Selector="dock|DocumentTabStripItem:selected /template/ Border">
+      <Setter Property="Background" Value="#404249"/>
+    </Style>
+    <Style Selector="dock|DocumentTabStripItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="#404249"/>
+    </Style>
+    <Style Selector="Button.primary"><Setter Property="Background" Value="#4E5058"/><Setter Property="FontWeight" Value="SemiBold"/></Style>
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="#1E1F22"/>
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+      <Setter Property="CornerRadius" Value="5"/>
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="Padding" Value="8,5"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="ComboBox">
+      <Setter Property="Background" Value="#2B2D31"/>
+      <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+      <Setter Property="MinHeight" Value="32"/>
+      <Setter Property="Padding" Value="8,4"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="ListBox"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/></Style>
+    <Style Selector="ListBoxItem"><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="8,4"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/></Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter"><Setter Property="Background" Value="#404249"/></Style>
+    <Style Selector="ListBox.history ListBoxItem"><Setter Property="Height" Value="30"/><Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0"/></Style>
+    <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{StaticResource MutedBrush}"/></Style>
+    <Style Selector="TextBlock.section"><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Margin" Value="0,3,0,6"/></Style>
+    <Style Selector="Border.card"><Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="5"/><Setter Property="Padding" Value="10"/></Style>
+    <Style Selector="TextBox.code"><Setter Property="FontFamily" Value="Consolas, Menlo, monospace"/><Setter Property="FontSize" Value="11"/></Style>
+    <Style Selector="TabItem"><Setter Property="FontSize" Value="13"/><Setter Property="Padding" Value="12,8"/></Style>
+    <Style Selector="Expander"><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="Background" Value="#2B2D31"/></Style>
+    <Style Selector="Expander.navigation"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Padding" Value="0"/></Style>
+    <Style Selector="Expander.navigation /template/ ToggleButton"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="MinHeight" Value="28"/><Setter Property="Padding" Value="8,4"/></Style>
+    <Style Selector="Expander.navigation /template/ Border"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/></Style>
+    <Style Selector="dock|DocumentTabStrip"><Setter Property="IsVisible" Value="False"/></Style>
+    <Style Selector="Border.category"><Setter Property="BorderBrush" Value="#41434A"/><Setter Property="BorderThickness" Value="0,0,0,1"/><Setter Property="Padding" Value="0,3"/></Style>
+    <Style Selector="ListBox.repository-tabs"><Setter Property="Background" Value="Transparent"/></Style>
+    <Style Selector="ListBox.repository-tabs ListBoxItem"><Setter Property="BorderBrush" Value="#41434A"/><Setter Property="BorderThickness" Value="0,0,1,0"/><Setter Property="Padding" Value="12,2"/></Style>
+    <Style Selector="ListBox.repository-tabs ListBoxItem:selected /template/ ContentPresenter"><Setter Property="Background" Value="#3D424D"/></Style>
+    <Style Selector="dock|ToolDockControl"><Setter Property="Background" Value="#2B2D31"/></Style>
+    <Style Selector="Button.workspace.active"><Setter Property="Background" Value="#454750"/><Setter Property="BorderBrush" Value="#999BA4"/></Style>
+    <Style Selector="Button.workspace.primary:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="#5D606A"/></Style>
+    <Style Selector="Button.workspace.primary:disabled"><Setter Property="Opacity" Value="0.5"/></Style>
+    <Style Selector="ListBox.repository-tabs ListBoxItem:selected /template/ ContentPresenter"><Setter Property="Background" Value="#404249"/></Style>
+    <Style Selector="ListBox.repository-tabs ListBoxItem:selected"><Setter Property="BorderBrush" Value="#9597A2"/><Setter Property="BorderThickness" Value="0,0,0,2"/></Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="#35373C"/></Style>
+    <Style Selector="Border.card"><Setter Property="Background" Value="#313338"/><Setter Property="CornerRadius" Value="6"/></Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter"><Setter Property="Background" Value="{StaticResource SelectionBrush}"/></Style>
+    <Style Selector="ListBox.repository-tabs ListBoxItem:selected /template/ ContentPresenter"><Setter Property="Background" Value="{StaticResource SelectionBrush}"/></Style>
+    <Style Selector="ListBox.repository-tabs ListBoxItem:selected"><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/></Style>
+    <Style Selector="Button.workspace.active"><Setter Property="Background" Value="{StaticResource SelectionBrush}"/><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/><Setter Property="Foreground" Value="#D9E7F8"/></Style>
+    <Style Selector="TextBox:focus /template/ Border#PART_BorderElement"><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/></Style>
+    <Style Selector="TextBox:focus"><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/></Style>
+    <Style Selector="Button.workspace.primary"><Setter Property="Background" Value="#456185"/><Setter Property="BorderBrush" Value="#6D8EB8"/><Setter Property="Foreground" Value="#F0F4FA"/></Style>
+    <Style Selector="Button.workspace.primary:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="#547398"/></Style>
+    <Style Selector="Button.workspace.primary:disabled /template/ ContentPresenter"><Setter Property="Background" Value="#383B42"/><Setter Property="BorderBrush" Value="#41434A"/></Style>
+    <Style Selector="Button.review-navigation"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Foreground" Value="#B5BAC1"/><Setter Property="Padding" Value="10,5"/></Style>
+    <Style Selector="Button.review-navigation.active"><Setter Property="Background" Value="{StaticResource SelectionBrush}"/><Setter Property="BorderThickness" Value="0,0,0,2"/><Setter Property="Foreground" Value="#D9E7F8"/></Style>
+    <Style Selector="Button.review-navigation:pointerover /template/ ContentPresenter"><Setter Property="Background" Value="#373C46"/></Style>
+    <Style Selector="ListBox.file-list ListBoxItem"><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="3,0,0,0"/><Setter Property="Padding" Value="5,6"/></Style>
+    <Style Selector="ListBox.file-list"><Setter Property="ScrollViewer.AllowAutoHide" Value="False"/><Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/></Style>
+    <Style Selector="ListBox.file-list ListBoxItem:selected /template/ ContentPresenter"><Setter Property="Background" Value="{StaticResource SelectionBrush}"/><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/><Setter Property="BorderThickness" Value="3,0,0,0"/></Style>
+    <Style Selector="ListBox.branch-list ListBoxItem:selected /template/ ContentPresenter"><Setter Property="Background" Value="{StaticResource SelectionBrush}"/><Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/><Setter Property="BorderThickness" Value="2,0,0,0"/></Style>
+    <Style Selector="Button.branch-picker"><Setter Property="BorderBrush" Value="#526985"/><Setter Property="Foreground" Value="#D9E7F8"/></Style>
+    <Style Selector="Button.review-action:disabled /template/ ContentPresenter"><Setter Property="Background" Value="#292C32"/><Setter Property="BorderBrush" Value="#393E47"/><Setter Property="Foreground" Value="#777F8A"/></Style>
+  </Application.Styles>
+</Application>
