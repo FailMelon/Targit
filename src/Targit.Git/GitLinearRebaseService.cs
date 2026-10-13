@@ -90,6 +90,8 @@ public sealed class GitLinearRebaseService
                 {
                     var tip = repo.Head.Tip!;
                     var previous = tip.Parents.Single();
+                    if (previous.Id == target.Tip.Id)
+                        throw new InvalidOperationException("Cannot squash or fixup into the target branch.");
                     var combinedMessage = action == GitRebaseAction.Squash
                         ? previous.Message.TrimEnd() + "\n\n" + commit.Message.TrimEnd()
                         : previous.Message;
