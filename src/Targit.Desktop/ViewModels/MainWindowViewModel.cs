@@ -56,6 +56,8 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string commitSearchSummary = "Select an action to inspect.";
     [ObservableProperty] private string commitSearchQuery = "";
 
+    [ObservableProperty] private string ancestryCommitSha = "";
+    [ObservableProperty] private string ancestrySummary = "Enter a commit SHA to inspect its parents.";
     private readonly GitCommitGraphService _commitGraph = new();
     [ObservableProperty] private string commitGraphSummary = "Load the commit graph to inspect parent relationships and refs.";
     private readonly GitRebaseConflictService _rebaseConflicts = new();
@@ -1240,6 +1242,25 @@ public partial class MainWindowViewModel : ObservableObject
         {
             FileLog.Error(e, "Inspect tags");
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = TagInspectionSummary = e.Message;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InspectAncestryAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var result = await new GitCommitAncestryService().InspectAsync(repo.Path, AncestryCommitSha);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path) return;
+            AncestrySummary = $"Commit: {result.Sha}{Environment.NewLine}Subject: {result.Subject}{Environment.NewLine}Merge: {result.IsMergeCommit}{Environment.NewLine}Parents: {(result.Parents.Count == 0 ? "(root)" : string.Join(", ", result.Parents))}";
+            Status = "Commit ancestry inspected.";
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Inspect commit ancestry");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = AncestrySummary = e.Message;
         }
     }
 
