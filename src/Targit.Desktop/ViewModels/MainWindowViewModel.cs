@@ -58,6 +58,36 @@ public partial class MainWindowViewModel : ObservableObject
         catch (Exception e) { FileLog.Error(e, "Rebase branch"); Status = e.Message; }
         finally { _gitMutationLock.Release(); }
     }
+    private readonly GitSequencerRecoveryService _sequencerRecovery = new();
+    [ObservableProperty] private string sequencerCommitMessage = "Resolve operation";
+    [RelayCommand]
+    private async Task ContinueSequencerAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            var sha = await _sequencerRecovery.ContinueAsync(repo.Path, SequencerCommitMessage);
+            await RefreshAsync();
+            Status = $"Operation committed: {sha[..7]}";
+        }
+        catch (Exception e) { FileLog.Error(e, "Continue cherry-pick/revert"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
+    [RelayCommand]
+    private async Task AbortSequencerAsync()
+    {
+        if (SelectedRepository is not { } repo) return;
+        await _gitMutationLock.WaitAsync();
+        try
+        {
+            await _sequencerRecovery.AbortAsync(repo.Path);
+            await RefreshAsync();
+            Status = "Cherry-pick/revert aborted.";
+        }
+        catch (Exception e) { FileLog.Error(e, "Abort cherry-pick/revert"); Status = e.Message; }
+        finally { _gitMutationLock.Release(); }
+    }
     private readonly GitMergeService _mergeOperation = new();
     private readonly GitMergeLifecycleService _mergeLifecycle = new();
     private readonly GitConflictResolutionService _conflictResolution = new();
