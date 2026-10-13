@@ -37,6 +37,17 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 break;
             case "history":
                 AddList(root, nameof(workspace.CommitLines), nameof(workspace.SelectedCommitLine));
+                root.Children.Add(new TextBlock { Text = "Commit descendants inspection", FontWeight = FontWeight.SemiBold });
+                var descendantsInput = new TextBox { Watermark = "Ancestor commit SHA" };
+                descendantsInput.Bind(TextBox.TextProperty, new Binding(nameof(workspace.DescendantCommitSha)) { Mode = BindingMode.TwoWay });
+                root.Children.Add(descendantsInput);
+                var descendantsAction = new Button { Content = "Inspect descendants" };
+                descendantsAction.Bind(Button.CommandProperty, new Binding(nameof(workspace.InspectDescendantsCommand)));
+                root.Children.Add(descendantsAction);
+                var descendantsResult = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 100, TextWrapping = TextWrapping.Wrap };
+                descendantsResult.Bind(TextBox.TextProperty, new Binding(nameof(workspace.DescendantSummary)));
+                root.Children.Add(descendantsResult);
+
                 root.Children.Add(new TextBlock { Text = "Commit ancestry inspection", FontWeight = FontWeight.SemiBold });
                 var ancestryInput = new TextBox { Watermark = "Commit SHA" };
                 ancestryInput.Bind(TextBox.TextProperty, new Binding(nameof(workspace.AncestryCommitSha)) { Mode = BindingMode.TwoWay });
