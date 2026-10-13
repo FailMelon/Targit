@@ -14,6 +14,12 @@ public sealed class GitLinearRebaseService
 
     public Task<string> RebaseWithMessagesAsync(string repositoryPath, string targetBranch,
         IReadOnlyList<GitRebaseStep>? plan, IReadOnlyDictionary<string, string>? messages,
+        CancellationToken cancellationToken = default) => RebaseWithEditsAsync(repositoryPath, targetBranch, plan, messages, null, cancellationToken);
+
+    /// <summary>Replays an Edit step using explicitly supplied file content and amends its commit.</summary>
+    public Task<string> RebaseWithEditsAsync(string repositoryPath, string targetBranch,
+        IReadOnlyList<GitRebaseStep>? plan, IReadOnlyDictionary<string, string>? messages,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>>? edits,
         CancellationToken cancellationToken = default) => Task.Run(() =>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
@@ -49,8 +55,9 @@ public sealed class GitLinearRebaseService
             if (plan.Count != commits.Length || !plan.Select(x => x.CommitSha).OrderBy(x => x, StringComparer.Ordinal)
                 .SequenceEqual(commits.Select(x => x.Sha).OrderBy(x => x, StringComparer.Ordinal)))
                 throw new InvalidOperationException("The rebase plan must contain each outgoing commit exactly once.");
-            if (plan.Any(x => x.Action == GitRebaseAction.Edit))
-                throw new NotSupportedException("Edit requires a paused workflow and cannot be replayed automatically.");
+            if (plan.Any(x => x.Action == GitRebaseAction.Edit &&
+                (edits is null || !edits.TryGetValue(x.CommitSha, out var changes) || changes.Count == 0)))
+                throw new InvalidOperationException("Every Edit step needs explicit file changes.");
             if (plan.Any(x => x.Action == GitRebaseAction.Reword &&
                 (messages is null || !messages.TryGetValue(x.CommitSha, out var message) || string.IsNullOrWhiteSpace(message))))
                 throw new InvalidOperationException("Every Reword action needs a non-empty replacement commit message.");
@@ -77,6 +84,28 @@ public sealed class GitLinearRebaseService
                     new CherryPickOptions { CommitOnSuccess = true });
                 if (result.Status != CherryPickStatus.CherryPicked)
                     throw new InvalidOperationException($"Rebase stopped at {commit.Sha[..7]}: {result.Status}. Original branch is unchanged.");
+                if (action == GitRebaseAction.Edit)
+                {
+                    var current = repo.Head.Tip!;
+                    foreach (var change in edits![commit.Sha])
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var root = Path.GetFullPath(repo.Info.WorkingDirectory);
+                        var full = Path.GetFullPath(Path.Combine(root, change.Key));
+                        if (Path.IsPathRooted(change.Key) ||
+                            !full.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar,
+                                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                            throw new InvalidOperationException("Edited path must remain inside the repository.");
+                        Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+                        File.WriteAllText(full, change.Value);
+                        Commands.Stage(repo, change.Key);
+                    }
+                    var tree = repo.Index.WriteToTree();
+                    var amended = repo.ObjectDatabase.CreateCommit(current.Author, current.Committer,
+                        current.Message, tree, current.Parents, false);
+                    repo.Refs.UpdateTarget(repo.Head.Reference.ResolveToDirectReference(), amended.Id);
+                    repo.Reset(ResetMode.Hard, amended);
+                }
                 if (action == GitRebaseAction.Reword)
                 {
                     var current = repo.Head.Tip!;
