@@ -9,7 +9,12 @@ public sealed class GitLinearRebaseService
         CancellationToken cancellationToken = default) => RebaseWithPlanAsync(repositoryPath, targetBranch, null, cancellationToken);
 
     public Task<string> RebaseWithPlanAsync(string repositoryPath, string targetBranch,
-        IReadOnlyList<GitRebaseStep>? plan, CancellationToken cancellationToken = default) => Task.Run(() =>
+        IReadOnlyList<GitRebaseStep>? plan, CancellationToken cancellationToken = default) =>
+        RebaseWithMessagesAsync(repositoryPath, targetBranch, plan, null, cancellationToken);
+
+    public Task<string> RebaseWithMessagesAsync(string repositoryPath, string targetBranch,
+        IReadOnlyList<GitRebaseStep>? plan, IReadOnlyDictionary<string, string>? messages,
+        CancellationToken cancellationToken = default) => Task.Run(() =>
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(targetBranch);
@@ -44,8 +49,11 @@ public sealed class GitLinearRebaseService
             if (plan.Count != commits.Length || !plan.Select(x => x.CommitSha).OrderBy(x => x, StringComparer.Ordinal)
                 .SequenceEqual(commits.Select(x => x.Sha).OrderBy(x => x, StringComparer.Ordinal)))
                 throw new InvalidOperationException("The rebase plan must contain each outgoing commit exactly once.");
-            if (plan.Any(x => x.Action is GitRebaseAction.Edit or GitRebaseAction.Reword))
-                throw new NotSupportedException("Edit and Reword require user-supplied content and are not supported by this executor.");
+            if (plan.Any(x => x.Action == GitRebaseAction.Edit))
+                throw new NotSupportedException("Edit requires a paused workflow and cannot be replayed automatically.");
+            if (plan.Any(x => x.Action == GitRebaseAction.Reword &&
+                (messages is null || !messages.TryGetValue(x.CommitSha, out var message) || string.IsNullOrWhiteSpace(message))))
+                throw new InvalidOperationException("Every Reword action needs a non-empty replacement commit message.");
             commits = plan.Where(x => x.Action != GitRebaseAction.Drop)
                 .Select(x => commits.Single(c => c.Sha == x.CommitSha)).ToArray();
             if (commits.Length == 0)
@@ -67,6 +75,15 @@ public sealed class GitLinearRebaseService
                     new CherryPickOptions { CommitOnSuccess = true });
                 if (result.Status != CherryPickStatus.CherryPicked)
                     throw new InvalidOperationException($"Rebase stopped at {commit.Sha[..7]}: {result.Status}. Original branch is unchanged.");
+                if (action == GitRebaseAction.Reword)
+                {
+                    var current = repo.Head.Tip!;
+                    var rewrittenMessage = messages![commit.Sha];
+                    var rewrittenCommit = repo.ObjectDatabase.CreateCommit(current.Author, current.Committer,
+                        rewrittenMessage, current.Tree, current.Parents, false);
+                    repo.Refs.UpdateTarget(repo.Head.Reference.ResolveToDirectReference(), rewrittenCommit.Id);
+                    repo.Reset(ResetMode.Hard, rewrittenCommit);
+                }
                 if (action is GitRebaseAction.Squash or GitRebaseAction.Fixup)
                 {
                     var tip = repo.Head.Tip!;
