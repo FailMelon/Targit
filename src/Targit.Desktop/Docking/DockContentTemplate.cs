@@ -46,18 +46,6 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 root.Children.Add(result41);
 
 
-                root.Children.Add(new TextBlock { Text = "Phase 39 inspection", FontWeight = FontWeight.SemiBold });
-                var input39 = new TextBox { Watermark = "Repository-relative file path" };
-                input39.Bind(TextBox.TextProperty, new Binding(nameof(workspace.BlamePath)) { Mode = BindingMode.TwoWay });
-                root.Children.Add(input39);
-                var action39 = new Button { Content = "Inspect Blame" };
-                action39.Bind(Button.CommandProperty, new Binding(nameof(workspace.InspectBlameCommand)));
-                root.Children.Add(action39);
-                var result39 = new TextBox { IsReadOnly = true, AcceptsReturn = true, MinHeight = 100, TextWrapping = TextWrapping.Wrap };
-                result39.Bind(TextBox.TextProperty, new Binding(nameof(workspace.BlameSummary)));
-                root.Children.Add(result39);
-
-
                 root.Children.Add(new TextBlock { Text = "Phase 40 inspection", FontWeight = FontWeight.SemiBold });
                 var input40 = new TextBox { Watermark = "Repository-relative file path" };
                 input40.Bind(TextBox.TextProperty, new Binding(nameof(workspace.FileHistoryPath)) { Mode = BindingMode.TwoWay });
