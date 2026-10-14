@@ -17,9 +17,7 @@ public sealed class GitCommitGraphService
             .Concat(repo.Tags.Select(t => t.PeeledTarget as Commit).Where(c => c is not null)).Append(repo.Head.Tip).Where(c => c is not null).DistinctBy(c => c!.Sha).ToArray() :
             [reference == "HEAD" ? repo.Head.Tip : repo.Branches[reference]?.Tip ?? repo.Lookup<Commit>(reference)];
         if (tips.All(c => c is null)) return new GitHistoryPage([], false);
-        var labels = repo.Branches.Where(b => b.Tip is not null).Select(b => (b.Tip!.Sha, b.FriendlyName))
-            .Concat(repo.Tags.Where(t => t.PeeledTarget is Commit).Select(t => (t.PeeledTarget.Sha, "tag:" + t.FriendlyName)))
-            .GroupBy(entry => entry.Sha).ToDictionary(g => g.Key, g => g.Select(e => e.Item2).ToArray());
+        var labels = GitDisplayReferences.Labels(repo).GroupBy(entry => entry.Sha).ToDictionary(g => g.Key, g => g.Select(e => e.Name).ToArray());
         var commits = repo.Commits.QueryBy(new CommitFilter { IncludeReachableFrom = tips.Where(t => t is not null), SortBy = CommitSortStrategies.Topological | CommitSortStrategies.Time })
             .Skip(offset).Take(pageSize + 1).Select(c =>
             {
@@ -36,22 +34,11 @@ public sealed class GitCommitGraphService
             throw new ArgumentOutOfRangeException(nameof(maxCount));
         using var repo = new Repository(repositoryPath);
         var labels = new Dictionary<string, List<string>>(StringComparer.Ordinal);
-        foreach (var branch in repo.Branches)
+        foreach (var reference in GitDisplayReferences.Labels(repo))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (branch.Tip is null) continue;
-            if (!labels.TryGetValue(branch.Tip.Sha, out var names))
-                labels[branch.Tip.Sha] = names = new List<string>();
-            names.Add(branch.FriendlyName);
-        }
-        foreach (var tag in repo.Tags)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var commit = tag.PeeledTarget as Commit;
-            if (commit is null) continue;
-            if (!labels.TryGetValue(commit.Sha, out var names))
-                labels[commit.Sha] = names = new List<string>();
-            names.Add("tag:" + tag.FriendlyName);
+            if (!labels.TryGetValue(reference.Sha, out var names)) labels[reference.Sha] = names = new List<string>();
+            names.Add(reference.Name);
         }
         return repo.Commits.QueryBy(new CommitFilter { SortBy = CommitSortStrategies.Topological | CommitSortStrategies.Time }).Take(maxCount)
             .Select(c => { cancellationToken.ThrowIfCancellationRequested(); return new GitCommitNode(c.Sha, c.MessageShort, c.Author.Name, c.Author.When,

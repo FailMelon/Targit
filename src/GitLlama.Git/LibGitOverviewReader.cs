@@ -26,7 +26,7 @@ public sealed class LibGitOverviewReader : IRepositoryOverviewReader
                     .Select(entry => new ChangedFile(entry.FilePath, entry.State.ToString())).ToArray();
 
             cancellationToken.ThrowIfCancellationRequested();
-            var branches = repo.Branches
+            var branches = GitDisplayReferences.Branches(repo)
                 .Select(branch => branch.FriendlyName)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray();

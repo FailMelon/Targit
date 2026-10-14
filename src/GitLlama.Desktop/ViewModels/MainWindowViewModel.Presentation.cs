@@ -10,6 +10,7 @@ namespace GitLlama.Desktop.ViewModels;
 public partial class MainWindowViewModel
 {
     private IReadOnlyList<HistoryRow> _allHistoryRows = [];
+    private string? _currentHistoryHeadSha;
     public ObservableCollection<HistoryRow> HistoryRows { get; } = [];
     public ObservableCollection<RepositoryInfo> FilteredRepositories { get; } = [];
     public ObservableCollection<string> FilteredBranches { get; } = [];
@@ -116,7 +117,7 @@ public partial class MainWindowViewModel
     }
     private void SetHistoryRows(IReadOnlyList<GitCommitNode> nodes)
     {
-        _allHistoryRows = HistoryRow.Layout(nodes);
+        _allHistoryRows = HistoryRow.Layout(nodes, CurrentBranch, _currentHistoryHeadSha);
         HistoryGraphWidth = _allHistoryRows.FirstOrDefault()?.GraphWidth ?? 84;
         FilterPresentationHistory();
     }

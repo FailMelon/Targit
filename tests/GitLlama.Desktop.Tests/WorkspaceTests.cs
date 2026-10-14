@@ -130,6 +130,28 @@ public sealed class WorkspaceTests
     }
 
     [AvaloniaFact]
+    public async Task GraphHighlightsCheckedOutLocalBranchAfterSwitchAndRefresh()
+    {
+        using var fixture = new WorkspaceFixture(); var vm = await fixture.OpenAsync(); vm.AutoRefresh = false;
+        using var repo = new Repository(fixture.RepositoryPath);
+        var initial = Assert.Single(vm.HistoryRows, row => row.IsCurrentBranchTip); Assert.Equal(repo.Head.Tip.Sha, initial.Sha);
+        Assert.True(initial.ReferenceLabels.First().IsCurrentBranch); Assert.Equal("✓ " + repo.Head.FriendlyName, initial.ReferenceLabels.First().DisplayName);
+        vm.SelectedHistoryRow = vm.HistoryRows.Last(); Assert.True(initial.IsCurrentBranchTip);
+        File.WriteAllText(Path.Combine(fixture.RepositoryPath, "src/Auth.cs"), repo.Head.Tip["src/Auth.cs"].Target is Blob blob ? blob.GetContentText() : "");
+        File.WriteAllText(Path.Combine(fixture.RepositoryPath, "README.md"), ((Blob)repo.Head.Tip["README.md"].Target).GetContentText());
+        Commands.Checkout(repo, "feature/authentication"); await vm.RefreshCommand.ExecuteAsync(null);
+        var current = Assert.Single(vm.HistoryRows, row => row.IsCurrentBranchTip); Assert.Equal("feature/authentication", vm.CurrentBranch); Assert.Equal(repo.Head.Tip.Sha, current.Sha);
+        Assert.DoesNotContain(vm.HistoryRows.SelectMany(row => row.ReferenceLabels), label => label.Name == initial.CurrentLocalBranch && label.IsCurrentBranch);
+        vm.HistorySearch = current.Subject; Assert.True(Assert.Single(vm.HistoryRows, row => row.IsCurrentBranchTip).IsCurrentBranchTip); vm.HistorySearch = "";
+        var template = new DockContentTemplate(vm); Avalonia.Application.Current!.DataTemplates.Add(template);
+        var window = new MainWindow(fixture.SettingsPath) { DataContext = vm };
+        try { window.Show(); window.ShowDocument("History"); Dispatcher.UIThread.RunJobs(); SavePreview(window, "checked-out-branch.png"); }
+        finally { window.Close(); Avalonia.Application.Current.DataTemplates.Remove(template); }
+        Commands.Checkout(repo, repo.Head.Tip); await vm.RefreshCommand.ExecuteAsync(null); Assert.DoesNotContain(vm.HistoryRows, row => row.IsCurrentBranchTip);
+        Assert.Contains(vm.HistoryRows.Single(row => row.Sha == repo.Head.Tip.Sha).Labels, label => label == "HEAD");
+    }
+
+    [AvaloniaFact]
     public async Task DeletedFilesCountAsStagedAndCanBeCommitted()
     {
         using var fixture = new WorkspaceFixture();

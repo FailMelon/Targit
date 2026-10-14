@@ -19,10 +19,7 @@ public sealed class GitHistoryWorkspaceService
         using var repo = new Repository(repositoryPath);
         var commit = repo.Lookup<Commit>(sha.Trim())
             ?? throw new ArgumentException("Commit not found.", nameof(sha));
-        var labels = repo.Branches.Where(b => b.Tip?.Sha == commit.Sha)
-            .Select(b => b.FriendlyName)
-            .Concat(repo.Tags.Where(t => (t.PeeledTarget as Commit)?.Sha == commit.Sha)
-                .Select(t => "tag:" + t.FriendlyName))
+        var labels = GitDisplayReferences.Labels(repo).Where(reference => reference.Sha == commit.Sha).Select(reference => reference.Name)
             .OrderBy(x => x, StringComparer.Ordinal).ToArray();
         cancellationToken.ThrowIfCancellationRequested();
         var patch = repo.Diff.Compare<Patch>(commit.Parents.FirstOrDefault()?.Tree, commit.Tree);

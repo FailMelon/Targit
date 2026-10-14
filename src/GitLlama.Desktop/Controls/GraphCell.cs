@@ -31,6 +31,8 @@ public sealed class GraphCell : Control
             }
             context.DrawGeometry(null, new Pen(Colors[edge.ColorLane % Colors.Length], 1.6), geometry);
         }
-        context.DrawEllipse(Colors[row.Lane % Colors.Length], null, new Point(X(row.Lane), Bounds.Height / 2), 4.5, 4.5);
+        var center = new Point(X(row.Lane), Bounds.Height / 2);
+        if (row.IsCurrentBranchTip) context.DrawEllipse(null, new Pen(Brush.Parse("#8DAED5"), 2), center, 7.5, 7.5);
+        context.DrawEllipse(Colors[row.Lane % Colors.Length], null, center, 4.5, 4.5);
     }
 }

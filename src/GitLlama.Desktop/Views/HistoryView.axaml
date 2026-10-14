@@ -21,9 +21,9 @@
               <controls:GraphCell DockPanel.Dock="Left" Width="{Binding GraphWidth}" Row="{Binding}"/>
               <Grid ColumnDefinitions="*,135,112" Margin="8,0" VerticalAlignment="Center">
                 <DockPanel Margin="0,0,12,0">
-                  <ItemsControl DockPanel.Dock="Right" ItemsSource="{Binding Labels}" Margin="6,0,0,0" MaxWidth="200">
+                  <ItemsControl DockPanel.Dock="Right" ItemsSource="{Binding ReferenceLabels}" Margin="6,0,0,0" MaxWidth="200">
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate><DataTemplate><Border Background="#39313F" BorderBrush="#665274" BorderThickness="1" CornerRadius="3" Padding="5,2"><TextBlock Text="{Binding}" FontSize="10" TextTrimming="CharacterEllipsis" MaxWidth="120"/></Border></DataTemplate></ItemsControl.ItemTemplate>
+                    <ItemsControl.ItemTemplate><DataTemplate><Border Background="{Binding Background}" BorderBrush="{Binding BorderBrush}" BorderThickness="1" CornerRadius="3" Padding="5,2" ToolTip.Tip="{Binding ToolTip}"><TextBlock Text="{Binding DisplayName}" FontSize="10" TextTrimming="CharacterEllipsis" MaxWidth="120"/></Border></DataTemplate></ItemsControl.ItemTemplate>
                   </ItemsControl>
                   <TextBlock Text="{Binding Subject}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                 </DockPanel>

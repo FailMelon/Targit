@@ -669,6 +669,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var snapshot = await _sessions.GetSession(repository.Path).OpenAsync();
             if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            _currentHistoryHeadSha = snapshot.HeadSha;
             CurrentBranch = snapshot.Branch ?? "Detached HEAD";
             Status = $"Opened repository: {repository.Name}";
             await RefreshAsync();
@@ -760,6 +761,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var snapshot = await _sessions.GetSession(repo.Path).OpenAsync();
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+            _currentHistoryHeadSha = snapshot.HeadSha;
             CurrentBranch = snapshot.Branch ?? "Detached HEAD";
             var overview = await _sessions.GetSession(repo.Path).RefreshAsync();
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
