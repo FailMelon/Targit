@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0
 - Show commit author pictures in History and the inspector, and owner pictures or host icons for remotes. Authors resolve through GitHub private addresses, Gravatar, then the commit's GitHub account across each GitHub remote, with initials as the fallback. Pictures are cached for 7 days and can be turned off in General settings.
 - Move the working changes button to the right of the repository toolbar; remove the Changes, Reflog and Files sections from the sidebar (still available from the View menu).
 - Add Azure DevOps Services integration through Microsoft Entra/MSAL device sign-in, silent renewal, encrypted per-profile cache restore, organization repository discovery and clone actions. Scope bearer credentials to the connected organization's HTTPS URLs for Git operations; keep SSH separate. Azure pull requests/Boards and on-premises Azure DevOps Server are outside this integration's current scope.
