@@ -4,7 +4,7 @@
       <ScrollViewer AllowAutoHide="False" IsVisible="{Binding !IsWorkingTreeInspector}" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="16" Spacing="14">
           <TextBlock Text="{Binding HistorySubject}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"/>
-          <Border Classes="card"><SelectableTextBlock Text="{Binding HistoryMessage}" TextWrapping="Wrap"/></Border>
+          <Border Classes="card" IsVisible="{Binding HasHistoryMessage}"><SelectableTextBlock Text="{Binding HistoryMessage}" TextWrapping="Wrap"/></Border>
           <Grid ColumnDefinitions="38,*" ColumnSpacing="12"><Border Background="{Binding HistoryAvatar.Background, FallbackValue=#41434A}" CornerRadius="18" Width="36" Height="36" ClipToBounds="True" VerticalAlignment="Top"><Panel><TextBlock Text="{Binding HistoryAvatar.Initials, FallbackValue=●}" FontSize="14" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/><Image Source="{Binding HistoryAvatar.Image}" Stretch="UniformToFill"/></Panel></Border><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding HistoryAuthor}"/><TextBlock Text="{Binding HistoryDate}" FontSize="11" Classes="muted"/><SelectableTextBlock Text="{Binding HistorySha}" FontSize="11" Classes="muted"/></StackPanel></Grid>
           <TextBlock Text="Changed files" Classes="section"/>
           <ListBox Classes="file-list" ItemsSource="{Binding HistoryFileRows}" SelectedItem="{Binding SelectedHistoryFileRow}" MaxHeight="300"/>

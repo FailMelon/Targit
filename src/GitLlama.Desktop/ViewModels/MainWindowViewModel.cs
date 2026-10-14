@@ -378,7 +378,7 @@ public partial class MainWindowViewModel : ObservableObject
             HistoryAvatar = _allHistoryRows.FirstOrDefault(row => row.Sha == commit.Sha)?.AuthorAvatar ?? HistoryAvatar;
             HistorySha = commit.Sha[..7];
             HistoryDate = commit.Date.ToString("yyyy-MM-dd HH:mm:ss zzz");
-            HistoryMessage = commit.Message;
+            HistoryMessage = CommitDescription(commit.Message);
             HistoryCommitDetails = $"Commit: {commit.Sha}{Environment.NewLine}Author: {commit.Author}{Environment.NewLine}" +
                 $"Date: {commit.Date:yyyy-MM-dd HH:mm:ss zzz}{Environment.NewLine}" +
                 $"Parents: {(commit.Parents.Count == 0 ? "(root)" : string.Join(", ", commit.Parents))}{Environment.NewLine}" +

@@ -38,7 +38,15 @@ public partial class MainWindowViewModel
     [ObservableProperty] private AvatarImage? historyAvatar;
     [ObservableProperty] private string historySha = "";
     [ObservableProperty] private string historyDate = "";
-    [ObservableProperty] private string historyMessage = "Choose a commit in History to inspect its message and changed files.";
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasHistoryMessage))] private string historyMessage = "Choose a commit in History to inspect its message and changed files.";
+    public bool HasHistoryMessage => !string.IsNullOrWhiteSpace(HistoryMessage);
+    // The subject is shown as the heading, so the description is everything after its paragraph.
+    internal static string CommitDescription(string message)
+    {
+        var normalized = message.Replace("\r\n", "\n").Trim();
+        var end = normalized.IndexOf("\n\n", StringComparison.Ordinal);
+        return end < 0 ? "" : normalized[(end + 2)..].Trim();
+    }
     [ObservableProperty] private bool isWorkingTreeInspector;
     [ObservableProperty] private int stagedFileCount;
     [ObservableProperty] private double historyGraphWidth = 84;
@@ -159,7 +167,7 @@ public partial class MainWindowViewModel
             return;
         }
         if (!IsUpdatingContextSnapshot) { IsWorkingTreeInspector = false; IsFileReview = false; CenterSection = "History"; }
-        HistorySubject = value.Subject; HistoryAuthor = value.Author; HistoryAvatar = value.AuthorAvatar;
+        HistorySubject = value.Subject; HistoryAuthor = value.Author; HistoryAvatar = value.AuthorAvatar; HistoryMessage = "";
         HistorySha = value.ShortSha; HistoryDate = value.FullDate;
         var line = _historyGraphShas.FirstOrDefault(e => e.Value == value.Sha).Key;
         if (line is not null)
