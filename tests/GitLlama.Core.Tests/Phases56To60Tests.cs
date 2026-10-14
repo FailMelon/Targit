@@ -36,7 +36,8 @@ public sealed class Phases56To60Tests
             );
             Assert.Equal("unstaged\n", File.ReadAllText(file));
             await service.DiscardUnstagedAsync(path, "sample.txt", "DISCARD");
-            Assert.Equal("staged\n", File.ReadAllText(file));
+            // Discard writes the file as checkout would, so line endings follow core.autocrlf.
+            Assert.Equal("staged\n", File.ReadAllText(file).Replace("\r\n", "\n"));
             using var check = new Repository(path);
             Assert.True((check.RetrieveStatus("sample.txt") & FileStatus.ModifiedInIndex) != 0);
         }

@@ -140,7 +140,7 @@ public partial class InspectorView : UserControl
 
     private void WorkingFileContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        if (sender is not ListBox list || DataContext is not MainWindowViewModel { UsesLfs: true } vm)
+        if (sender is not ListBox list || DataContext is not MainWindowViewModel vm)
         {
             return;
         }
@@ -154,7 +154,15 @@ public partial class InspectorView : UserControl
             return;
         }
 
-        list.ContextMenu = new ContextMenu { ItemsSource = LfsLockMenu.Items(this, vm, file.Path).ToArray() };
+        list.ContextMenu = new ContextMenu
+        {
+            ItemsSource = WorkingFileMenu.Items(
+                this,
+                vm,
+                file,
+                inStagedList: ReferenceEquals(list.ItemsSource, vm.StagedFiles)
+            ),
+        };
         list.ContextMenu.Open(list);
         e.Handled = true;
     }

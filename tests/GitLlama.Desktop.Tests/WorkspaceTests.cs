@@ -280,7 +280,11 @@ public sealed class WorkspaceTests
             Assert.Equal(2, repository.Head.Tip.Parents.Count());
             Assert.Equal("merge@example.invalid", repository.Head.Tip.Author.Email);
             Assert.Contains("incoming", repository.Head.Tip.MessageShort);
-            Assert.Equal("theirs\n", File.ReadAllText(Path.Combine(fixture.RepositoryPath, "conflict.txt")));
+            // Using a whole side writes the file as checkout would, so line endings follow core.autocrlf.
+            Assert.Equal(
+                "theirs\n",
+                File.ReadAllText(Path.Combine(fixture.RepositoryPath, "conflict.txt")).Replace("\r\n", "\n")
+            );
         }
     }
 
@@ -363,6 +367,92 @@ public sealed class WorkspaceTests
         Assert.Empty(vm.ConflictedFiles);
         Assert.True(vm.CanFinishMerge);
         Assert.Equal("theirs\n", File.ReadAllText(Path.Combine(fixture.RepositoryPath, "b.txt")).Replace("\r\n", "\n"));
+    }
+
+    [AvaloniaFact]
+    public async Task DiscardFromTheFileMenuRemovesTheFileFromUnstaged()
+    {
+        using var fixture = new WorkspaceFixture();
+        var vm = await fixture.OpenAsync();
+        // Viewing the file first keeps its diff loading in the background, as it does when clicked in the app.
+        vm.SelectedWorkingFile = vm.WorkingFiles.Single(file => file.Path == "README.md");
+        Assert.True(vm.IsFileReview);
+
+        await vm.DiscardFileAsync(vm.WorkingFiles.Single(file => file.Path == "README.md"));
+
+        // The file has no changes left, so the centre goes back to the history graph.
+        Assert.False(vm.IsFileReview);
+        Assert.Equal("History", vm.CenterSection);
+        Assert.Null(vm.SelectedWorkingFile);
+        Assert.DoesNotContain(vm.UnstagedFiles, file => file.Path == "README.md");
+        Assert.Contains(vm.UnstagedFiles, file => file.Path == "src/Auth.cs");
+        using var repository = new Repository(fixture.RepositoryPath);
+        Assert.Equal(FileStatus.Unaltered, repository.RetrieveStatus("README.md"));
+    }
+
+    [AvaloniaFact]
+    public async Task WorkingFileMenuOffersFileActions()
+    {
+        using var fixture = new WorkspaceFixture();
+        File.WriteAllText(Path.Combine(fixture.RepositoryPath, "notes.draft"), "new");
+        var vm = await fixture.OpenAsync();
+        await vm.RefreshCommand.ExecuteAsync(null);
+        var host = new Window();
+        host.Show();
+        try
+        {
+            string[] Headers(object[] items) => items.OfType<MenuItem>().Select(item => (string)item.Header!).ToArray();
+
+            var readme = vm.WorkingFiles.Single(file => file.Path == "README.md");
+            Assert.Equal(
+                [
+                    "Stage",
+                    "Discard changes…",
+                    "Ignore",
+                    "Stash file",
+                    "File history",
+                    "File blame",
+                    "Open file",
+                    "Show in folder",
+                    "Copy file path",
+                    "Copy full path",
+                    "Create patch from file changes…",
+                    "Delete file…",
+                ],
+                Headers(WorkingFileMenu.Items(host, vm, readme, inStagedList: false))
+            );
+            Assert.Equal("Unstage", Headers(WorkingFileMenu.Items(host, vm, readme, inStagedList: true))[0]);
+            var log = vm.WorkingFiles.Single(file => file.Path == "notes.draft");
+            var logMenu = WorkingFileMenu.Items(host, vm, log, inStagedList: false);
+            Assert.Equal("Discard new file…", Headers(logMenu)[1]);
+            Assert.Equal(
+                ["Ignore this file", "Ignore all .draft files"],
+                (
+                    (IEnumerable<object>)
+                        logMenu.OfType<MenuItem>().Single(item => (string)item.Header! == "Ignore").ItemsSource!
+                )
+                    .OfType<MenuItem>()
+                    .Select(item => (string)item.Header!)
+            );
+        }
+        finally
+        {
+            host.Close();
+        }
+
+        await vm.IgnoreAsync("*.draft", tracked: false);
+        Assert.DoesNotContain(vm.WorkingFiles, file => file.Path == "notes.draft");
+        Assert.Contains("*.draft", File.ReadAllText(Path.Combine(fixture.RepositoryPath, ".gitignore")));
+
+        await vm.StashFileAsync("README.md");
+        Assert.DoesNotContain(vm.WorkingFiles, file => file.Path == "README.md");
+        Assert.Contains(vm.WorkingFiles, file => file.Path == "src/Auth.cs");
+        Assert.EndsWith(": README.md", vm.Stashes.Single().Message);
+
+        await vm.DeleteFileAsync("src/Auth.cs");
+        Assert.False(File.Exists(Path.Combine(fixture.RepositoryPath, "src", "Auth.cs")));
+        Assert.Equal("Deleted", vm.WorkingFiles.Single(file => file.Path == "src/Auth.cs").Status);
+        Assert.Contains("deleted file", await vm.FilePatchAsync("src/Auth.cs", staged: false));
     }
 
     [AvaloniaFact]

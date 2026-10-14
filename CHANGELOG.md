@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix Discard changes leaving a file listed as modified: discarded files and files resolved with all of one side are written with your line-ending settings (core.autocrlf, .gitattributes) and Git LFS, the way checkout writes them. Discarding a file that only looked modified because of its line endings now clears it. When the file you were viewing has no changes left after discarding, stashing or ignoring it, the centre goes back to the history graph.
+- Right-click a changed file to stage or unstage it, discard its changes, ignore it (the file, its extension or its folder), stash just that file, see its history or blame, open it or show it in its folder, copy its path, save a patch of its changes, or delete it. Discard and delete ask first.
 - Merging a branch from the sidebar asks with a Merge or Cancel popup instead of making you type MERGE. Abort merge and applying a stash over your changes use the same popup.
 
 ## 0.2.1 - 2026-10-14

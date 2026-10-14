@@ -56,7 +56,8 @@ public sealed class GitConflictChoiceService
                 var blob = repo.Lookup<Blob>(entry.Id) ?? throw new InvalidOperationException("Stage missing.");
                 ct.ThrowIfCancellationRequested();
                 Directory.CreateDirectory(Path.GetDirectoryName(full)!);
-                using (var input = blob.GetContentStream())
+                // Apply checkout filters (line endings, Git LFS) so the file matches what Git expects on disk.
+                using (var input = blob.GetContentStream(new FilteringOptions(relativePath.Replace('\\', '/'))))
                 using (var output = File.Create(full))
                 {
                     input.CopyTo(output);

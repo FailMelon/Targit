@@ -144,6 +144,90 @@ public sealed class GitStashService
             .ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Stashes every change to one file, staged or not, including a new untracked file, and leaves other files
+    /// alone. The stash message is the file's path. Uses system Git, like <see cref="SaveAsync"/>.
+    /// </summary>
+    public async Task SaveFileAsync(
+        string repositoryPath,
+        string relativePath,
+        string? authorName = null,
+        string? authorEmail = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
+        var (stashesBefore, untracked) = await Task.Run(
+                () =>
+                {
+                    using var repository = new Repository(repositoryPath);
+                    if (repository.Info.IsBare || repository.Head.Tip is null)
+                    {
+                        throw new InvalidOperationException("A working tree with an initial commit is required.");
+                    }
+
+                    GitPathGuard.RegularWorkingFile(repository, relativePath);
+                    var state = repository.RetrieveStatus(relativePath);
+                    if (state is FileStatus.Unaltered or FileStatus.Nonexistent or FileStatus.Ignored)
+                    {
+                        throw new InvalidOperationException("This file has no changes to stash.");
+                    }
+
+                    if ((state & FileStatus.Conflicted) != 0)
+                    {
+                        throw new InvalidOperationException("Resolve the conflict in this file before stashing it.");
+                    }
+
+                    if (
+                        (string.IsNullOrWhiteSpace(authorName) || string.IsNullOrWhiteSpace(authorEmail))
+                        && repository.Config.BuildSignature(DateTimeOffset.Now) is null
+                    )
+                    {
+                        throw new InvalidOperationException(
+                            "Set your name and email in Git or a GitLlama profile before stashing."
+                        );
+                    }
+
+                    return (repository.Stashes.Count(), state == FileStatus.NewInWorkdir);
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        var arguments = new List<string>();
+        if (!string.IsNullOrWhiteSpace(authorName) && !string.IsNullOrWhiteSpace(authorEmail))
+        {
+            arguments.AddRange(["-c", "user.name=" + authorName.Trim(), "-c", "user.email=" + authorEmail.Trim()]);
+        }
+
+        arguments.AddRange(["stash", "push", "-m", relativePath]);
+        if (untracked)
+        {
+            arguments.Add("--include-untracked");
+        }
+
+        arguments.AddRange(["--", relativePath]);
+        await GitSystemTransport
+            .RunAsync(repositoryPath, arguments, new GitNetworkOptions(), cancellationToken)
+            .ConfigureAwait(false);
+        await Task.Run(
+                () =>
+                {
+                    using var repository = new Repository(repositoryPath);
+                    if (repository.Stashes.Count() == stashesBefore)
+                    {
+                        throw new InvalidOperationException(
+                            "Nothing could be stashed. The file may differ only in line endings."
+                        );
+                    }
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+    }
+
     /// <summary>Explains the changes a stash leaves in place, or returns an empty string when there are none.</summary>
     public static string Describe(GitStashSaveResult left)
     {

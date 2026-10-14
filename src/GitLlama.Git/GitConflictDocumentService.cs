@@ -75,7 +75,19 @@ public sealed class GitConflictDocumentService
                 var absolute = GitPathGuard.RegularWorkingFile(repository, relativePath);
                 var working = File.Exists(absolute) ? ReadText(File.ReadAllBytes(absolute)) : null;
                 var sample = working ?? ours ?? theirs ?? "";
-                var lineEnding = sample.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+                // Without a working file, the stages hold Git's stored line endings, so follow core.autocrlf instead.
+                var lineEnding =
+                    sample.Contains("\r\n", StringComparison.Ordinal)
+                    || (
+                        working is null
+                        && string.Equals(
+                            repository.Config.Get<string>("core.autocrlf")?.Value,
+                            "true",
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
+                        ? "\r\n"
+                        : "\n";
                 var endsWithNewline = sample.Length == 0 || sample.EndsWith('\n');
                 var segments =
                     working is not null && HasMarkers(working)

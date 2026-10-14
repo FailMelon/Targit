@@ -186,9 +186,24 @@ public sealed class GitWorkingTreeReviewService
                 }
 
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-                using var input = blob.GetContentStream();
-                using var output = File.Create(destination);
-                input.CopyTo(output);
+                // Write the file the way checkout would, applying line-ending conversion (core.autocrlf, .gitattributes)
+                // and filters such as Git LFS, so it matches the index instead of showing as modified.
+                using (var input = blob.GetContentStream(new FilteringOptions(normalized)))
+                using (var output = File.Create(destination))
+                {
+                    input.CopyTo(output);
+                }
+
+                // Refresh the index entry's cached size and time, otherwise Git can keep listing the file as modified
+                // (for example after an earlier write with the wrong line endings). If re-reading the file would
+                // store different content, put the original entry back so nothing is staged.
+                repo.Index.Add(normalized);
+                if (repo.Index[normalized]?.Id != entry.Id)
+                {
+                    repo.Index.Add(blob, normalized, entry.Mode);
+                }
+
+                repo.Index.Write();
             },
             cancellationToken
         );

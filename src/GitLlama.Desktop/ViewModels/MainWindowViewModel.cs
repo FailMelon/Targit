@@ -3828,11 +3828,15 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private async Task DiscardSelectedUnstagedAsync()
     {
-        if (
-            SelectedRepository is not { } repo
-            || SelectedChangeLine is not { } selected
-            || !_changePaths.TryGetValue(selected, out var path)
-        )
+        if (SelectedChangeLine is { } selected && _changePaths.TryGetValue(selected, out var path))
+        {
+            await DiscardUnstagedPathAsync(path, DiscardConfirmation);
+        }
+    }
+
+    private async Task DiscardUnstagedPathAsync(string path, string confirmation)
+    {
+        if (SelectedRepository is not { } repo)
         {
             return;
         }
@@ -3846,7 +3850,27 @@ public partial class MainWindowViewModel : ObservableObject
                 return;
             }
 
-            await _workingReview.DiscardUnstagedAsync(repo.Path, path, DiscardConfirmation);
+            // The file can be open for a moment while its diff or preview loads, so retry briefly.
+            for (var attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    await _workingReview.DiscardUnstagedAsync(repo.Path, path, confirmation);
+                    break;
+                }
+                catch (Exception e)
+                    when (attempt < 5
+                        && (
+                            e is IOException
+                            || e.InnerException is IOException
+                            || e.Message.Contains("used by another process", StringComparison.OrdinalIgnoreCase)
+                        )
+                    )
+                {
+                    await Task.Delay(150 * attempt);
+                }
+            }
+
             DiscardConfirmation = "";
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path)
             {
@@ -3854,6 +3878,7 @@ public partial class MainWindowViewModel : ObservableObject
             }
 
             await RefreshAsync();
+            CloseReviewIfUnchanged(path);
             Status = $"Discarded unstaged changes in {path}; staged content preserved.";
         }
         catch (Exception e)
