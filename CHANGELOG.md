@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-10-14
+
 - List submodules in the sidebar with their status; double-click one (or right-click → Open) to work inside it in the same tab. The toolbar shows the path from the parent repository, with × to return. Uninitialized submodules are initialized first.
 - Add submodules with the + on the Submodules category, and remove them from the right-click menu. Removal is staged for you to commit and keeps the submodule's cloned history in .git/modules. Uses system Git.
 - Support Git LFS: files tracked by LFS are staged as pointers and checked out with their content through git-lfs, and their content is uploaded before each push. Track and stop tracking file types from the Git LFS sidebar category, download files that were checked out as pointers, and set up command-line Git for LFS. Pushing a repository that uses LFS requires Git LFS to be installed.
