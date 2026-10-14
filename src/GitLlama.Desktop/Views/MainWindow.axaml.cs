@@ -30,6 +30,7 @@ public partial class MainWindow : Window
         _factory.InitLayout(layout);
         PropertyChanged += (_, args) =>
         {
+            if (args.Property == WindowStateProperty || args.Property == CanResizeProperty) ResizeHandles.IsVisible = CanResize && WindowState == WindowState.Normal;
             if (args.Property != WindowStateProperty) return;
             WindowMaximizeIcon.Data = Avalonia.Media.StreamGeometry.Parse(WindowState == WindowState.Maximized ? "M 3,1 L 11,1 L 11,9 M 1,3 L 9,3 L 9,11 L 1,11 Z" : "M 1,1 L 11,1 L 11,11 L 1,11 Z");
             UpdateNativeShadow();
@@ -244,18 +245,9 @@ public partial class MainWindow : Window
     }
     private void WindowEdge_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (e.Handled || WindowState != WindowState.Normal || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-        var p = e.GetPosition(this);
-        var left = p.X <= WindowFrame.Margin.Left + 5; var right = p.X >= Bounds.Width - WindowFrame.Margin.Right - 5;
-        var top = p.Y <= WindowFrame.Margin.Top + 5; var bottom = p.Y >= Bounds.Height - WindowFrame.Margin.Bottom - 5;
-        WindowEdge? edge = (left, right, top, bottom) switch
-        {
-            (true, _, true, _) => WindowEdge.NorthWest, (_, true, true, _) => WindowEdge.NorthEast,
-            (true, _, _, true) => WindowEdge.SouthWest, (_, true, _, true) => WindowEdge.SouthEast,
-            (true, _, _, _) => WindowEdge.West, (_, true, _, _) => WindowEdge.East,
-            (_, _, true, _) => WindowEdge.North, (_, _, _, true) => WindowEdge.South, _ => null
-        };
-        if (edge is { } resize) { BeginResizeDrag(resize, e); e.Handled = true; }
+        if (!CanResize || WindowState != WindowState.Normal || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        if (sender is Control { Tag: string direction } && Enum.TryParse<WindowEdge>(direction, out var edge))
+        { e.Handled = true; BeginResizeDrag(edge, e); }
     }
     private void ShowDocument_Click(object? sender, RoutedEventArgs e)
     {

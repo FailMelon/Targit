@@ -1,4 +1,4 @@
-<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:dock="clr-namespace:Dock.Avalonia.Controls;assembly=Dock.Avalonia" xmlns:views="clr-namespace:GitLlama.Desktop.Views" xmlns:controls="clr-namespace:GitLlama.Desktop.Controls" x:Class="GitLlama.Desktop.Views.MainWindow" Title="GitLlama" Icon="/Assets/gitllama.ico" Width="1500" Height="920" MinWidth="1080" MinHeight="640" SystemDecorations="None" Background="{StaticResource SurfaceBrush}" PointerPressed="WindowEdge_PointerPressed">
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:dock="clr-namespace:Dock.Avalonia.Controls;assembly=Dock.Avalonia" xmlns:views="clr-namespace:GitLlama.Desktop.Views" xmlns:controls="clr-namespace:GitLlama.Desktop.Controls" x:Class="GitLlama.Desktop.Views.MainWindow" Title="GitLlama" Icon="/Assets/gitllama.ico" Width="1500" Height="920" MinWidth="1080" MinHeight="640" CanResize="True" SystemDecorations="None" Background="{StaticResource SurfaceBrush}">
 
   <Border x:Name="WindowFrame" Margin="0" BorderBrush="#65676F" BorderThickness="1" Background="{StaticResource SurfaceBrush}"><Grid><DockPanel Background="{StaticResource SurfaceBrush}" IsEnabled="{Binding !IsSettingsOpen}">
       <DockPanel.KeyBindings>
@@ -87,5 +87,16 @@
   <Grid x:Name="SettingsOverlay" IsVisible="{Binding IsSettingsOpen}" Background="#B3000000" ColumnDefinitions="*,14*,*" RowDefinitions="*,14*,*" KeyboardNavigation.TabNavigation="Cycle">
     <Border Grid.Column="1" Grid.Row="1" Background="#292C32" BorderBrush="#4B5360" BorderThickness="1" CornerRadius="12" ClipToBounds="True"><views:SettingsView/></Border>
   </Grid>
+  <Grid x:Name="ResizeHandles">
+    <Border Height="6" VerticalAlignment="Top" Background="Transparent" Cursor="SizeNorthSouth" Tag="North" PointerPressed="WindowEdge_PointerPressed"/>
+    <Border Height="6" VerticalAlignment="Bottom" Background="Transparent" Cursor="SizeNorthSouth" Tag="South" PointerPressed="WindowEdge_PointerPressed"/>
+    <Border Width="6" HorizontalAlignment="Left" Background="Transparent" Cursor="SizeWestEast" Tag="West" PointerPressed="WindowEdge_PointerPressed"/>
+    <Border Width="6" HorizontalAlignment="Right" Background="Transparent" Cursor="SizeWestEast" Tag="East" PointerPressed="WindowEdge_PointerPressed"/>
+    <Border Width="14" Height="14" HorizontalAlignment="Left" VerticalAlignment="Top" Background="Transparent" Cursor="TopLeftCorner" Tag="NorthWest" PointerPressed="WindowEdge_PointerPressed"/>
+    <Border Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Top" Background="Transparent" Cursor="TopRightCorner" Tag="NorthEast" PointerPressed="WindowEdge_PointerPressed"/>
+    <Border Width="14" Height="14" HorizontalAlignment="Left" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomLeftCorner" Tag="SouthWest" PointerPressed="WindowEdge_PointerPressed"/>
+    <Border Width="14" Height="14" HorizontalAlignment="Right" VerticalAlignment="Bottom" Background="Transparent" Cursor="BottomRightCorner" Tag="SouthEast" PointerPressed="WindowEdge_PointerPressed"/>
+  </Grid>
+  <Border x:Name="SshPromptBackdrop" Background="#99000000" IsVisible="False"/>
   </Grid></Border>
 </Window>

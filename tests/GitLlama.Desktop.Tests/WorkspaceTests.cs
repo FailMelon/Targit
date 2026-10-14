@@ -648,6 +648,13 @@ public sealed class WorkspaceTests
             window.Show(); Dispatcher.UIThread.RunJobs();
             Assert.Equal(new Thickness(1), window.FindControl<Border>("WindowFrame")!.BorderThickness);
             Assert.Equal("GitLlama", window.Title); Assert.NotNull(window.Icon);
+            var handles = window.FindControl<Grid>("ResizeHandles")!;
+            Assert.Equal(Enum.GetNames<WindowEdge>().Order(), handles.Children.Cast<Border>().Select(handle => (string)handle.Tag!).Order());
+            Assert.All(handles.Children.Cast<Border>(), handle => Assert.NotNull(handle.Cursor));
+            Assert.True(window.CanResize); Assert.True(handles.IsVisible);
+            window.WindowState = WindowState.Maximized; Assert.False(handles.IsVisible);
+            window.WindowState = WindowState.Normal; Assert.True(handles.IsVisible);
+            window.CanResize = false; Assert.False(handles.IsVisible); window.CanResize = true;
             Assert.Contains(window.GetVisualDescendants(), control => control is GitLlama.Desktop.Controls.LlamaIcon);
             Assert.Equal(new Thickness(0), window.FindControl<Border>("WindowFrame")!.Margin);
             Assert.Null(window.FindControl<TextBox>("GlobalCommitSearch"));
