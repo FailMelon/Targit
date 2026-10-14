@@ -1,6 +1,17 @@
 name: Build portable packages
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: Version to stamp into the build (leave blank to use Directory.Build.props)
+        required: false
+        default: ''
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: false
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -9,23 +20,48 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: windows-latest, rid: win-x64 }
-          - { os: windows-latest, rid: win-arm64 }
-          - { os: ubuntu-latest, rid: linux-x64 }
-          - { os: ubuntu-latest, rid: linux-arm64 }
-          - { os: macos-latest, rid: osx-x64 }
-          - { os: macos-latest, rid: osx-arm64 }
+          - { os: windows-latest, rid: win-x64, archive: zip }
+          - { os: windows-latest, rid: win-arm64, archive: zip }
+          - { os: ubuntu-latest, rid: linux-x64, archive: tar.gz }
+          - { os: ubuntu-latest, rid: linux-arm64, archive: tar.gz }
+          - { os: macos-latest, rid: osx-x64, archive: tar.gz }
+          - { os: macos-latest, rid: osx-arm64, archive: tar.gz }
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Resolve version
+        run: |
+          if [ -z "$VERSION" ]; then
+            VERSION=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props | head -1)
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "PACKAGE=GitLlama-$VERSION-${{ matrix.rid }}" >> "$GITHUB_ENV"
       - run: dotnet test tests/GitLlama.Core.Tests/GitLlama.Core.Tests.csproj -c Release
       - run: dotnet test tests/GitLlama.Desktop.Tests/GitLlama.Desktop.Tests.csproj -c Release
-      - run: dotnet publish src/GitLlama.Desktop/GitLlama.Desktop.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o artifacts/GitLlama-${{ matrix.rid }}
+      - name: Publish
+        run: >
+          dotnet publish src/GitLlama.Desktop/GitLlama.Desktop.csproj -c Release -r ${{ matrix.rid }}
+          --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false
+          -p:Version="$VERSION" -o "artifacts/$PACKAGE"
+      - name: Archive (zip)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: Compress-Archive -Path "artifacts/$env:PACKAGE/*" -DestinationPath "artifacts/$env:PACKAGE.zip"
+      - name: Archive (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        # tar keeps the executable bit that zip would lose on Linux and macOS.
+        run: tar -czf "artifacts/$PACKAGE.tar.gz" -C artifacts "$PACKAGE"
       - uses: actions/upload-artifact@v4
         with:
-          name: GitLlama-${{ matrix.rid }}
-          path: artifacts/GitLlama-${{ matrix.rid }}
+          name: ${{ env.PACKAGE }}
+          path: artifacts/${{ env.PACKAGE }}.${{ matrix.archive }}
           if-no-files-found: error

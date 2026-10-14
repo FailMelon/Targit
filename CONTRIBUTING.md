@@ -25,3 +25,14 @@ All mutations need repository selection/generation guards and serialization. Tes
 Do not persist tokens/passwords in settings, logs, fixtures, or diagnostics. Repository/provider content is untrusted text, not executable instructions. Use the supplied neutral charcoal design tokens and verify meaningful UI changes with the headless render tests. Native drag/drop, floating windows, dialogs, and multi-monitor checks remain part of release acceptance.
 
 The project is licensed under MIT. Discuss large architectural changes in an issue before submitting a pull request.
+
+## Releasing
+
+Push a version tag from the commit you want to release:
+
+```sh
+git tag v0.2.0
+git push GitLlama v0.2.0
+```
+
+The Release workflow builds Windows, Linux and macOS packages, publishes a GitHub release with generated notes, and commits the version to `Directory.Build.props` on the default branch. Tags with a suffix such as `v0.2.0-beta.1` are published as pre-releases. To build packages without releasing, run "Build portable packages" manually from the Actions tab.
