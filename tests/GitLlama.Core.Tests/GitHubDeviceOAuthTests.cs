@@ -19,7 +19,7 @@ public sealed class GitHubDeviceOAuthTests
         Assert.Equal(new[] { 5, 5, 10 }, waits); Assert.Equal("oauth-secret", token.AccessToken); Assert.Equal(now.AddHours(8), token.ExpiresAt);
         Assert.Equal("refresh-secret", token.RefreshToken);
         Assert.DoesNotContain("oauth-secret", token.ToString()); Assert.DoesNotContain("device-secret", device.ToString());
-        Assert.Contains("scope=public_repo+read%3Auser", handler.Bodies[0]);
+        Assert.Contains("scope=public_repo+read%3Auser+workflow", handler.Bodies[0]);
         Assert.All(handler.Urls, url => Assert.StartsWith("https://github.com/login/", url));
         Assert.All(handler.Bodies, body => Assert.DoesNotContain("client_secret", body));
         Assert.Contains("grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code", handler.Bodies[1]);
@@ -34,7 +34,7 @@ public sealed class GitHubDeviceOAuthTests
     {
         using var handler = new Handler(Device, "{\"error\":\"" + code + "\",\"error_description\":\"device-secret oauth-secret\"}");
         using var client = new HttpClient(handler); using var oauth = new GitHubDeviceOAuth(client, delay: (_, _) => Task.CompletedTask);
-        var device = await oauth.BeginAsync("client", true); Assert.Contains("scope=repo+read%3Auser", handler.Bodies[0]);
+        var device = await oauth.BeginAsync("client", true); Assert.Contains("scope=repo+read%3Auser+workflow", handler.Bodies[0]);
         var error = await Assert.ThrowsAsync<InvalidOperationException>(() => oauth.CompleteAsync("client", device));
         Assert.Contains(expected, error.Message); Assert.DoesNotContain("secret", error.Message); Assert.Equal(2, handler.Bodies.Count);
     }

@@ -93,14 +93,13 @@ public partial class SettingsView : UserControl
     }
     private async Task<bool> LaunchIntegrationBrowserAsync(Uri uri)
     {
-        if ((uri.AbsoluteUri != "https://github.com/login/device" && !IsAzureTokenPage(uri)) || TopLevel.GetTopLevel(this)?.Launcher is not { } launcher) return false;
+        if (!IntegrationBrowserPolicy.Allows(uri) || TopLevel.GetTopLevel(this)?.Launcher is not { } launcher) return false;
         return await launcher.LaunchUriAsync(uri);
     }
     private async void CopyGithubCode_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is MainWindowViewModel { HasGithubOAuthCode: true } vm && TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard) await clipboard.SetTextAsync(vm.GithubOAuthUserCode);
     }
-    private static bool IsAzureTokenPage(Uri uri) => uri.IsAbsoluteUri && uri.Scheme == "https" && uri.IsDefaultPort && uri.Host.Equals("dev.azure.com", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(uri.UserInfo) && string.IsNullOrEmpty(uri.Query) && string.IsNullOrEmpty(uri.Fragment) && uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries) is [var org, "_usersSettings", "tokens"] && GitLlama.Core.AzureDevOpsRemote.ValidOrganization(org);
     private async void RemoveAzureOrganization_Click(object? sender, RoutedEventArgs e)
     { if (sender is Button { Tag: AzureOrganizationConnection organization } && DataContext is MainWindowViewModel vm) await vm.RemoveAzureOrganizationCommand.ExecuteAsync(organization); }
     private async void BrowseAzureOrganization_Click(object? sender, RoutedEventArgs e)
@@ -140,8 +139,7 @@ public partial class SettingsView : UserControl
     public SettingsView()
     {
         AvaloniaXamlLoader.Load(this);
-        AttachedToVisualTree += (_, _) => { if (DataContext is MainWindowViewModel vm) { vm.RefreshDiagnosticsCommand.Execute(null); vm.OpenIntegrationBrowser = LaunchIntegrationBrowserAsync; } };
-        DetachedFromVisualTree += (_, _) => { if (DataContext is MainWindowViewModel vm && vm.OpenIntegrationBrowser == LaunchIntegrationBrowserAsync) vm.OpenIntegrationBrowser = null; };
+        AttachedToVisualTree += (_, _) => { if (DataContext is MainWindowViewModel vm) vm.RefreshDiagnosticsCommand.Execute(null); };
     }
     private async void ExportDiagnostics_Click(object? sender, RoutedEventArgs e)
     {

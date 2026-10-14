@@ -629,6 +629,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (_updatingRepositoryFavorite) return;
         RemoteOperationFeedback = "";
+        ClearGithubPushAccessFeedback();
         if (value is not null) OpenRepositoryTab(value);
         var version = Interlocked.Increment(ref _repositorySelectionVersion);
         ResetPresentation();
@@ -965,6 +966,7 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand(IncludeCancelCommand = true)]
     private async Task PushRemoteAsync(CancellationToken cancellationToken)
     {
+        ClearGithubPushAccessFeedback();
         if (SelectedRepository is not { } repo) { Status = RemoteOperationFeedback = "Push failed: open a repository first."; return; }
         if (SelectedRemote is not { } remote) { Status = RemoteOperationFeedback = "Push failed: choose a remote in the Remotes section first."; return; }
         RemoteOperationFeedback = $"Preparing to push {CurrentBranch} to {remote.Name}…";
@@ -977,6 +979,9 @@ public partial class MainWindowViewModel : ObservableObject
             Status = $"Pushing current branch to {remote.Name}...";
             RemoteOperationFeedback = Status;
             IsNetworkBusy = true;
+            if (!await CheckLinkedGithubPushAccessAsync(remote.PushUrl ?? remote.Url, options.Secret, cancellationToken)) return;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
             var branch = await _remotes.PushCurrentBranchAsync(repo.Path, remote.Name, cancellationToken, options);
             if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
             await RefreshAsync();
@@ -987,6 +992,7 @@ public partial class MainWindowViewModel : ObservableObject
             var message = SafeMessage(e);
             if (!string.IsNullOrEmpty(options.Secret)) message = message.Replace(options.Secret, "[redacted]", StringComparison.Ordinal);
             if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = RemoteOperationFeedback = cancellationToken.IsCancellationRequested ? "Push canceled; refresh the remote to check its state." : $"Push to {remote.Name} failed: {message}";
+            if (!cancellationToken.IsCancellationRequested && version == Interlocked.Read(ref _repositorySelectionVersion)) OfferGithubAccessAfterPushFailure(remote.PushUrl ?? remote.Url, options.Secret, message);
         }
         finally { IsNetworkBusy = false; NetworkProgressText = ""; _gitMutationLock.Release(); }
     }

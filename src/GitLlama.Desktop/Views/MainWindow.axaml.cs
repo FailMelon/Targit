@@ -41,6 +41,7 @@ public partial class MainWindow : Window
         {
             if (DataContext is not MainWindowViewModel vm) return;
             vm.DockDocument = ShowDocument;
+            vm.OpenIntegrationBrowser ??= LaunchIntegrationBrowserAsync;
             vm.SshSession.RequestPassphrase = async (request, ct) => await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => SshPromptDialog.UnlockAsync(this, request, ct));
             vm.SshSession.RequestHostTrust = async (request, ct) => await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => SshPromptDialog.TrustHostAsync(this, request, ct));
         };
@@ -87,6 +88,8 @@ public partial class MainWindow : Window
         SynchronizeDocumentTabs();
         (DataContext as MainWindowViewModel)?.StartRepositoryMonitoring();
     }
+    private async Task<bool> LaunchIntegrationBrowserAsync(Uri uri)
+        => IntegrationBrowserPolicy.Allows(uri) && await Launcher.LaunchUriAsync(uri);
 
     private DocumentDock? FindDocuments()
     {

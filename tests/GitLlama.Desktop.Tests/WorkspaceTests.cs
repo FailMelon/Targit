@@ -1174,6 +1174,56 @@ public sealed class WorkspaceTests
         await restored.DisconnectAzureCommand.ExecuteAsync(null); Assert.False(restored.IsAzureConnected); Assert.Null(await store.LoadPayloadAsync(profile, "azure"));
     }
     [AvaloniaFact]
+    public async Task GithubPushDeniedOffersAuthorizationWithoutAttemptingThePush()
+    {
+        using var fixture = new WorkspaceFixture(); using var handler = new OAuthHandler(); using var client = new HttpClient(handler);
+        var vm = await fixture.OpenAsync(oauthFactory: () => new GitLlama.Providers.GitHubDeviceOAuth(client, delay: (_, ct) => { ct.ThrowIfCancellationRequested(); return Task.CompletedTask; })); vm.AutoRefresh = false;
+        vm.GithubOAuthVerify = (_, _) => Task.FromResult("LlamaUser"); await vm.SignInGithubOAuthCommand.ExecuteAsync(null);
+        vm.NewRemoteName = "GitHub"; vm.NewRemoteUrl = "https://github.com/example/denied.git"; await vm.AddRemoteCommand.ExecuteAsync(null);
+        vm.GithubPushAccessCheck = (repo, token, _) => { Assert.Equal("example", repo.Owner); Assert.Equal("denied", repo.Name); Assert.Equal(vm.GithubToken, token); return Task.FromResult(GitLlama.Providers.GitHubPushAccess.ApprovalNeeded); };
+        await vm.PushRemoteCommand.ExecuteAsync(null); Assert.Contains("GitHub denied GitLlama access", vm.RemoteOperationFeedback); Assert.True(vm.HasGithubPushAccessLink); Assert.False(vm.IsNetworkBusy);
+        Uri? opened = null; vm.OpenIntegrationBrowser = uri => { opened = uri; return Task.FromResult(true); };
+        await vm.ManageGithubPushAccessCommand.ExecuteAsync(null); Assert.Equal("https://github.com/settings/connections/applications/Ov23liO3PME31PJH8PfM", opened!.AbsoluteUri);
+        var window = new MainWindow(fixture.SettingsPath) { DataContext = vm };
+        try
+        {
+            window.Show(); Dispatcher.UIThread.RunJobs(); Assert.True(window.FindControl<Button>("GithubGrantAccessButton")!.IsEffectivelyVisible);
+            var launcher = vm.OpenIntegrationBrowser;
+            window.ShowDocument("Settings"); await WaitUntilAsync(() => window.GetVisualDescendants().OfType<SettingsView>().Any());
+            vm.CloseSettingsCommand.Execute(null); Dispatcher.UIThread.RunJobs(); Assert.Same(launcher, vm.OpenIntegrationBrowser);
+            Assert.True(IntegrationBrowserPolicy.Allows(new Uri(vm.GithubPushAccessUrl)));
+            opened = null; await vm.ManageGithubPushAccessCommand.ExecuteAsync(null); Assert.NotNull(opened);
+            vm.OpenIntegrationBrowser = _ => Task.FromResult(false); await vm.ManageGithubPushAccessCommand.ExecuteAsync(null); Assert.Contains("browser could not be opened", vm.RemoteOperationFeedback);
+            vm.OpenIntegrationBrowser = launcher;
+            SavePreview(window, "github-push-access.png");
+        }
+        finally { window.Close(); }
+        vm.DismissRemoteFeedbackCommand.Execute(null); Assert.False(vm.HasGithubPushAccessLink);
+        vm.GithubPushAccessCheck = (_, _, _) => Task.FromResult(GitLlama.Providers.GitHubPushAccess.NoWritePermission);
+        Assert.False(await vm.CheckLinkedGithubPushAccessAsync(vm.SelectedRemote!.Url, vm.GithubToken, CancellationToken.None)); Assert.Contains("write access", vm.RemoteOperationFeedback); Assert.False(vm.HasGithubPushAccessLink);
+        vm.DismissRemoteFeedbackCommand.Execute(null);
+        vm.GithubPushAccessCheck = (_, _, _) => throw new HttpRequestException("secret-provider-error");
+        Assert.True(await vm.CheckLinkedGithubPushAccessAsync(vm.SelectedRemote.Url, vm.GithubToken, CancellationToken.None)); Assert.False(vm.HasRemoteOperationFeedback);
+        vm.GithubPushAccessCheck = (_, _, _) => Task.FromResult(GitLlama.Providers.GitHubPushAccess.PrivateScopeNeeded);
+        Assert.False(await vm.CheckLinkedGithubPushAccessAsync(vm.SelectedRemote.Url, vm.GithubToken, CancellationToken.None)); Assert.True(vm.NeedsGithubPrivateAccess);
+        await vm.EnableGithubPrivateAccessCommand.ExecuteAsync(null); Assert.True(vm.GithubIncludePrivateRepositories); Assert.True(vm.IsGithubConnected); Assert.True(vm.IsGithubIntegrationExpanded); Assert.True(vm.IsSettingsOpen);
+        vm.DismissRemoteFeedbackCommand.Execute(null); Assert.False(vm.NeedsGithubPrivateAccess);
+        vm.OfferGithubAccessAfterPushFailure(vm.SelectedRemote.Url, vm.GithubToken, "request failed with status code: 403"); Assert.True(vm.HasGithubPushAccessLink);
+        vm.DismissRemoteFeedbackCommand.Execute(null);
+        vm.OfferGithubAccessAfterPushFailure(vm.SelectedRemote.Url, vm.GithubToken, "non-fast-forward update rejected"); Assert.False(vm.HasGithubPushAccessLink);
+        vm.OfferGithubAccessAfterPushFailure("https://other.example/owner/repo", vm.GithubToken, "403 access denied"); Assert.False(vm.HasGithubPushAccessLink);
+        vm.OfferGithubAccessAfterPushFailure(vm.SelectedRemote.Url, vm.GithubToken, "refusing to allow an OAuth App to create or update workflow `.github/workflows/build.yml` without `workflow` scope");
+        Assert.True(vm.NeedsGithubWorkflowAccess); Assert.Contains("authorize the workflow permission", vm.RemoteOperationFeedback);
+        await vm.ReconnectGithubPermissionsCommand.ExecuteAsync(null);
+        Assert.True(vm.IsGithubConnected); Assert.False(vm.NeedsGithubWorkflowAccess); Assert.True(vm.GithubIncludePrivateRepositories); Assert.Contains("Retry the push", vm.RemoteOperationFeedback);
+    }
+    [Theory]
+    [InlineData("https://github.com/settings/connections/applications/Ov23liO3PME31PJH8PfM", true)]
+    [InlineData("https://github.com/login/device", true)]
+    [InlineData("https://github.com.evil.example/settings/connections/applications/id", false)]
+    [InlineData("https://github.com/settings/connections/applications/id?redirect=evil", false)]
+    public void IntegrationBrowserChecksExactAllowedLinks(string url, bool allowed) => Assert.Equal(allowed, IntegrationBrowserPolicy.Allows(new Uri(url)));
+    [AvaloniaFact]
     public async Task AzurePatValidationAndFailuresDoNotReplaceWorkingConnections()
     {
         using var fixture = new WorkspaceFixture(); var vm = await fixture.OpenAsync(); vm.AutoRefresh = false;

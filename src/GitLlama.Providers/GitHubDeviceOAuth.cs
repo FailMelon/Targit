@@ -42,7 +42,7 @@ public sealed class GitHubDeviceOAuth : IDisposable
     public async Task<GitHubDeviceAuthorization> BeginAsync(string clientId, bool includePrivateRepositories, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
-        using var json = await PostAsync("login/device/code", new() { ["client_id"] = clientId, ["scope"] = includePrivateRepositories ? "repo read:user" : "public_repo read:user" }, ct);
+        using var json = await PostAsync("login/device/code", new() { ["client_id"] = clientId, ["scope"] = includePrivateRepositories ? "repo read:user workflow" : "public_repo read:user workflow" }, ct);
         var root = json.RootElement;
         if (root.ValueKind != JsonValueKind.Object) throw new InvalidOperationException("GitHub returned an invalid sign-in response. Try again.");
         if (root.TryGetProperty("error", out var error)) throw Failure(error.GetString());

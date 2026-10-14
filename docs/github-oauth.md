@@ -2,7 +2,7 @@
 
 Open Settings → Integrations → Sign in with GitHub. GitLlama requests a device code, opens https://github.com/login/device in your default browser, and shows the verification code. Enter it on GitHub, approve the displayed GitLlama app, and return to GitLlama. Copy code/Open GitHub sign-in page are available if automatic browser opening fails. Cancel stops polling.
 
-Public repositories are requested by default (`public_repo read:user`). Select Include private repositories before signing in to request `repo read:user`. GitHub and organization policy control the actual access granted; SSO may require additional approval.
+Public repositories are requested by default (`public_repo read:user workflow`). Select Include private repositories before signing in to request `repo read:user workflow`. The `workflow` scope lets GitLlama push changes to GitHub Actions workflow files. Existing connections must use **Reconnect / update permissions** to authorize the additional scope; token refresh alone cannot add it. Workflow-scope push rejections show a reconnect action, and the push must be retried after authorization. GitHub and organization policy control the actual access granted; SSO may require additional approval.
 
 The connected token is used for pull requests/issues and GitHub HTTPS operations when no separate HTTPS session token is supplied. It is never sent to another host or used for SSH. On Windows, OAuth access/refresh tokens are encrypted with DPAPI for the current Windows user in a separate per-profile connection file. Tokens are excluded from ordinary settings and diagnostics. Restarting the app and switching profiles restore the corresponding saved connection. Disconnect removes the profile's local encrypted connection; revoke the app's authorization on GitHub if you want to revoke server-side access too.
 
@@ -14,4 +14,6 @@ The public OAuth Client ID is configured in `GitHubDeviceOAuth.DefaultClientId`.
 
 Protocol reference: [GitHub OAuth authorization documentation](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow).
 
-GitLab, Bitbucket and Azure DevOps integrations are planned and are not functional connections yet. Existing Git transports can still access repositories using their HTTPS/SSH credentials.
+Before HTTPS pushes using GitLlama's linked OAuth account, GitLlama checks repository access. Access errors offer Manage GitLlama access, opening the connected application's GitHub authorization settings where organization access can be granted or requested. GitHub may conceal inaccessible repositories with a 404 response, so the message also asks users to check the remote URL. Missing private-repository scope offers an explicit reauthorization action with private access enabled. Lack of account write permission is reported separately: app approval cannot grant repository membership. API outages or rate limits do not prevent Git itself from attempting the push. Access-related Git rejections also offer the authorization link. No push is retried automatically after changing authorization.
+
+GitLab and Bitbucket integrations are planned. Azure DevOps uses organization-scoped personal access tokens; see [Azure setup](azure-devops.md).

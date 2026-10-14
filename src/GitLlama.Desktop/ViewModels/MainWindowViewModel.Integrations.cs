@@ -36,6 +36,7 @@ public partial class MainWindowViewModel
     {
         Interlocked.Increment(ref _githubConnectionRevision);
         InvalidateCloneableRepositories();
+        ClearGithubPushAccessFeedback();
         _githubConnectionCancellation?.Cancel(); _githubConnectionCancellation?.Dispose(); _githubConnectionCancellation = null;
         _githubConnection = null; IsGithubConnected = false; GithubSessionExpiresAt = null; GithubStorageFeedback = "";
         OnPropertyChanged(nameof(CanDisconnectGithub)); OnPropertyChanged(nameof(GithubSessionExpiryText));
