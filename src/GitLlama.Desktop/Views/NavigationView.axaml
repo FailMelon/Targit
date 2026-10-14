@@ -115,22 +115,9 @@
                 </Border>
 
                 <Border Classes="category">
-                    <Expander Classes="navigation" IsExpanded="True">
-                        <Expander.Header>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="Stashes" VerticalAlignment="Center" />
-
-                                <Button x:Name="SaveStashButton"
-                                        Grid.Column="1"
-                                        Classes="workspace toolbar"
-                                        Content="＋"
-                                        Click="SaveStash_Click"
-                                        IsEnabled="{Binding !HasNoChanges}"
-                                        ToolTip.Tip="Stash working changes"
-                                        Padding="6,0"
-                                        MinHeight="0" />
-                            </Grid>
-                        </Expander.Header>
+                    <Expander Classes="navigation"
+                              Header="Stashes"
+                              IsExpanded="True">
 
                         <StackPanel>
                             <TreeView x:Name="StashTreeControl"
@@ -176,7 +163,7 @@
                                 </TreeView.ItemTemplate>
                             </TreeView>
 
-                            <TextBlock Text="No stashes. Use ＋ to set your working changes aside."
+                            <TextBlock Text="No stashes. Use the Stash tab under your working changes to set changes aside."
                                        Classes="muted"
                                        FontSize="11"
                                        Margin="8,4"

@@ -325,12 +325,6 @@ public partial class NavigationView
         e.Handled = true;
     }
 
-    private async void SaveStash_Click(object? sender, RoutedEventArgs e)
-    {
-        e.Handled = true;
-        await SaveStashAsync();
-    }
-
     private async Task SaveStashAsync()
     {
         if (DataContext is not MainWindowViewModel vm || TopLevel.GetTopLevel(this) is not Window owner)

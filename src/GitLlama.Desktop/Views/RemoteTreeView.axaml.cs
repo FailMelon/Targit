@@ -78,15 +78,6 @@ public partial class RemoteTreeView : UserControl
         );
     }
 
-    private async void CreateRemoteBranch_Click(object? sender, RoutedEventArgs e)
-    {
-        e.Handled = true;
-        if ((sender as Control)?.DataContext is RemoteTreeNode { Remote: { } remote })
-        {
-            await EditBranchAsync(remote.Name, null, GitLlama.Git.RemoteBranchOperation.Create);
-        }
-    }
-
     private void TreeContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         var node =
