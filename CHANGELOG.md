@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show when a merge stops on conflicts: the working changes button reads "Merge conflicts (N) · Resolve", and the working changes inspector shows the merge with Resolve conflicts, Finish merge and Abort merge (after confirming). Resolve conflicts opens the Conflicts tab with the first conflicted file selected. Finishing a merge uses your profile or Git identity and Git's prepared merge message when none is entered. Fix a branch list drawn over the Merge, Conflicts and Rebase tabs.
+
 ## 0.2.0 - 2026-10-14
 
 - List submodules in the sidebar with their status; double-click one (or right-click → Open) to work inside it in the same tab. The toolbar shows the path from the parent repository, with × to return. Uninitialized submodules are initialized first.

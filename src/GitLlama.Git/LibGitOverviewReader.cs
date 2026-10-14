@@ -36,7 +36,7 @@ public sealed class LibGitOverviewReader : IRepositoryOverviewReader
                     .OrderBy(name => name, StringComparer.Ordinal)
                     .ToArray();
 
-                return new RepositoryOverview(commits, changes, branches);
+                return new RepositoryOverview(commits, changes, branches, repo.Info.CurrentOperation.ToString());
             },
             cancellationToken
         );

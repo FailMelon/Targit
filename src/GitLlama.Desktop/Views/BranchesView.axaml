@@ -14,11 +14,7 @@
                        HorizontalAlignment="Right" />
         </DockPanel>
 
-        <ListBox Grid.Row="1"
-                 ItemsSource="{Binding BranchLines}"
-                 SelectedItem="{Binding SelectedBranchLine}" />
-
-        <TabControl Grid.Row="1">
+        <TabControl Grid.Row="1" SelectedIndex="{Binding MergeTabIndex}">
             <TabItem Header="Merge">
                 <ScrollViewer>
                     <StackPanel Margin="10" Spacing="10">
@@ -35,7 +31,7 @@
                                 Content="Merge selected into current"
                                 Command="{Binding MergeSelectedBranchCommand}" />
 
-                        <TextBox Text="{Binding MergeCommitMessage}" Watermark="Merge commit message" />
+                        <TextBox Text="{Binding MergeCommitMessage}" Watermark="Merge commit message (blank uses Git's merge message)" />
 
                         <WrapPanel ItemSpacing="8">
                             <Button Classes="workspace"

@@ -326,7 +326,7 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    private string mergeCommitMessage = "Merge branches";
+    private string mergeCommitMessage = "";
 
     [ObservableProperty]
     private string conflictPath = "";
@@ -432,7 +432,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanFinishMerge))]
     private async Task ContinueMergeAsync()
     {
         if (SelectedRepository is not { } repo)
@@ -449,7 +449,8 @@ public partial class MainWindowViewModel : ObservableObject
                 return;
             }
 
-            var sha = await _mergeLifecycle.ContinueAsync(repo.Path, MergeCommitMessage);
+            var sha = await _mergeLifecycle.ContinueAsync(repo.Path, MergeCommitMessage, AuthorName, AuthorEmail);
+            MergeCommitMessage = "";
             await RefreshAsync();
             Status = $"Merge completed: {sha[..7]}";
         }
@@ -464,7 +465,7 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsMergeInProgress))]
     private async Task AbortMergeAsync()
     {
         if (SelectedRepository is not { } repo)
@@ -1518,6 +1519,12 @@ public partial class MainWindowViewModel : ObservableObject
             var workingRows = overview.Changes.Select(WorkingFileRow.From).Select(WithLfs).ToArray();
             CollectionUpdates.Sync(WorkingFiles, workingRows, file => file.Path);
             CollectionUpdates.Sync(ChangeLines, workingRows.Select(file => file.Line), line => line);
+            RepositoryOperation = overview.Operation;
+            if (HasMergeConflicts)
+            {
+                await InspectMergeConflictsAsync();
+            }
+
             foreach (var change in overview.Changes)
             {
                 var line = $"{change.State}  {change.Path}";

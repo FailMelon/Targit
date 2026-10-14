@@ -19,7 +19,10 @@ public partial class MainWindowViewModel
     public bool HasSelectedWorkingFile => SelectedWorkingFile is not null;
     public bool HasSelectedHistoryFile => SelectedHistoryFileRow is not null;
     public string WorkingChangesCaption =>
-        ChangeCount == 0 ? "Working directory is clean" : $"{ChangeCount} working changes · View changes";
+        HasMergeConflicts ? $"Merge conflicts ({ConflictedFileCount}) · Resolve"
+        : IsMergeInProgress ? "Merge ready to finish · View changes"
+        : ChangeCount == 0 ? "Working directory is clean"
+        : $"{ChangeCount} working changes · View changes";
     public ObservableCollection<string> OperationLog { get; } = [];
     public ObservableCollection<WorkingFileRow> WorkingFiles { get; } = [];
     public ObservableCollection<WorkingFileRow> StagedFiles { get; } = [];
@@ -133,6 +136,7 @@ public partial class MainWindowViewModel
             OnPropertyChanged(nameof(StagedFilesCaption));
             OnPropertyChanged(nameof(UnstagedFilesCaption));
             NotifyStashAvailability();
+            NotifyMergeState();
         };
         Repositories.CollectionChanged += (_, _) => FilterRepositories();
         BranchLines.CollectionChanged += (_, _) => FilterBranches();
@@ -361,6 +365,7 @@ public partial class MainWindowViewModel
         HistoryCommitDetails = "Select a commit in History.";
         HistoryFilePreview = "Select a changed file to inspect its patch.";
         StagedFileCount = 0;
+        RepositoryOperation = "None";
         UpstreamStatus = "No upstream";
         FileHistoryPath = "";
         FileHistorySummary = "Select a file to load its history.";
