@@ -1,0 +1,37 @@
+name: Sync release notes
+# Keeps each GitHub release's notes matching its CHANGELOG.md section.
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - CHANGELOG.md
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: release-notes
+  cancel-in-progress: true
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for version in $(python3 scripts/changelog.py versions); do
+            tag="v$version"
+            if ! current=$(gh release view "$tag" --json body --jq .body 2>/dev/null); then
+              echo "$tag: no GitHub release, skipping."
+              continue
+            fi
+            python3 scripts/changelog.py notes "$version" > notes.md
+            if [ "$current" = "$(cat notes.md)" ]; then
+              echo "$tag: up to date."
+            else
+              gh release edit "$tag" --notes-file notes.md
+              echo "$tag: notes updated."
+            fi
+          done

@@ -35,7 +35,7 @@ git tag v0.2.0
 git push GitLlama v0.2.0
 ```
 
-The Release workflow builds Windows, Linux and macOS packages, publishes a GitHub release with generated notes, and commits the version to `Directory.Build.props` on the default branch. Tags with a suffix such as `v0.2.0-beta.1` are published as pre-releases. To build packages without releasing, run "Build portable packages" manually from the Actions tab.
+Add each user-facing change as a bullet under `## Unreleased` in CHANGELOG.md as you go. The Release workflow builds Windows, Linux and macOS packages and publishes a GitHub release using those entries as its notes. It then commits the version to `Directory.Build.props` on the default branch and renames `## Unreleased` to the version, starting a new empty `## Unreleased`. Editing a released section of CHANGELOG.md on the default branch updates that release's notes on GitHub. Tags with a suffix such as `v0.2.0-beta.1` are published as pre-releases. To build packages without releasing, run "Build portable packages" manually from the Actions tab.
 
 ## Project layout
 

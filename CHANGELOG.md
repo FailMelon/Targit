@@ -1,6 +1,9 @@
 # Changelog
 
-## 0.1.0
+## Unreleased
+
+## 0.1.0 - 2026-10-14
+
 - Show commit author pictures in History and the inspector, and owner pictures or host icons for remotes. Authors resolve through GitHub private addresses, Gravatar, then the commit's GitHub account across each GitHub remote, with initials as the fallback. Pictures are cached for 7 days and can be turned off in General settings.
 - Move the working changes button to the right of the repository toolbar; remove the Changes, Reflog and Files sections from the sidebar (still available from the View menu).
 - Add Azure DevOps Services integration through Microsoft Entra/MSAL device sign-in, silent renewal, encrypted per-profile cache restore, organization repository discovery and clone actions. Scope bearer credentials to the connected organization's HTTPS URLs for Git operations; keep SSH separate. Azure pull requests/Boards and on-premises Azure DevOps Server are outside this integration's current scope.
@@ -45,7 +48,6 @@
 - Contextual inspector without tabs; local/remote sidebar groups and branch/tag/commit menus.
 - Floating-document docking and closed History recovery; backed-up workspace schema migration.
 - Ignored files excluded from status and untracked directories expanded into individual files.
-
 - Neutral charcoal workspace with compact menus/toolbars, graph rows, contextual commit inspector, and named layout presets.
 - Repository clone/init, branch and tag management, stash workflows, reflog recovery, worktrees, and submodule updates.
 - Paged multi-branch history, author/date/text filters, commit context actions, file history and blame.
