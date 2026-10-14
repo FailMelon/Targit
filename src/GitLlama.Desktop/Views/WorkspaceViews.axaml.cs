@@ -188,6 +188,55 @@ public partial class InspectorView : UserControl
 
 public partial class InspectorView : UserControl
 {
+    private async void AbortMerge_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
+        var dialog = RemoteEditDialog.Create("Abort the merge?", out var fields);
+        fields.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"{vm.CurrentBranch} goes back to how it was before the merge. Every uncommitted change is "
+                    + "discarded, including conflicts you've already resolved. This can't be undone.",
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            }
+        );
+        var buttons = new StackPanel
+        {
+            Orientation = Avalonia.Layout.Orientation.Horizontal,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            Spacing = 8,
+        };
+        var no = new Button { Content = "No" };
+        var yes = new Button { Content = "Yes, abort merge", Classes = { "workspace", "primary" } };
+        var confirmed = false;
+        no.Click += (_, _) => dialog.Close();
+        yes.Click += (_, _) =>
+        {
+            confirmed = true;
+            dialog.Close();
+        };
+        dialog.KeyDown += (_, args) =>
+        {
+            if (args.Key == Key.Escape)
+            {
+                dialog.Close();
+            }
+        };
+        buttons.Children.Add(no);
+        buttons.Children.Add(yes);
+        fields.Children.Add(buttons);
+        await dialog.ShowDialog(owner);
+        if (confirmed)
+        {
+            await vm.AbortMergeCommand.ExecuteAsync(null);
+        }
+    }
+
     private async void ExportPatch_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm || TopLevel.GetTopLevel(this) is not { } window)

@@ -1025,7 +1025,7 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                     new Binding(nameof(workspace.ResolveConflictUsingWorkingTreeCommand))
                 );
                 root.Children.Add(resolve);
-                var mergeMessage = new TextBox { Watermark = "Merge commit message" };
+                var mergeMessage = new TextBox { Watermark = "Merge commit message (blank uses Git's merge message)" };
                 mergeMessage.Bind(
                     TextBox.TextProperty,
                     new Binding(nameof(workspace.MergeCommitMessage)) { Mode = BindingMode.TwoWay }

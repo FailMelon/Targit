@@ -35,6 +35,8 @@ public sealed class ThreeWayConflictTests
 
             var status = await new GitMergeService().MergeAsync(path, "other");
             Assert.Equal(MergeStatus.Conflicts, status);
+            var overview = await new LibGitOverviewReader().ReadOverviewAsync(path);
+            Assert.Equal("Merge", overview.Operation);
             var stage = await new GitThreeWayConflictService().InspectAsync(path, "conflict.txt");
             Assert.Equal("base\n", stage.Base);
             Assert.Equal("ours\n", stage.Ours);
@@ -42,9 +44,16 @@ public sealed class ThreeWayConflictTests
             File.WriteAllText(Path.Combine(path, "conflict.txt"), "resolved\n");
             await new GitConflictResolutionService().ResolveUsingWorkingTreeAsync(path, "conflict.txt");
             Assert.Empty(await new GitConflictDetectionService().ListAsync(path));
-            var sha = await new GitMergeLifecycleService().ContinueAsync(path, "merge resolved");
+            // A blank message uses the one Git prepared for the merge, authored by the given identity.
+            var sha = await new GitMergeLifecycleService().ContinueAsync(path, "", "Merger", "merger@example.invalid");
             using var check = new Repository(path);
-            Assert.Equal(2, check.Lookup<Commit>(sha)!.Parents.Count());
+            var merge = check.Lookup<Commit>(sha)!;
+            Assert.Equal(2, merge.Parents.Count());
+            Assert.Contains("other", merge.MessageShort);
+            Assert.DoesNotContain("#", merge.Message);
+            Assert.Equal("merger@example.invalid", merge.Author.Email);
+            Assert.Equal(CurrentOperation.None, check.Info.CurrentOperation);
+            Assert.Equal("None", (await new LibGitOverviewReader().ReadOverviewAsync(path)).Operation);
         }
         finally
         {

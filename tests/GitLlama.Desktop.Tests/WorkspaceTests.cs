@@ -213,6 +213,75 @@ public sealed class WorkspaceTests
     }
 
     [AvaloniaFact]
+    public async Task ConflictedMergeIsSurfacedAndCanBeResolvedAndFinished()
+    {
+        using var fixture = new WorkspaceFixture();
+        var vm = await fixture.OpenAsync();
+        await WaitUntilAsync(() => vm.HistoryRows.Count > 0);
+        string current;
+        using (var repository = new Repository(fixture.RepositoryPath))
+        {
+            repository.Reset(ResetMode.Hard);
+            var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+            var file = Path.Combine(fixture.RepositoryPath, "conflict.txt");
+            current = repository.Head.FriendlyName;
+            repository.CreateBranch("incoming");
+            File.WriteAllText(file, "ours\n");
+            Commands.Stage(repository, "conflict.txt");
+            repository.Commit("ours", signature, signature);
+            Commands.Checkout(repository, repository.Branches["incoming"]);
+            File.WriteAllText(file, "theirs\n");
+            Commands.Stage(repository, "conflict.txt");
+            repository.Commit("theirs", signature, signature);
+            Commands.Checkout(repository, repository.Branches[current]);
+        }
+
+        Assert.Equal(MergeStatus.Conflicts, await new GitMergeService().MergeAsync(fixture.RepositoryPath, "incoming"));
+        await vm.RefreshCommand.ExecuteAsync(null);
+        Assert.True(vm.IsMergeInProgress);
+        Assert.Equal(1, vm.ConflictedFileCount);
+        Assert.True(vm.ShowMergeBanner);
+        Assert.Equal("Merge conflicts (1) · Resolve", vm.WorkingChangesCaption);
+        Assert.False(vm.ContinueMergeCommand.CanExecute(null));
+
+        var view = new BranchesView { DataContext = vm };
+        var window = new Window { Content = view };
+        try
+        {
+            window.Show();
+            await vm.OpenConflictResolutionCommand.ExecuteAsync(null);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(1, vm.MergeTabIndex);
+            Assert.Equal(1, view.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex);
+            Assert.Empty(view.GetVisualDescendants().OfType<ListBox>());
+            Assert.Equal("conflict.txt", vm.ConflictPath);
+        }
+        finally
+        {
+            window.Close();
+        }
+
+        await vm.AcceptTheirsCommand.ExecuteAsync(null);
+        await vm.RefreshCommand.ExecuteAsync(null);
+        Assert.False(vm.HasMergeConflicts);
+        Assert.True(vm.CanFinishMerge);
+        Assert.Equal("Merge ready to finish · View changes", vm.WorkingChangesCaption);
+
+        vm.AuthorName = "Merge Author";
+        vm.AuthorEmail = "merge@example.invalid";
+        await vm.ContinueMergeCommand.ExecuteAsync(null);
+        Assert.False(vm.ShowMergeBanner);
+        using (var repository = new Repository(fixture.RepositoryPath))
+        {
+            Assert.Equal(CurrentOperation.None, repository.Info.CurrentOperation);
+            Assert.Equal(2, repository.Head.Tip.Parents.Count());
+            Assert.Equal("merge@example.invalid", repository.Head.Tip.Author.Email);
+            Assert.Contains("incoming", repository.Head.Tip.MessageShort);
+            Assert.Equal("theirs\n", File.ReadAllText(Path.Combine(fixture.RepositoryPath, "conflict.txt")));
+        }
+    }
+
+    [AvaloniaFact]
     public async Task StashIsOnlyAvailableWhenChangesAreStaged()
     {
         using var fixture = new WorkspaceFixture();

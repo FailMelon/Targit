@@ -7,7 +7,9 @@ public sealed record ChangedFile(string Path, string State);
 public sealed record RepositoryOverview(
     IReadOnlyList<CommitSummary> Commits,
     IReadOnlyList<ChangedFile> Changes,
-    IReadOnlyList<string> Branches
+    IReadOnlyList<string> Branches,
+    // The operation that stopped part-way, such as "Merge" or "Rebase", or "None".
+    string Operation = "None"
 );
 
 public interface IRepositoryOverviewReader
