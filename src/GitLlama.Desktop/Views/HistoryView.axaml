@@ -11,7 +11,7 @@
       <TextBlock Text="Filtered results · graph connections hidden" IsVisible="{Binding HasHistoryFilter}" Classes="muted" FontSize="11"/>
     </StackPanel>
     <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1" Padding="0,7" Background="#252526">
-      <DockPanel><TextBlock DockPanel.Dock="Left" Text="Graph" Width="{Binding HistoryGraphWidth}" Padding="8,0"/><Grid ColumnDefinitions="*,135,112" Margin="8,0"><TextBlock Text="Message"/><TextBlock Grid.Column="1" Text="Author"/><TextBlock Grid.Column="2" Text="Date"/></Grid></DockPanel>
+      <DockPanel><TextBlock DockPanel.Dock="Left" Text="Graph" Width="{Binding HistoryGraphWidth}" Padding="8,0"/><Grid ColumnDefinitions="*,155,112" Margin="8,0"><TextBlock Text="Message"/><TextBlock Grid.Column="1" Text="Author"/><TextBlock Grid.Column="2" Text="Date"/></Grid></DockPanel>
     </Border>
     <ListBox x:Name="HistoryList" Grid.Row="3" Classes="history" ItemsSource="{Binding HistoryRows}" SelectedItem="{Binding SelectedHistoryRow}" ContextRequested="CommitContextRequested">
       <ListBox.ItemTemplate>
@@ -19,7 +19,7 @@
           <Border BorderBrush="#2D2D30" BorderThickness="0,0,0,1" ToolTip.Tip="{Binding Sha}">
             <DockPanel Height="30">
               <controls:GraphCell DockPanel.Dock="Left" Width="{Binding GraphWidth}" Row="{Binding}"/>
-              <Grid ColumnDefinitions="*,135,112" Margin="8,0" VerticalAlignment="Center">
+              <Grid ColumnDefinitions="*,155,112" Margin="8,0" VerticalAlignment="Center">
                 <DockPanel Margin="0,0,12,0">
                   <ItemsControl DockPanel.Dock="Right" ItemsSource="{Binding ReferenceLabels}" Margin="6,0,0,0" MaxWidth="200">
                     <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
@@ -27,7 +27,12 @@
                   </ItemsControl>
                   <TextBlock Text="{Binding Subject}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                 </DockPanel>
-                <TextBlock Grid.Column="1" Text="{Binding Author}" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" Classes="muted"/>
+                <DockPanel Grid.Column="1" Margin="0,0,8,0">
+                  <Border DockPanel.Dock="Left" Width="18" Height="18" CornerRadius="9" ClipToBounds="True" Margin="0,0,6,0" Background="{Binding AuthorAvatar.Background}" VerticalAlignment="Center">
+                    <Panel><TextBlock Text="{Binding AuthorAvatar.Initials}" FontSize="8" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/><Image Source="{Binding AuthorAvatar.Image}" Stretch="UniformToFill"/></Panel>
+                  </Border>
+                  <TextBlock Text="{Binding Author}" TextTrimming="CharacterEllipsis" Classes="muted" VerticalAlignment="Center"/>
+                </DockPanel>
                 <TextBlock Grid.Column="2" Text="{Binding Date}" FontSize="11" Classes="muted" ToolTip.Tip="{Binding FullDate}"/>
               </Grid>
             </DockPanel>

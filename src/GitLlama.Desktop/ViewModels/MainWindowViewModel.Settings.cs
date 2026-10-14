@@ -22,6 +22,13 @@ public partial class MainWindowViewModel : IDisposable
         if (!_loadingSettings) _ = PersistAsync();
         _ = ConfigureWatcherAsync();
     }
+    // Off until settings load so nothing is requested before the user's preference is known.
+    [ObservableProperty] private bool loadAvatars;
+    partial void OnLoadAvatarsChanged(bool value)
+    {
+        AvatarCache.Enabled = value;
+        if (!_loadingSettings) _ = PersistAsync();
+    }
     internal void StartRepositoryMonitoring() { _monitoringEnabled = true; _ = ConfigureWatcherAsync(); }
     internal void StopRepositoryMonitoring()
     {

@@ -375,6 +375,7 @@ public partial class MainWindowViewModel : ObservableObject
             _activeHistoryCommit = commit;
             HistorySubject = commit.Subject;
             HistoryAuthor = commit.Author;
+            HistoryAvatar = _allHistoryRows.FirstOrDefault(row => row.Sha == commit.Sha)?.AuthorAvatar ?? HistoryAvatar;
             HistorySha = commit.Sha[..7];
             HistoryDate = commit.Date.ToString("yyyy-MM-dd HH:mm:ss zzz");
             HistoryMessage = commit.Message;
@@ -607,6 +608,7 @@ public partial class MainWindowViewModel : ObservableObject
             SelectedTab = Tabs.Contains(data.ActiveTab) ? data.ActiveTab : Tabs.FirstOrDefault() ?? "History";
             SelectedLayout = LayoutNames.Contains(data.LayoutName) ? data.LayoutName : "Standard";
             AutoRefresh = data.AutoRefresh;
+            LoadAvatars = data.LoadAvatars;
             InitializeProfiles(data);
             SelectedRepository = Repositories.FirstOrDefault(r => r.Path == data.ActiveRepository);
             if (data.OpenRepositoryPaths is { Count: > 0 } paths)
@@ -739,7 +741,7 @@ public partial class MainWindowViewModel : ObservableObject
         {
             if (revision != Interlocked.Read(ref _settingsRevision)) return;
             CaptureActiveProfile();
-            var snapshot = new GitLlamaSettings(Repositories.ToList(), SelectedRepository?.Path, Tabs.ToList(), SelectedTab, LayoutName: SelectedLayout, AutoRefresh: AutoRefresh, OpenRepositoryPaths: RepositoryWorkspaceTabs.Select(tab => tab.Repository?.Path).ToList(), ActiveRepositoryTab: RepositoryWorkspaceTabs.IndexOf(SelectedRepositoryWorkspaceTab!), UseCredentialManager: UseCredentialManager, UseSshAgent: UseSshAgent, SshPrivateKeyPath: SshPrivateKeyPath, SshPublicKeyPath: SshPublicKeyPath, Profiles: Profiles.ToList(), ActiveProfileId: ActiveProfile?.Id);
+            var snapshot = new GitLlamaSettings(Repositories.ToList(), SelectedRepository?.Path, Tabs.ToList(), SelectedTab, LayoutName: SelectedLayout, AutoRefresh: AutoRefresh, OpenRepositoryPaths: RepositoryWorkspaceTabs.Select(tab => tab.Repository?.Path).ToList(), ActiveRepositoryTab: RepositoryWorkspaceTabs.IndexOf(SelectedRepositoryWorkspaceTab!), UseCredentialManager: UseCredentialManager, UseSshAgent: UseSshAgent, SshPrivateKeyPath: SshPrivateKeyPath, SshPublicKeyPath: SshPublicKeyPath, Profiles: Profiles.ToList(), ActiveProfileId: ActiveProfile?.Id, LoadAvatars: LoadAvatars);
             await _settings.SaveAsync(snapshot);
         }
         catch (Exception e) { FileLog.Error(e, "Repository workspace operation"); Status = e.Message; }

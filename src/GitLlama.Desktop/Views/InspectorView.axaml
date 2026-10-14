@@ -3,10 +3,9 @@
     <Grid>
       <ScrollViewer AllowAutoHide="False" IsVisible="{Binding !IsWorkingTreeInspector}" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="16" Spacing="14">
-          <Button Classes="workspace" Click="ViewChanges_Click" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"><TextBlock Text="{Binding WorkingChangesCaption}"/></Button>
           <TextBlock Text="{Binding HistorySubject}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap"/>
           <Border Classes="card"><SelectableTextBlock Text="{Binding HistoryMessage}" TextWrapping="Wrap"/></Border>
-          <Grid ColumnDefinitions="38,*" ColumnSpacing="12"><Border Background="#41434A" CornerRadius="19" Width="36" Height="36"><TextBlock Text="●" FontSize="22" Foreground="#DBDEE1" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding HistoryAuthor}"/><TextBlock Text="{Binding HistoryDate}" FontSize="11" Classes="muted"/><SelectableTextBlock Text="{Binding HistorySha}" FontSize="11" Classes="muted"/></StackPanel></Grid>
+          <Grid ColumnDefinitions="38,*" ColumnSpacing="12"><Border Background="{Binding HistoryAvatar.Background, FallbackValue=#41434A}" CornerRadius="18" Width="36" Height="36" ClipToBounds="True" VerticalAlignment="Top"><Panel><TextBlock Text="{Binding HistoryAvatar.Initials, FallbackValue=●}" FontSize="14" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/><Image Source="{Binding HistoryAvatar.Image}" Stretch="UniformToFill"/></Panel></Border><StackPanel Grid.Column="1" Spacing="4"><TextBlock Text="{Binding HistoryAuthor}"/><TextBlock Text="{Binding HistoryDate}" FontSize="11" Classes="muted"/><SelectableTextBlock Text="{Binding HistorySha}" FontSize="11" Classes="muted"/></StackPanel></Grid>
           <TextBlock Text="Changed files" Classes="section"/>
           <ListBox Classes="file-list" ItemsSource="{Binding HistoryFileRows}" SelectedItem="{Binding SelectedHistoryFileRow}" MaxHeight="300"/>
           <Expander Classes="navigation" Header="Commit metadata"><SelectableTextBlock Text="{Binding HistoryCommitDetails}" TextWrapping="Wrap" Margin="0,8"/></Expander>

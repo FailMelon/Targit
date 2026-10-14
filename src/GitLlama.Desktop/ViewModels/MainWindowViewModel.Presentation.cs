@@ -35,6 +35,7 @@ public partial class MainWindowViewModel
     [ObservableProperty] private string branchSearch = "";
     [ObservableProperty] private string historySubject = "Select a commit";
     [ObservableProperty] private string historyAuthor = "";
+    [ObservableProperty] private AvatarImage? historyAvatar;
     [ObservableProperty] private string historySha = "";
     [ObservableProperty] private string historyDate = "";
     [ObservableProperty] private string historyMessage = "Choose a commit in History to inspect its message and changed files.";
@@ -151,14 +152,14 @@ public partial class MainWindowViewModel
             _activeHistoryCommit = null;
             HistoryFiles.Clear(); _historyFilePaths.Clear(); SelectedHistoryFile = null;
             HistoryFileRows.Clear(); SelectedHistoryFileRow = null;
-            HistorySubject = "Select a commit"; HistoryAuthor = HistorySha = HistoryDate = "";
+            HistorySubject = "Select a commit"; HistoryAuthor = HistorySha = HistoryDate = ""; HistoryAvatar = null;
             HistoryMessage = "Choose a commit in History to inspect its message and changed files.";
             HistoryCommitDetails = "Select a commit in History.";
             HistoryFilePreview = "Select a changed file to inspect its patch.";
             return;
         }
         if (!IsUpdatingContextSnapshot) { IsWorkingTreeInspector = false; IsFileReview = false; CenterSection = "History"; }
-        HistorySubject = value.Subject; HistoryAuthor = value.Author;
+        HistorySubject = value.Subject; HistoryAuthor = value.Author; HistoryAvatar = value.AuthorAvatar;
         HistorySha = value.ShortSha; HistoryDate = value.FullDate;
         var line = _historyGraphShas.FirstOrDefault(e => e.Value == value.Sha).Key;
         if (line is not null)
@@ -175,7 +176,7 @@ public partial class MainWindowViewModel
         WorkingFiles.Clear(); SelectedWorkingFile = null; HistoryFileRows.Clear(); SelectedHistoryFileRow = null;
         Interlocked.Increment(ref _historySelectionRevision); Interlocked.Increment(ref _historyFileRevision);
         _activeHistoryCommit = null;
-        HistorySubject = "Select a commit"; HistoryAuthor = HistorySha = HistoryDate = "";
+        HistorySubject = "Select a commit"; HistoryAuthor = HistorySha = HistoryDate = ""; HistoryAvatar = null;
         HistoryMessage = "Choose a commit in History to inspect its message and changed files.";
         HistoryCommitDetails = "Select a commit in History.";
         HistoryFilePreview = "Select a changed file to inspect its patch.";

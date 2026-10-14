@@ -22,7 +22,7 @@ namespace GitLlama.Desktop.Tests;
 public sealed class TestApp : App
 {
     // Use the production styles without creating the real user's workspace or settings.
-    public override void OnFrameworkInitializationCompleted() { }
+    public override void OnFrameworkInitializationCompleted() => AvatarCache.NetworkAvailable = false;
 }
 public static class TestAppBuilder
 {

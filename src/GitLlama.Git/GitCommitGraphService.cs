@@ -2,7 +2,7 @@ using LibGit2Sharp;
 
 namespace GitLlama.Git;
 
-public sealed record GitCommitNode(string Sha, string Subject, string Author, DateTimeOffset Timestamp, IReadOnlyList<string> Parents, IReadOnlyList<string> Labels);
+public sealed record GitCommitNode(string Sha, string Subject, string Author, DateTimeOffset Timestamp, IReadOnlyList<string> Parents, IReadOnlyList<string> Labels, string AuthorEmail = "");
 public sealed record GitHistoryPage(IReadOnlyList<GitCommitNode> Commits, bool HasMore);
 
 /// <summary>Phase 36 Git backend service.</summary>
@@ -22,7 +22,7 @@ public sealed class GitCommitGraphService
             .Skip(offset).Take(pageSize + 1).Select(c =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                return new GitCommitNode(c.Sha, c.MessageShort, c.Author.Name, c.Author.When, c.Parents.Select(p => p.Sha).ToArray(), labels.GetValueOrDefault(c.Sha, []));
+                return new GitCommitNode(c.Sha, c.MessageShort, c.Author.Name, c.Author.When, c.Parents.Select(p => p.Sha).ToArray(), labels.GetValueOrDefault(c.Sha, []), c.Author.Email ?? "");
             }).ToArray();
         return new GitHistoryPage(commits.Take(pageSize).ToArray(), commits.Length > pageSize);
     }, cancellationToken);
@@ -43,7 +43,7 @@ public sealed class GitCommitGraphService
         return repo.Commits.QueryBy(new CommitFilter { SortBy = CommitSortStrategies.Topological | CommitSortStrategies.Time }).Take(maxCount)
             .Select(c => { cancellationToken.ThrowIfCancellationRequested(); return new GitCommitNode(c.Sha, c.MessageShort, c.Author.Name, c.Author.When,
                 c.Parents.Select(p => p.Sha).ToArray(),
-                labels.TryGetValue(c.Sha, out var names) ? names.OrderBy(n => n, StringComparer.Ordinal).ToArray() : Array.Empty<string>()); })
+                labels.TryGetValue(c.Sha, out var names) ? names.OrderBy(n => n, StringComparer.Ordinal).ToArray() : Array.Empty<string>(), c.Author.Email ?? ""); })
             .ToArray();
     }, cancellationToken);
 }

@@ -16,7 +16,8 @@ public sealed partial class RemoteTreeNode : ObservableObject
     [ObservableProperty] private GitRemoteInfo? remote;
     [ObservableProperty] private string count = "";
     public string Tooltip => Remote?.Url ?? Branch ?? Name;
-    partial void OnRemoteChanged(GitRemoteInfo? value) => OnPropertyChanged(nameof(Tooltip));
+    public AvatarImage? Avatar => IsRemote && Remote is { } remote ? AvatarCache.ForRemote(remote.Name, remote.Url) : null;
+    partial void OnRemoteChanged(GitRemoteInfo? value) { OnPropertyChanged(nameof(Tooltip)); OnPropertyChanged(nameof(Avatar)); }
 }
 
 public partial class MainWindowViewModel
@@ -34,6 +35,8 @@ public partial class MainWindowViewModel
             PopulateRemoteChildren(root, branches, remote.Name + "/"); roots.Add(root);
         }
         CollectionUpdates.Sync(RemoteTree, roots, node => node.Key);
+        AvatarCache.GitHubToken = () => IsGithubConnected ? GithubUsableToken : "";
+        AvatarCache.GitHubRepositories = Remotes.OrderBy(r => r.Name != "origin").Select(r => GitLlama.Providers.GitHubProvider.FromRemote(r.Url)).OfType<GitLlama.Core.HostingRepository>().Distinct().ToArray();
     }
     private static void PopulateRemoteChildren(RemoteTreeNode parent, IEnumerable<string> branches, string prefix)
     {

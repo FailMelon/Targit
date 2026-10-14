@@ -264,6 +264,11 @@ public partial class MainWindow : Window
         if (sender is MenuItem { Tag: string title }) ShowDocument(title);
     }
     private void Settings_Click(object? sender, RoutedEventArgs e) => ShowDocument("Settings");
+    private void ViewChanges_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainWindowViewModel vm) vm.IsWorkingTreeInspector = true;
+        ShowDocument("Changes");
+    }
 
     private void BranchPicker_Click(object? sender, RoutedEventArgs e)
     {

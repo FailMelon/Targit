@@ -42,18 +42,11 @@ public partial class NavigationView : UserControl
 {
     public NavigationView() => AvaloniaXamlLoader.Load(this);
     private void OpenFolder_Click(object? sender, RoutedEventArgs e) => (TopLevel.GetTopLevel(this) as MainWindow)?.OpenRepositoryFolder();
-    private void Changes_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) vm.IsWorkingTreeInspector = true;
-        (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Changes");
-    }
     private void Remotes_Click(object? sender, RoutedEventArgs e) => (DataContext as MainWindowViewModel)?.DockDocument?.Invoke("Remotes");
     private void PullRequests_Click(object? sender, RoutedEventArgs e) => (DataContext as MainWindowViewModel)?.DockDocument?.Invoke("Pull Requests");
     private void Issues_Click(object? sender, RoutedEventArgs e) => (DataContext as MainWindowViewModel)?.DockDocument?.Invoke("Issues");
-    private void Files_Click(object? sender, RoutedEventArgs e) => (DataContext as MainWindowViewModel)?.DockDocument?.Invoke("Files");
     private void Stashes_Click(object? sender, RoutedEventArgs e) => (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Stashes");
     private void Worktrees_Click(object? sender, RoutedEventArgs e) => (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Worktrees");
-    private void Reflog_Click(object? sender, RoutedEventArgs e) => (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Reflog");
     private void Tags_Click(object? sender, RoutedEventArgs e) => (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Tags");
     private void Submodules_Click(object? sender, RoutedEventArgs e) => (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Submodules");
     private void Branches_Click(object? sender, RoutedEventArgs e) => (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Branches");
@@ -87,10 +80,6 @@ public partial class InspectorView : UserControl
         else await vm.StageSelectedCommand.ExecuteAsync(null);
         vm.ReviewStagedPatch = vm.SelectedWorkingFile?.IsStaged == true;
         e.Handled = true;
-    }
-    private void ViewChanges_Click(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainWindowViewModel vm) { vm.IsWorkingTreeInspector = true; vm.DockDocument?.Invoke("Changes"); }
     }
 }
 public partial class InspectorView : UserControl

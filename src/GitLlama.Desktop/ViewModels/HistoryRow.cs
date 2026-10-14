@@ -17,6 +17,7 @@ public sealed record HistoryRow(GitCommitNode Commit, int Lane, double GraphWidt
     public string ShortSha => Sha[..Math.Min(7, Sha.Length)];
     public string Subject => Commit.Subject;
     public string Author => Commit.Author;
+    public AvatarImage AuthorAvatar => AvatarCache.ForAuthor(Commit.Author, Commit.AuthorEmail, Commit.Sha);
     public string Date => Commit.Timestamp.LocalDateTime.ToString("MMM d, HH:mm");
     public string FullDate => Commit.Timestamp.ToString("yyyy-MM-dd HH:mm:ss zzz");
     public IReadOnlyList<string> Labels => Commit.Labels;

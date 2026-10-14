@@ -5,7 +5,7 @@ namespace GitLlama.Infrastructure;
 
 public sealed record SettingsProfile(string Id, string Name, string AuthorName = "", string AuthorEmail = "", bool UseCredentialManager = true, bool UseSshAgent = true, string SshPrivateKeyPath = "", string SshPublicKeyPath = "");
 
-public sealed record GitLlamaSettings(List<RepositoryInfo> Repositories, string? ActiveRepository, List<string>? Tabs = null, string ActiveTab = "History", string LeftPanel = "Repositories", string RightPanel = "Inspector", string LayoutName = "Standard", bool AutoRefresh = true, int SchemaVersion = 1, List<string?>? OpenRepositoryPaths = null, int ActiveRepositoryTab = 0, bool UseCredentialManager = true, bool UseSshAgent = true, string SshPrivateKeyPath = "", string SshPublicKeyPath = "", List<SettingsProfile>? Profiles = null, string? ActiveProfileId = null);
+public sealed record GitLlamaSettings(List<RepositoryInfo> Repositories, string? ActiveRepository, List<string>? Tabs = null, string ActiveTab = "History", string LeftPanel = "Repositories", string RightPanel = "Inspector", string LayoutName = "Standard", bool AutoRefresh = true, int SchemaVersion = 1, List<string?>? OpenRepositoryPaths = null, int ActiveRepositoryTab = 0, bool UseCredentialManager = true, bool UseSshAgent = true, string SshPrivateKeyPath = "", string SshPublicKeyPath = "", List<SettingsProfile>? Profiles = null, string? ActiveProfileId = null, bool LoadAvatars = true);
 
 public sealed class JsonSettingsStore
 {
