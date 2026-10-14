@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.2 - 2026-10-14
+
 - Show where the current branch pushes and pulls in a push / pull picker next to the branch, with how far ahead and behind it is. Pick any branch on a remote, start a new branch on a remote, or stop tracking. Push, Pull and Fetch follow it (Push and Fetch use origin, or the only remote, until one is chosen), and their tooltips say exactly where they go. Pushing to a remote branch with a different name now works.
 - Remove the + beside each remote in the sidebar for creating a branch on the server. The + on Remotes still adds a remote. Remove the + on Stashes too; stash from the Stash tab under your working changes or a file's right-click menu.
 - Fix Discard changes leaving a file listed as modified: discarded files and files resolved with all of one side are written with your line-ending settings (core.autocrlf, .gitattributes) and Git LFS, the way checkout writes them. Discarding a file that only looked modified because of its line endings now clears it. When the file you were viewing has no changes left after discarding, stashing or ignoring it, the centre goes back to the history graph.
