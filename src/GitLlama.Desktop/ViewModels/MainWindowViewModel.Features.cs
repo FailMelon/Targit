@@ -135,6 +135,7 @@ public partial class MainWindowViewModel
     {
         FetchRemoteCommand.Cancel(); PushRemoteCommand.Cancel(); PullFastForwardCommand.Cancel(); CloneRepositoryCommand.Cancel();
         PushSelectedTagCommand.Cancel(); DeleteSelectedRemoteTagCommand.Cancel(); UpdateSubmoduleCommand.Cancel();
+        ChangeRemoteBranchCommand.Cancel();
     }
     public bool RepositoryCreationSucceeded { get; private set; }
     [RelayCommand]

@@ -983,9 +983,12 @@ public sealed class WorkspaceTests
             repo.Network.Remotes.Add("origin", "https://github.com/example/StoneForge.git");
             repo.Network.Remotes.Add("upstream", "https://github.com/example/upstream.git");
             foreach (var name in new[] { "origin/main", "origin/feature/auth", "origin/feature/ui", "origin/team/fix/login", "upstream/main" }) repo.Refs.Add("refs/remotes/" + name, repo.Head.Tip.Id);
+            repo.Refs.Add("refs/remotes/origin/HEAD", "refs/remotes/origin/main");
         }
         var vm = await fixture.OpenAsync(); vm.AutoRefresh = false;
         Assert.Equal(2, vm.RemoteTree.Count);
+        Assert.DoesNotContain("origin/HEAD", vm.BranchLines);
+        Assert.DoesNotContain(vm.HistoryRows.SelectMany(row => row.Labels), label => label == "origin/HEAD" || label == "HEAD");
         var origin = vm.RemoteTree.Single(n => n.Name == "origin"); var upstream = vm.RemoteTree.Single(n => n.Name == "upstream");
         Assert.Equal("4", origin.Count); Assert.Equal("1", upstream.Count);
         var feature = origin.Children.Single(n => n.Name == "feature"); Assert.Null(feature.Branch);
@@ -999,7 +1002,8 @@ public sealed class WorkspaceTests
         {
             window.Show(); await WaitUntilAsync(() => window.GetVisualDescendants().OfType<RemoteTreeView>().Any()); Dispatcher.UIThread.RunJobs();
             var view = window.GetVisualDescendants().OfType<RemoteTreeView>().Single();
-            Assert.Equal(new[] { "Fetch origin", "Push " + vm.CurrentBranch + " to origin", "Remote settings…", "Remove origin…", "Copy remote URL" }, view.BuildMenu(origin).Items.OfType<MenuItem>().Select(i => i.Header));
+            Assert.Equal(new[] { "Fetch origin", "Push " + vm.CurrentBranch + " to origin", "Create remote branch…", "Edit remote URL…", "Remove origin…", "Copy remote URL" }, view.BuildMenu(origin).Items.OfType<MenuItem>().Select(i => i.Header));
+            Assert.Contains(view.BuildMenu(feature.Children[0]).Items.OfType<MenuItem>(), item => Equals(item.Header, "Rename remote branch…"));
             await vm.RefreshCommand.ExecuteAsync(null);
             Assert.Same(origin, vm.RemoteTree.Single(n => n.Name == "origin")); Assert.Same(feature, origin.Children.Single(n => n.Name == "feature"));
             Assert.False(feature.IsExpanded); Assert.False(upstream.IsExpanded);
@@ -1008,7 +1012,7 @@ public sealed class WorkspaceTests
             Assert.Equal("origin/main", vm.SelectedBranchLine); Assert.Equal("origin", vm.SelectedRemote!.Name); Assert.Equal("main", vm.UpstreamBranchName);
             SavePreview(window, "remote-tree.png");
             window.ShowDocument("Remotes");
-            await WaitUntilAsync(() => window.GetVisualDescendants().OfType<RemotesView>().Any());
+            await WaitUntilAsync(() => window.GetVisualDescendants().OfType<RemotesView>().Any(remotes => remotes.GetVisualDescendants().OfType<RemoteTreeView>().Any()));
             Assert.NotEmpty(window.GetVisualDescendants().OfType<RemotesView>().Single().GetVisualDescendants().OfType<RemoteTreeView>());
             SavePreview(window, "remotes-panel.png");
             vm.BranchSearch = "login"; Assert.Single(vm.RemoteTree); Assert.Equal("1", vm.RemoteTree[0].Count);
@@ -1216,6 +1220,34 @@ public sealed class WorkspaceTests
         Assert.True(vm.NeedsGithubWorkflowAccess); Assert.Contains("authorize the workflow permission", vm.RemoteOperationFeedback);
         await vm.ReconnectGithubPermissionsCommand.ExecuteAsync(null);
         Assert.True(vm.IsGithubConnected); Assert.False(vm.NeedsGithubWorkflowAccess); Assert.True(vm.GithubIncludePrivateRepositories); Assert.Contains("Retry the push", vm.RemoteOperationFeedback);
+    }
+    [AvaloniaFact]
+    public async Task RemoteUrlPopupUpdatesConnectionAndRemovalRequiresConfirmation()
+    {
+        using var fixture = new WorkspaceFixture(); var vm = await fixture.OpenAsync(); vm.AutoRefresh = false;
+        vm.NewRemoteName = "origin"; vm.NewRemoteUrl = "https://github.com/example/old.git"; await vm.AddRemoteCommand.ExecuteAsync(null);
+        var window = new MainWindow(fixture.SettingsPath) { DataContext = vm };
+        try
+        {
+            window.Show(); Dispatcher.UIThread.RunJobs(); Assert.NotNull(vm.OpenIntegrationBrowser);
+            var edit = RemoteEditDialog.ConnectionAsync(window, vm, vm.SelectedRemote);
+            await WaitUntilAsync(() => window.OwnedWindows.Any());
+            var dialog = window.OwnedWindows.Single();
+            var boxes = dialog.GetVisualDescendants().OfType<TextBox>().ToDictionary(input => input.Name!);
+            Assert.True(boxes["RemoteNameInput"].IsReadOnly);
+            boxes["RemoteUrlInput"].Text = "https://github.com/example/new.git";
+            dialog.GetVisualDescendants().OfType<Button>().Single(button => Equals(button.Content, "Save remote")).RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await WaitUntilAsync(() => !dialog.IsVisible); await edit;
+            Assert.Equal("https://github.com/example/new.git", vm.SelectedRemote!.Url); Assert.Equal(vm.SelectedRemote.Url, vm.SelectedRemote.PushUrl);
+            var remove = RemoteEditDialog.ConnectionAsync(window, vm, vm.SelectedRemote, remove: true);
+            await WaitUntilAsync(() => window.OwnedWindows.Any()); dialog = window.OwnedWindows.Single();
+            var confirmation = dialog.GetVisualDescendants().OfType<TextBox>().Single(input => input.Name == "RemoteNameInput");
+            var button = dialog.GetVisualDescendants().OfType<Button>().Single(item => Equals(item.Content, "Remove remote"));
+            button.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent)); Dispatcher.UIThread.RunJobs(); Assert.True(dialog.IsVisible); Assert.Single(vm.Remotes);
+            confirmation.Text = "origin"; button.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await WaitUntilAsync(() => !dialog.IsVisible); await remove; Assert.Empty(vm.Remotes);
+        }
+        finally { window.Close(); }
     }
     [Theory]
     [InlineData("https://github.com/settings/connections/applications/Ov23liO3PME31PJH8PfM", true)]

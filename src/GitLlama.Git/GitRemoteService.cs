@@ -6,8 +6,17 @@ public sealed record GitRemoteInfo(string Name, string Url, string PushUrl);
 public sealed record GitRemoteBranchInfo(string RemoteName, string BranchName, string CommitSha, bool IsTrackedByCurrentBranch);
 
 /// <summary>Manages Git remote configuration using LibGit2Sharp.</summary>
-public sealed class GitRemoteService
+public sealed partial class GitRemoteService
 {
+    public Task EditAsync(string path, GitRemoteInfo expected, string fetchUrl, string pushUrl, CancellationToken ct = default) => Task.Run(() =>
+    {
+        ct.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(fetchUrl) || string.IsNullOrWhiteSpace(pushUrl) || fetchUrl.IndexOfAny(['\0', '\r', '\n']) >= 0 || pushUrl.IndexOfAny(['\0', '\r', '\n']) >= 0) throw new InvalidOperationException("Enter valid remote URLs or local paths.");
+        using var repo = new Repository(path);
+        var remote = repo.Network.Remotes[expected.Name] ?? throw new InvalidOperationException("The remote no longer exists.");
+        if (remote.Url != expected.Url || (remote.PushUrl ?? remote.Url) != expected.PushUrl) throw new InvalidOperationException("The remote changed. Reopen its settings before editing.");
+        repo.Network.Remotes.Update(expected.Name, updater => { updater.Url = fetchUrl.Trim(); updater.PushUrl = pushUrl.Trim(); });
+    }, ct);
     public Task<IReadOnlyList<GitRemoteInfo>> ListAsync(string repositoryPath,
         CancellationToken cancellationToken = default) => Task.Run<IReadOnlyList<GitRemoteInfo>>(() =>
     {

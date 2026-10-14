@@ -49,25 +49,41 @@ public partial class RemoteTreeView : UserControl
     internal ContextMenu BuildMenu(RemoteTreeNode node)
     {
         if (DataContext is not MainWindowViewModel vm) return new ContextMenu();
-        if (node.Branch is { } branch && this.GetVisualAncestors().OfType<NavigationView>().FirstOrDefault() is { } navigation) return navigation.BuildBranchMenu(branch);
         var items = new List<MenuItem>();
+        var hasNavigationMenu = false;
+        if (node.Branch is { } branch && this.GetVisualAncestors().OfType<NavigationView>().FirstOrDefault() is { } navigation)
+        { items.AddRange(navigation.BuildBranchMenu(branch).ItemsSource!.OfType<MenuItem>()); hasNavigationMenu = true; }
         void Add(string label, Func<Task> action) { var item = new MenuItem { Header = label }; item.Click += async (_, _) => await action(); items.Add(item); }
         if (node.Remote is { } remote)
         {
             Add("Fetch " + remote.Name, () => { vm.SelectedRemote = remote; return vm.FetchRemoteCommand.ExecuteAsync(null); });
             Add("Push " + vm.CurrentBranch + " to " + remote.Name, () => { vm.SelectedRemote = remote; return vm.PushRemoteCommand.ExecuteAsync(null); });
-            Add("Remote settings…", () => { vm.SelectedRemote = remote; vm.DockDocument?.Invoke("Remotes"); return Task.CompletedTask; });
-            Add("Remove " + remote.Name + "…", () => PromptAsync("Remove " + remote.Name, "Remove this remote configuration and its remote-tracking references. Type its name to confirm.", "Remove", remote.Name, _ => vm.SelectedRemote = remote, () => vm.RemoveRemoteCommand.ExecuteAsync(null)));
+            Add("Create remote branch…", () => EditBranchAsync(remote.Name, null, GitLlama.Git.RemoteBranchOperation.Create));
+            Add("Edit remote URL…", () => EditConnectionAsync(remote));
+            Add("Remove " + remote.Name + "…", () => EditConnectionAsync(remote, remove: true));
             Add("Copy remote URL", () => CopyAsync(remote.Url));
         }
         else if (node.Branch is { } reference)
         {
-            Add("Checkout " + reference + "…", () => CheckoutAsync(reference));
-            Add("Show branch history", () => vm.RevealBranchHistoryCommand.ExecuteAsync(reference));
-            Add("Copy branch name", () => CopyAsync(reference));
+            if (!hasNavigationMenu)
+            {
+                Add("Checkout " + reference + "…", () => CheckoutAsync(reference));
+                Add("Show branch history", () => vm.RevealBranchHistoryCommand.ExecuteAsync(reference));
+                Add("Copy branch name", () => CopyAsync(reference));
+            }
+            var branchRemote = vm.Remotes.FirstOrDefault(candidate => reference.StartsWith(candidate.Name + "/", StringComparison.Ordinal));
+            if (branchRemote is not null && !reference.EndsWith("/HEAD", StringComparison.Ordinal))
+            {
+                var name = reference[(branchRemote.Name.Length + 1)..];
+                Add("Create remote branch here…", () => EditBranchAsync(branchRemote.Name, name, GitLlama.Git.RemoteBranchOperation.Create));
+                Add("Rename remote branch…", () => EditBranchAsync(branchRemote.Name, name, GitLlama.Git.RemoteBranchOperation.Rename));
+                Add("Delete remote branch…", () => EditBranchAsync(branchRemote.Name, name, GitLlama.Git.RemoteBranchOperation.Delete));
+            }
         }
         return new ContextMenu { ItemsSource = items };
     }
+    private Task EditConnectionAsync(GitLlama.Git.GitRemoteInfo remote, bool remove = false) => TopLevel.GetTopLevel(this) is Window owner && DataContext is MainWindowViewModel vm ? RemoteEditDialog.ConnectionAsync(owner, vm, remote, remove) : Task.CompletedTask;
+    private Task EditBranchAsync(string remote, string? branch, GitLlama.Git.RemoteBranchOperation operation) => TopLevel.GetTopLevel(this) is Window owner && DataContext is MainWindowViewModel vm ? RemoteEditDialog.BranchAsync(owner, vm, remote, branch, operation) : Task.CompletedTask;
     private async Task CopyAsync(string text) { if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard) await clipboard.SetTextAsync(text); }
     private async Task PromptAsync(string title, string description, string action, string expected, Action<string> setValue, Func<Task> execute)
     {

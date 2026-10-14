@@ -133,7 +133,7 @@ public sealed class GitBranchService
         repository.Branches.Remove(branch);
     }, cancellationToken);
 
-    private static bool BranchNameIsValid(string name) =>
+    internal static bool BranchNameIsValid(string name) =>
         !string.IsNullOrWhiteSpace(name) && !name.StartsWith('-') &&
         !name.StartsWith('/') && !name.EndsWith('/') &&
         !name.EndsWith('.') && !name.EndsWith(".lock", StringComparison.OrdinalIgnoreCase) &&
