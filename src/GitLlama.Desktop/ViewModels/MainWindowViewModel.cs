@@ -2487,8 +2487,8 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private async Task SaveTrackedStashAsync()
+    [RelayCommand(CanExecute = nameof(CanStashStaged))]
+    private async Task SaveStagedStashAsync()
     {
         if (SelectedRepository is not { } repo)
         {
@@ -2505,7 +2505,7 @@ public partial class MainWindowViewModel : ObservableObject
                 return;
             }
 
-            await _stashes.SaveAsync(repo.Path, message);
+            await _stashes.SaveStagedAsync(repo.Path, message);
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path)
             {
                 return;
@@ -2513,11 +2513,11 @@ public partial class MainWindowViewModel : ObservableObject
 
             StashMessage = "";
             await RefreshAsync();
-            Status = "Saved tracked changes to stash (untracked files excluded).";
+            Status = "Saved staged changes to stash; unstaged and untracked files were left in place.";
         }
         catch (Exception e)
         {
-            FileLog.Error(e, "Save tracked stash");
+            FileLog.Error(e, "Save staged stash");
             if (version == Interlocked.Read(ref _repositorySelectionVersion))
             {
                 Status = e.Message;

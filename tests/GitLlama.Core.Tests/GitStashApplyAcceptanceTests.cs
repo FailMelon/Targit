@@ -24,7 +24,12 @@ public sealed class GitStashApplyAcceptanceTests
 
             var service = new GitStashService();
             File.WriteAllText(Path.Combine(path, "tracked.txt"), "stashed");
-            await service.SaveAsync(path, "keep this stash");
+            using (var repo = new Repository(path))
+            {
+                Commands.Stage(repo, "tracked.txt");
+            }
+
+            await service.SaveStagedAsync(path, "keep this stash");
             Assert.Equal("original", File.ReadAllText(Path.Combine(path, "tracked.txt")));
             await service.ApplyAsync(path, 0);
             Assert.Equal("stashed", File.ReadAllText(Path.Combine(path, "tracked.txt")));

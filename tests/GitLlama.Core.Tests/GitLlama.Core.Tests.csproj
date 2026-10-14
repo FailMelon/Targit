@@ -10,5 +10,6 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="../Shared/FakeLfsLockServer.cs" Link="Shared/FakeLfsLockServer.cs" />
+        <Compile Include="../Shared/TestLogIsolation.cs" Link="Shared/TestLogIsolation.cs" />
     </ItemGroup>
 </Project>

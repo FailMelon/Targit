@@ -24,7 +24,12 @@ public sealed class GitStashPopAcceptanceTests
 
             var service = new GitStashService();
             File.WriteAllText(Path.Combine(path, "tracked.txt"), "stashed");
-            await service.SaveAsync(path, "pop me");
+            using (var repo = new Repository(path))
+            {
+                Commands.Stage(repo, "tracked.txt");
+            }
+
+            await service.SaveStagedAsync(path, "pop me");
             File.WriteAllText(Path.Combine(path, "tracked.txt"), "dirty");
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.PopAsync(path, 0));
             Assert.Single(await service.ListAsync(path));

@@ -22,30 +22,50 @@ public sealed class GitStashService
             cancellationToken
         );
 
-    /// <summary>Saves tracked working-tree changes in a stash without including untracked files.</summary>
-    public Task SaveAsync(string repositoryPath, string message, CancellationToken cancellationToken = default) =>
-        Task.Run(
-            () =>
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
-                using var repository = new Repository(repositoryPath);
-                if (repository.Info.IsBare || repository.Head.Tip is null)
-                {
-                    throw new InvalidOperationException("A working tree with an initial commit is required.");
-                }
+    private const FileStatus StagedStates =
+        FileStatus.NewInIndex
+        | FileStatus.ModifiedInIndex
+        | FileStatus.DeletedFromIndex
+        | FileStatus.RenamedInIndex
+        | FileStatus.TypeChangeInIndex;
 
-                if (!repository.RetrieveStatus().IsDirty)
+    /// <summary>
+    /// Saves only the staged changes in a stash, leaving unstaged and untracked work in place.
+    /// LibGit2Sharp cannot stash the index alone, so this uses system Git (2.35 or newer).
+    /// </summary>
+    public async Task SaveStagedAsync(
+        string repositoryPath,
+        string message,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+        await Task.Run(
+                () =>
                 {
-                    throw new InvalidOperationException("There are no local changes to stash.");
-                }
+                    using var repository = new Repository(repositoryPath);
+                    if (repository.Info.IsBare || repository.Head.Tip is null)
+                    {
+                        throw new InvalidOperationException("A working tree with an initial commit is required.");
+                    }
 
-                var signature = new Signature("GitLlama", "gitllama@localhost", DateTimeOffset.UtcNow);
-                cancellationToken.ThrowIfCancellationRequested();
-                repository.Stashes.Add(signature, message ?? string.Empty, StashModifiers.Default);
-            },
-            cancellationToken
-        );
+                    if (!repository.RetrieveStatus().Any(entry => (entry.State & StagedStates) != 0))
+                    {
+                        throw new InvalidOperationException("There are no staged changes to stash.");
+                    }
+                },
+                cancellationToken
+            )
+            .ConfigureAwait(false);
+
+        string[] arguments = string.IsNullOrWhiteSpace(message)
+            ? ["stash", "push", "--staged"]
+            : ["stash", "push", "--staged", "-m", message];
+        await GitSystemTransport
+            .RunAsync(repositoryPath, arguments, new GitNetworkOptions(), cancellationToken)
+            .ConfigureAwait(false);
+    }
 
     /// <summary>Permanently removes a selected stash entry without applying it.</summary>
     public Task DropAsync(string repositoryPath, int index, CancellationToken cancellationToken = default) =>

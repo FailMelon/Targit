@@ -14,8 +14,8 @@
 
         <Button Grid.Row="2"
                 Classes="workspace"
-                Content="Stash tracked working changes"
-                Command="{Binding SaveTrackedStashCommand}" />
+                Content="Stash staged changes"
+                Command="{Binding SaveStagedStashCommand}" />
 
         <ListBox Grid.Row="3"
                  ItemsSource="{Binding Stashes}"

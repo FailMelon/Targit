@@ -44,9 +44,14 @@ public sealed class GitStashServiceTests
             }
 
             var service = new GitStashService();
-            await Assert.ThrowsAsync<InvalidOperationException>(() => service.SaveAsync(path, "empty"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.SaveStagedAsync(path, "empty"));
             File.WriteAllText(Path.Combine(path, "readme.txt"), "modified");
-            await service.SaveAsync(path, "work in progress");
+            using (var repo = new Repository(path))
+            {
+                Commands.Stage(repo, "readme.txt");
+            }
+
+            await service.SaveStagedAsync(path, "work in progress");
             Assert.Single(await service.ListAsync(path));
             Assert.Equal("initial", File.ReadAllText(Path.Combine(path, "readme.txt")));
         }

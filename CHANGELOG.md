@@ -7,6 +7,8 @@
 - Support Git LFS: files tracked by LFS are staged as pointers and checked out with their content through git-lfs, and their content is uploaded before each push. Track and stop tracking file types from the Git LFS sidebar category, download files that were checked out as pointers, and set up command-line Git for LFS. Pushing a repository that uses LFS requires Git LFS to be installed.
 - Support Git LFS file locking: lock and unlock files from the working changes list, see every lock and who holds it in the Git LFS sidebar category, and force-unlock with confirmation. Mark tracked file types as lockable so they stay read-only until you lock them. Pushes that change files someone else has locked are refused with the list of files.
 - Mark Git LFS files with an LFS badge in the inspector's working changes and commit file lists, where pointer line counts are hidden. Add Push all LFS files, to upload content for every branch and tag, and Free up disk space, which previews and then removes old local LFS content the server already has.
+- Stash only staged changes: unstaged edits and untracked files stay in the working tree, and the stash button is disabled until something is staged. Uses system Git 2.35 or newer.
+- Keep test runs from writing to the application log in %APPDATA%\GitLlama.
 
 ## 0.1.0 - 2026-10-14
 

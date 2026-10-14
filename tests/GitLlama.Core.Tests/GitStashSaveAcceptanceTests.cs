@@ -7,7 +7,7 @@ namespace GitLlama.Core.Tests;
 public sealed class GitStashSaveAcceptanceTests
 {
     [Fact]
-    public async Task StashesTrackedChangesButLeavesUntrackedFiles()
+    public async Task StashesOnlyStagedChangesAndLeavesUnstagedAndUntrackedFiles()
     {
         var path = Path.Combine(Path.GetTempPath(), "gitllama-stash-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
@@ -16,21 +16,38 @@ public sealed class GitStashSaveAcceptanceTests
             Repository.Init(path);
             using (var repo = new Repository(path))
             {
-                File.WriteAllText(Path.Combine(path, "tracked.txt"), "original");
-                Commands.Stage(repo, "tracked.txt");
+                File.WriteAllText(Path.Combine(path, "staged.txt"), "original");
+                File.WriteAllText(Path.Combine(path, "unstaged.txt"), "original");
+                Commands.Stage(repo, "staged.txt");
+                Commands.Stage(repo, "unstaged.txt");
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 repo.Commit("initial", signature, signature);
             }
 
-            File.WriteAllText(Path.Combine(path, "tracked.txt"), "modified");
+            File.WriteAllText(Path.Combine(path, "unstaged.txt"), "keep editing");
             File.WriteAllText(Path.Combine(path, "untracked.txt"), "leave me");
             var service = new GitStashService();
-            await service.SaveAsync(path, "phase 19");
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.SaveStagedAsync(path, "nothing staged"));
+            Assert.Empty(await service.ListAsync(path));
+
+            File.WriteAllText(Path.Combine(path, "staged.txt"), "ready");
+            using (var repo = new Repository(path))
+            {
+                Commands.Stage(repo, "staged.txt");
+            }
+
+            await service.SaveStagedAsync(path, "phase 19");
             var stash = Assert.Single(await service.ListAsync(path));
             Assert.Equal(0, stash.Index);
             Assert.Contains("phase 19", stash.Message);
-            Assert.Equal("original", File.ReadAllText(Path.Combine(path, "tracked.txt")));
+            Assert.Equal("original", File.ReadAllText(Path.Combine(path, "staged.txt")));
+            Assert.Equal("keep editing", File.ReadAllText(Path.Combine(path, "unstaged.txt")));
             Assert.Equal("leave me", File.ReadAllText(Path.Combine(path, "untracked.txt")));
+            using (var repo = new Repository(path))
+            {
+                Assert.Equal(FileStatus.ModifiedInWorkdir, repo.RetrieveStatus("unstaged.txt"));
+                Assert.Equal(FileStatus.Unaltered, repo.RetrieveStatus("staged.txt"));
+            }
         }
         finally
         {

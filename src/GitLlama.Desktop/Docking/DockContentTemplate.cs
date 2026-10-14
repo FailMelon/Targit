@@ -719,7 +719,7 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                 root.Children.Add(
                     new TextBlock
                     {
-                        Text = "Stash tracked changes (untracked files are excluded)",
+                        Text = "Stash staged changes (unstaged and untracked files stay in place)",
                         FontWeight = FontWeight.SemiBold,
                     }
                 );
@@ -729,8 +729,8 @@ public sealed class DockContentTemplate(MainWindowViewModel workspace) : IDataTe
                     new Binding(nameof(workspace.StashMessage)) { Mode = BindingMode.TwoWay }
                 );
                 root.Children.Add(stashMessage);
-                var saveStash = new Button { Content = "Stash tracked changes" };
-                saveStash.Bind(Button.CommandProperty, new Binding(nameof(workspace.SaveTrackedStashCommand)));
+                var saveStash = new Button { Content = "Stash staged changes" };
+                saveStash.Bind(Button.CommandProperty, new Binding(nameof(workspace.SaveStagedStashCommand)));
                 root.Children.Add(saveStash);
                 var stashList = new ListBox { MinHeight = 70 };
                 stashList.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(workspace.Stashes)));

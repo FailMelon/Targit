@@ -7,11 +7,13 @@ namespace GitLlama.Infrastructure;
 public static class FileLog
 {
     private static readonly object Gate = new();
-    private static readonly string LogPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "GitLlama",
-        "gitllama.log"
-    );
+
+    /// <summary>
+    /// Destination of the log. Defaults to the user's application data folder;
+    /// tests redirect it so they never write into the real user's log.
+    /// </summary>
+    public static string LogPath { get; set; } =
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GitLlama", "gitllama.log");
 
     public static void Error(Exception exception, string context)
     {
@@ -19,9 +21,10 @@ public static class FileLog
         {
             lock (Gate)
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
+                var path = LogPath;
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
                 File.AppendAllText(
-                    LogPath,
+                    path,
                     SecretRedactor.Redact(
                         $"[{DateTimeOffset.UtcNow:O}] ERROR {context}{Environment.NewLine}{exception}{Environment.NewLine}"
                     )
