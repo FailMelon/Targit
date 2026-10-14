@@ -31,6 +31,18 @@ public sealed class GitLfsTests : IDisposable
         Assert.Equal([new GitLfsFile("Art/Hero.psd", true), new GitLfsFile("Audio/Theme song.wav", false)], files);
     }
 
+    [Theory]
+    [InlineData("prune: 3 local objects, 1 retained, done.\n", 2)]
+    [InlineData("3 local objects, 1 retained, done.\n", 2)]
+    [InlineData("1 local object, 1 retained, done.\n", 0)]
+    [InlineData("3 local objects, 3 retained, done.\n", 0)]
+    [InlineData("3 local objects, 1 retained, done.\n2 files would be pruned (400 KB)\n", 2)]
+    [InlineData("3 local objects, 1 retained, 1 not on remote, done.\n1 file would be pruned (200 KB)\n", 1)]
+    [InlineData("1 local object, 0 retained\r3 local objects, 1 retained, done.\n", 2)]
+    [InlineData("", 0)]
+    public void ParsesPruneSummariesAcrossLfsVersions(string output, int expected) =>
+        Assert.Equal(expected, GitLfsService.ParsePruneCount(output));
+
     [Fact]
     public async Task StagingATrackedFileCommitsAPointerAndCheckoutRestoresIt()
     {
@@ -223,7 +235,7 @@ public sealed class GitLfsTests : IDisposable
         using (var repo = new Repository(_path))
         {
             repo.Network.Remotes.Add("origin", new Uri(remotePath).AbsoluteUri);
-            // Treat every commit as old so only the checked-out version must be kept.
+            // Keep the fixture outside the retention cutoff even when the test finishes in one second.
             repo.Config.Set("lfs.fetchrecentcommitsdays", 0);
             repo.Config.Set("lfs.fetchrecentrefsdays", 0);
             repo.Config.Set("lfs.pruneoffsetdays", 0);
@@ -231,7 +243,8 @@ public sealed class GitLfsTests : IDisposable
             {
                 File.WriteAllBytes(Path.Combine(_path, "big.bin"), version);
                 Commands.Stage(repo, [".gitattributes", "big.bin"]);
-                Commit(repo, "Version");
+                var signature = new Signature("Test", "test@example.com", DateTimeOffset.UtcNow.AddDays(-30));
+                repo.Commit("Version", signature, signature);
             }
         }
 

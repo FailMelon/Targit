@@ -183,14 +183,25 @@ public sealed partial class GitLfsService
     /// <summary>Counts what <see cref="PruneAsync"/> would delete, without deleting anything.</summary>
     public async Task<GitLfsPrunePreview> PreviewPruneAsync(string path, CancellationToken ct = default)
     {
-        // git-lfs's verbose list can omit entries, but its summary line is exact:
-        // "prune: 3 local objects, 1 retained, done."
+        // The dry-run total is exact and also accounts for remote verification.
+        // Older git-lfs versions prefix their progress summary with "prune:".
         var output = await GitSystemTransport.RunAsync(path, ["lfs", "prune", "--dry-run"], Local, ct);
-        var summary = PruneSummary().Match(output);
-        var objects = summary.Success
+        return new GitLfsPrunePreview(ParsePruneCount(output), StorageSize(path));
+    }
+
+    public static int ParsePruneCount(string output)
+    {
+        var total = PruneTotal().Match(output);
+        if (total.Success)
+        {
+            return int.Parse(total.Groups["count"].Value);
+        }
+
+        var summary = PruneSummary().Matches(output).LastOrDefault();
+        var objects = summary is { Success: true }
             ? int.Parse(summary.Groups["local"].Value) - int.Parse(summary.Groups["retained"].Value)
             : 0;
-        return new GitLfsPrunePreview(Math.Max(0, objects), StorageSize(path));
+        return Math.Max(0, objects);
     }
 
     /// <summary>
@@ -392,8 +403,11 @@ public sealed partial class GitLfsService
         return patterns.DistinctBy(entry => entry.Pattern).ToArray();
     }
 
-    [GeneratedRegex(@"prune: (?<local>\d+) local objects?, (?<retained>\d+) retained")]
+    [GeneratedRegex(@"(?<local>\d+) local objects?, (?<retained>\d+) retained")]
     private static partial Regex PruneSummary();
+
+    [GeneratedRegex(@"(?<count>\d+) files? would be pruned")]
+    private static partial Regex PruneTotal();
 
     private static string RepositoryPath(string file)
     {
