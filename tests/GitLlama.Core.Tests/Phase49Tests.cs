@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -26,6 +26,7 @@ public sealed class Phase49Tests
                 Commands.Stage(repo, "a.txt");
                 second = repo.Commit("second", sig, sig).Sha;
             }
+
             var service = new GitCommitFilePatchService();
             var root = await service.GetAsync(path, first, "a.txt");
             Assert.Equal(2, root.LinesAdded);
@@ -43,7 +44,10 @@ public sealed class Phase49Tests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

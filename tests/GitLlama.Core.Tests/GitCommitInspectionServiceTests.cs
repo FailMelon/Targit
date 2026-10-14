@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -26,6 +26,7 @@ public sealed class GitCommitInspectionServiceTests
                     repository.Commit($"Commit {i}", signature, signature);
                 }
             }
+
             var commits = await service.ListRecentAsync(path, 2);
             Assert.Equal(2, commits.Count);
             Assert.All(commits, commit => Assert.Equal("Test", commit.Author));
@@ -34,7 +35,10 @@ public sealed class GitCommitInspectionServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

@@ -1,6 +1,65 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GitLlama.Desktop.Views.RemoteTreeView">
-  <TreeView x:Name="RemoteTreeControl" ItemsSource="{Binding RemoteTree}" SelectionChanged="SelectionChanged" Tapped="BranchTapped" DoubleTapped="BranchDoubleTapped" ContextRequested="TreeContextRequested">
-    <TreeView.Styles><Style Selector="TreeViewItem"><Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/><Setter Property="Padding" Value="2,4"/></Style></TreeView.Styles>
-    <TreeView.ItemTemplate><TreeDataTemplate ItemsSource="{Binding Children}"><Grid ColumnDefinitions="20,*,Auto" ColumnSpacing="4" ToolTip.Tip="{Binding Tooltip}"><Panel><Path Data="{Binding IconPath}" IsVisible="{Binding !Avatar.HasImage, FallbackValue=True}" Width="14" Height="14" Stretch="Uniform" Stroke="#AAB2BF" StrokeThickness="1.4" VerticalAlignment="Center"/><Border IsVisible="{Binding Avatar.HasImage, FallbackValue=False}" Width="16" Height="16" CornerRadius="3" ClipToBounds="True" VerticalAlignment="Center"><Image Source="{Binding Avatar.Image}" Stretch="UniformToFill"/></Border></Panel><TextBlock Grid.Column="1" Text="{Binding Name}" IsVisible="{Binding IsRemote}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding Name}" IsVisible="{Binding !IsRemote}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/><TextBlock Grid.Column="2" Text="{Binding Count}" Classes="muted" FontSize="11" Margin="8,0,4,0" VerticalAlignment="Center"/></Grid></TreeDataTemplate></TreeView.ItemTemplate>
-  </TreeView>
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GitLlama.Desktop.Views.RemoteTreeView">
+    <TreeView x:Name="RemoteTreeControl"
+              ItemsSource="{Binding RemoteTree}"
+              SelectionChanged="SelectionChanged"
+              Tapped="BranchTapped"
+              DoubleTapped="BranchDoubleTapped"
+              ContextRequested="TreeContextRequested">
+        <TreeView.Styles>
+            <Style Selector="TreeViewItem">
+                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                <Setter Property="Padding" Value="2,4" />
+            </Style>
+        </TreeView.Styles>
+
+        <TreeView.ItemTemplate>
+            <TreeDataTemplate ItemsSource="{Binding Children}">
+                <Grid ColumnDefinitions="20,*,Auto"
+                      ColumnSpacing="4"
+                      ToolTip.Tip="{Binding Tooltip}">
+                    <Panel>
+                        <Path Data="{Binding IconPath}"
+                              IsVisible="{Binding !Avatar.HasImage, FallbackValue=True}"
+                              Width="14"
+                              Height="14"
+                              Stretch="Uniform"
+                              Stroke="#AAB2BF"
+                              StrokeThickness="1.4"
+                              VerticalAlignment="Center" />
+
+                        <Border IsVisible="{Binding Avatar.HasImage, FallbackValue=False}"
+                                Width="16"
+                                Height="16"
+                                CornerRadius="3"
+                                ClipToBounds="True"
+                                VerticalAlignment="Center">
+                            <Image Source="{Binding Avatar.Image}" Stretch="UniformToFill" />
+                        </Border>
+                    </Panel>
+
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Name}"
+                               IsVisible="{Binding IsRemote}"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding Name}"
+                               IsVisible="{Binding !IsRemote}"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center" />
+
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding Count}"
+                               Classes="muted"
+                               FontSize="11"
+                               Margin="8,0,4,0"
+                               VerticalAlignment="Center" />
+                </Grid>
+            </TreeDataTemplate>
+        </TreeView.ItemTemplate>
+    </TreeView>
 </UserControl>

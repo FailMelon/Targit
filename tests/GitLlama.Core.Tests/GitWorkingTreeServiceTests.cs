@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -14,18 +14,27 @@ public sealed class GitWorkingTreeServiceTests
         {
             var git = new GitWorkingTreeService();
             File.WriteAllText(Path.Combine(path, "one.txt"), "first");
-            await Assert.ThrowsAsync<InvalidOperationException>(
-                () => git.CommitAsync(path, "No changes", "Test", "test@example.com"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                git.CommitAsync(path, "No changes", "Test", "test@example.com")
+            );
 
             await git.StageAsync(path, "one.txt");
             using (var repo = new Repository(path))
-                Assert.Contains(repo.RetrieveStatus(), entry => entry.FilePath == "one.txt" &&
-                    (entry.State & FileStatus.NewInIndex) != 0);
+            {
+                Assert.Contains(
+                    repo.RetrieveStatus(),
+                    entry => entry.FilePath == "one.txt" && (entry.State & FileStatus.NewInIndex) != 0
+                );
+            }
 
             await git.UnstageAsync(path, "one.txt");
             using (var repo = new Repository(path))
-                Assert.Contains(repo.RetrieveStatus(), entry => entry.FilePath == "one.txt" &&
-                    (entry.State & FileStatus.NewInWorkdir) != 0);
+            {
+                Assert.Contains(
+                    repo.RetrieveStatus(),
+                    entry => entry.FilePath == "one.txt" && (entry.State & FileStatus.NewInWorkdir) != 0
+                );
+            }
 
             await git.StageAsync(path, "one.txt");
             var sha = await git.CommitAsync(path, "Initial commit", "Test", "test@example.com");
@@ -36,7 +45,10 @@ public sealed class GitWorkingTreeServiceTests
                 Assert.Empty(repo.RetrieveStatus());
             }
         }
-        finally { Cleanup(path); }
+        finally
+        {
+            Cleanup(path);
+        }
     }
 
     [Fact]
@@ -55,7 +67,10 @@ public sealed class GitWorkingTreeServiceTests
             Assert.Null(repo.Head.Tip["unstaged.txt"]);
             Assert.Contains(repo.RetrieveStatus(), entry => entry.FilePath == "unstaged.txt");
         }
-        finally { Cleanup(path); }
+        finally
+        {
+            Cleanup(path);
+        }
     }
 
     [Fact]
@@ -79,10 +94,15 @@ public sealed class GitWorkingTreeServiceTests
             var blob = (Blob)repo.Head.Tip["file.txt"].Target;
             Assert.Equal("staged version", blob.GetContentText());
             Assert.Equal("later working tree version", File.ReadAllText(file));
-            Assert.Contains(repo.RetrieveStatus(), entry => entry.FilePath == "file.txt" &&
-                (entry.State & FileStatus.ModifiedInWorkdir) != 0);
+            Assert.Contains(
+                repo.RetrieveStatus(),
+                entry => entry.FilePath == "file.txt" && (entry.State & FileStatus.ModifiedInWorkdir) != 0
+            );
         }
-        finally { Cleanup(path); }
+        finally
+        {
+            Cleanup(path);
+        }
     }
 
     [Fact]
@@ -104,7 +124,10 @@ public sealed class GitWorkingTreeServiceTests
             Assert.Null(repo.Head.Tip["removed.txt"]);
             Assert.Empty(repo.RetrieveStatus());
         }
-        finally { Cleanup(path); }
+        finally
+        {
+            Cleanup(path);
+        }
     }
 
     [Fact]
@@ -123,7 +146,10 @@ public sealed class GitWorkingTreeServiceTests
             Assert.NotNull(repo.Head.Tip[relativePath]);
             Assert.False(repo.RetrieveStatus().IsDirty);
         }
-        finally { Cleanup(path); }
+        finally
+        {
+            Cleanup(path);
+        }
     }
 
     [Fact]
@@ -148,9 +174,13 @@ public sealed class GitWorkingTreeServiceTests
             Assert.True((status & FileStatus.ModifiedInIndex) == 0);
             Assert.Equal("modified", File.ReadAllText(file));
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                git.CommitAsync(path, "Should not commit", "Tester", "tester@example.invalid"));
+                git.CommitAsync(path, "Should not commit", "Tester", "tester@example.invalid")
+            );
         }
-        finally { Cleanup(path); }
+        finally
+        {
+            Cleanup(path);
+        }
     }
 
     [Fact]
@@ -165,9 +195,13 @@ public sealed class GitWorkingTreeServiceTests
             await Assert.ThrowsAsync<InvalidOperationException>(() => git.StageAsync(path, "file.txt"));
             await Assert.ThrowsAsync<InvalidOperationException>(() => git.UnstageAsync(path, "file.txt"));
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                git.CommitAsync(path, "message", "Tester", "tester@example.invalid"));
+                git.CommitAsync(path, "message", "Tester", "tester@example.invalid")
+            );
         }
-        finally { Cleanup(path); }
+        finally
+        {
+            Cleanup(path);
+        }
     }
 
     [Fact]
@@ -181,7 +215,10 @@ public sealed class GitWorkingTreeServiceTests
             await Assert.ThrowsAsync<ArgumentException>(() => git.CommitAsync(path, "Message", "", "test@example.com"));
             await Assert.ThrowsAsync<ArgumentException>(() => git.CommitAsync(path, "Message", "Test", ""));
         }
-        finally { Cleanup(path); }
+        finally
+        {
+            Cleanup(path);
+        }
     }
 
     private static string NewRepository()
@@ -194,9 +231,16 @@ public sealed class GitWorkingTreeServiceTests
 
     private static void Cleanup(string path)
     {
-        if (!Directory.Exists(path)) return;
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
         foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+        {
             File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+        }
+
         Directory.Delete(path, true);
     }
 }

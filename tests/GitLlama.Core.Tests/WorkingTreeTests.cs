@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -19,11 +19,15 @@ public sealed class WorkingTreeTests
 
             await service.StageAsync(directory, "sample.txt");
             using (var repo = new Repository(directory))
+            {
                 Assert.True(repo.RetrieveStatus("sample.txt").HasFlag(FileStatus.NewInIndex));
+            }
 
             await service.UnstageAsync(directory, "sample.txt");
             using (var repo = new Repository(directory))
+            {
                 Assert.True(repo.RetrieveStatus("sample.txt").HasFlag(FileStatus.NewInWorkdir));
+            }
 
             await service.StageAsync(directory, "sample.txt");
             var sha = await service.CommitAsync(directory, "Add sample", "GitLlama Tests", "tests@example.invalid");
@@ -36,7 +40,10 @@ public sealed class WorkingTreeTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(directory, true);
         }
     }
@@ -51,11 +58,15 @@ public sealed class WorkingTreeTests
             Repository.Init(directory);
             File.WriteAllText(Path.Combine(directory, "unstaged.txt"), "content");
             var service = new GitWorkingTreeService();
-            var error = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => service.CommitAsync(directory, "Should fail", "Tester", "test@example.invalid"));
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.CommitAsync(directory, "Should fail", "Tester", "test@example.invalid")
+            );
             Assert.Contains("Stage", error.Message);
         }
-        finally { Cleanup(directory); }
+        finally
+        {
+            Cleanup(directory);
+        }
     }
 
     [Fact]
@@ -76,13 +87,19 @@ public sealed class WorkingTreeTests
             Assert.Null(repo.Head.Tip.Tree["unstaged.txt"]);
             Assert.True(repo.RetrieveStatus().IsDirty);
         }
-        finally { Cleanup(directory); }
+        finally
+        {
+            Cleanup(directory);
+        }
     }
 
     private static void Cleanup(string directory)
     {
         foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
+        {
             File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+        }
+
         Directory.Delete(directory, true);
     }
 
@@ -91,8 +108,10 @@ public sealed class WorkingTreeTests
     {
         var service = new GitWorkingTreeService();
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            service.CommitAsync(".", "", "Tester", "test@example.invalid"));
+            service.CommitAsync(".", "", "Tester", "test@example.invalid")
+        );
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            service.CommitAsync(".", "message", "", "test@example.invalid"));
+            service.CommitAsync(".", "message", "", "test@example.invalid")
+        );
     }
 }

@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -26,9 +26,12 @@ public sealed class GitBranchFromCommitAcceptanceTests
                 Commands.Stage(repo, "file.txt");
                 headSha = repo.Commit("new", signature, signature).Sha;
             }
+
             var service = new GitBranchFromCommitService();
             Assert.Equal("recovery/old-work", await service.CreateAsync(path, oldSha, "recovery/old-work"));
-            await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(path, oldSha, "recovery/old-work"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.CreateAsync(path, oldSha, "recovery/old-work")
+            );
             Assert.Equal("new", File.ReadAllText(Path.Combine(path, "file.txt")));
             using (var repo = new Repository(path))
             {
@@ -40,7 +43,10 @@ public sealed class GitBranchFromCommitAcceptanceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

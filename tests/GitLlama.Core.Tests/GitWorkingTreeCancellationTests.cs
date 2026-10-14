@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -16,11 +16,15 @@ public sealed class GitWorkingTreeCancellationTests
             using var cancellation = new CancellationTokenSource();
             cancellation.Cancel();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                new GitWorkingTreeService().StageAsync(path, "pending.txt", cancellation.Token));
+                new GitWorkingTreeService().StageAsync(path, "pending.txt", cancellation.Token)
+            );
             using var repository = new Repository(path);
             Assert.Equal(FileStatus.NewInWorkdir, repository.RetrieveStatus("pending.txt"));
         }
-        finally { DeleteRepository(path); }
+        finally
+        {
+            DeleteRepository(path);
+        }
     }
 
     [Fact]
@@ -35,12 +39,16 @@ public sealed class GitWorkingTreeCancellationTests
             using var cancellation = new CancellationTokenSource();
             cancellation.Cancel();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                service.CommitAsync(path, "message", "Tester", "tester@example.invalid", cancellation.Token));
+                service.CommitAsync(path, "message", "Tester", "tester@example.invalid", cancellation.Token)
+            );
             using var repository = new Repository(path);
             Assert.Null(repository.Head.Tip);
             Assert.True((repository.RetrieveStatus("pending.txt") & FileStatus.NewInIndex) != 0);
         }
-        finally { DeleteRepository(path); }
+        finally
+        {
+            DeleteRepository(path);
+        }
     }
 
     [Fact]
@@ -55,11 +63,15 @@ public sealed class GitWorkingTreeCancellationTests
             using var cancellation = new CancellationTokenSource();
             cancellation.Cancel();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                service.UnstageAsync(path, "pending.txt", cancellation.Token));
+                service.UnstageAsync(path, "pending.txt", cancellation.Token)
+            );
             using var repository = new Repository(path);
             Assert.True((repository.RetrieveStatus("pending.txt") & FileStatus.NewInIndex) != 0);
         }
-        finally { DeleteRepository(path); }
+        finally
+        {
+            DeleteRepository(path);
+        }
     }
 
     private static string CreateRepository()
@@ -72,9 +84,16 @@ public sealed class GitWorkingTreeCancellationTests
 
     private static void DeleteRepository(string path)
     {
-        if (!Directory.Exists(path)) return;
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
         foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+        {
             File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+        }
+
         Directory.Delete(path, true);
     }
 }

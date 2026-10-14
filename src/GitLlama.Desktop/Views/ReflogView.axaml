@@ -1,8 +1,39 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GitLlama.Desktop.Views.ReflogView">
-  <Grid Margin="12" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
-    <DockPanel><TextBlock Text="Reflog and recovery" FontSize="18" FontWeight="SemiBold"/><Button Classes="workspace" Content="Refresh" Command="{Binding RefreshCommand}" HorizontalAlignment="Right"/></DockPanel>
-    <TextBlock Grid.Row="1" Text="Recover a commit by creating a new branch. This keeps the current working files and branch untouched." Classes="muted" TextWrapping="Wrap"/>
-    <ListBox Grid.Row="2" ItemsSource="{Binding Reflog}" SelectedItem="{Binding SelectedReflog}"/>
-    <Border Grid.Row="3" Classes="card"><StackPanel Spacing="8"><TextBox Text="{Binding RecoveredBranchName}" Watermark="New recovery branch name"/><Button Classes="workspace" Content="Create branch at selected reflog entry" Command="{Binding RecoverReflogBranchCommand}"/><TextBlock Text="{Binding Status}" TextWrapping="Wrap"/></StackPanel></Border>
-  </Grid>
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GitLlama.Desktop.Views.ReflogView">
+    <Grid Margin="12"
+          RowDefinitions="Auto,Auto,*,Auto"
+          RowSpacing="10">
+        <DockPanel>
+            <TextBlock Text="Reflog and recovery"
+                       FontSize="18"
+                       FontWeight="SemiBold" />
+
+            <Button Classes="workspace"
+                    Content="Refresh"
+                    Command="{Binding RefreshCommand}"
+                    HorizontalAlignment="Right" />
+        </DockPanel>
+
+        <TextBlock Grid.Row="1"
+                   Text="Recover a commit by creating a new branch. This keeps the current working files and branch untouched."
+                   Classes="muted"
+                   TextWrapping="Wrap" />
+
+        <ListBox Grid.Row="2"
+                 ItemsSource="{Binding Reflog}"
+                 SelectedItem="{Binding SelectedReflog}" />
+
+        <Border Grid.Row="3" Classes="card">
+            <StackPanel Spacing="8">
+                <TextBox Text="{Binding RecoveredBranchName}" Watermark="New recovery branch name" />
+
+                <Button Classes="workspace"
+                        Content="Create branch at selected reflog entry"
+                        Command="{Binding RecoverReflogBranchCommand}" />
+
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </Grid>
 </UserControl>

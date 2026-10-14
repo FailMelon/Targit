@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -23,6 +23,7 @@ public sealed class GitBranchDivergenceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 repository.Commit("Initial", signature, signature);
             }
+
             Repository.Clone(source, clone);
             var divergence = await new GitBranchDivergenceService().GetCurrentAsync(clone);
             Assert.Equal(0, divergence.Ahead);
@@ -31,7 +32,10 @@ public sealed class GitBranchDivergenceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(root, true);
         }
     }

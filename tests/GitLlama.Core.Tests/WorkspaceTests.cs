@@ -2,15 +2,19 @@ using GitLlama.Application;
 using GitLlama.Core;
 using GitLlama.Infrastructure;
 using Xunit;
+
 namespace GitLlama.Core.Tests;
+
 public sealed class WorkspaceTests
 {
     [Fact]
     public void RenamedAppImportsLegacySettingsWithoutOverwritingOrDeletingThem()
     {
         var root = Path.Combine(Path.GetTempPath(), "gitllama-migration-" + Guid.NewGuid().ToString("N"));
-        var legacy = Path.Combine(root, "Targit"); var current = Path.Combine(root, "GitLlama");
-        Directory.CreateDirectory(legacy); Directory.CreateDirectory(current);
+        var legacy = Path.Combine(root, "Targit");
+        var current = Path.Combine(root, "GitLlama");
+        Directory.CreateDirectory(legacy);
+        Directory.CreateDirectory(current);
         try
         {
             File.WriteAllText(Path.Combine(legacy, "settings.json"), "legacy preferences");
@@ -25,13 +29,20 @@ public sealed class WorkspaceTests
             Assert.False(File.Exists(Path.Combine(current, "workspace.json")));
             Assert.True(File.Exists(Path.Combine(legacy, "workspace.json")));
         }
-        finally { Directory.Delete(root, true); }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
     }
+
     private sealed class FakeReader : IRepositoryReader
     {
         public bool IsRepository(string path) => true;
-        public Task<RepositorySnapshot> ReadAsync(string path, CancellationToken ct = default) => Task.FromResult(new RepositorySnapshot(path, "main", null, false));
+
+        public Task<RepositorySnapshot> ReadAsync(string path, CancellationToken ct = default) =>
+            Task.FromResult(new RepositorySnapshot(path, "main", null, false));
     }
+
     [Fact]
     public async Task OpenNormalizesPath()
     {
@@ -39,6 +50,7 @@ public sealed class WorkspaceTests
         var snapshot = await workspace.OpenAsync(".");
         Assert.Equal(Path.GetFullPath("."), snapshot.Path);
     }
+
     [Fact]
     public async Task MissingSettingsReturnSafeDefaults()
     {
@@ -65,7 +77,10 @@ public sealed class WorkspaceTests
             await store.SaveAsync(new GitLlamaSettings([], null));
             Assert.True(File.Exists(Path.Combine(root, "settings.json")));
         }
-        finally { Directory.Delete(root, true); }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
     }
 
     [Fact]
@@ -75,7 +90,13 @@ public sealed class WorkspaceTests
         try
         {
             var store = new JsonSettingsStore(root);
-            var settings = new GitLlamaSettings([new RepositoryInfo("/example", "Example")], "/example", ["History", "Changes"], "Changes", LayoutName: "Review");
+            var settings = new GitLlamaSettings(
+                [new RepositoryInfo("/example", "Example")],
+                "/example",
+                ["History", "Changes"],
+                "Changes",
+                LayoutName: "Review"
+            );
             await store.SaveAsync(settings);
             var loaded = await store.LoadAsync();
             Assert.Equal(settings.ActiveRepository, loaded.ActiveRepository);
@@ -86,6 +107,12 @@ public sealed class WorkspaceTests
             Assert.Equal(settings.Repositories, loaded.Repositories);
             Assert.Equal(settings.Tabs, loaded.Tabs);
         }
-        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, true);
+            }
+        }
     }
 }

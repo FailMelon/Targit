@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -23,6 +23,7 @@ public sealed class GitTagServiceTests
                 sha = repository.Commit("Initial", signature, signature).Sha;
                 repository.Tags.Add("v1.0", repository.Head.Tip);
             }
+
             var tag = Assert.Single(await new GitTagService().ListAsync(path));
             Assert.Equal("v1.0", tag.Name);
             Assert.Equal(sha, tag.TargetSha);
@@ -31,10 +32,14 @@ public sealed class GitTagServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
+
     [Fact]
     public async Task CreatesLightweightTagAndRejectsDuplicate()
     {
@@ -50,6 +55,7 @@ public sealed class GitTagServiceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 repository.Commit("Initial", signature, signature);
             }
+
             var service = new GitTagService();
             await service.CreateAsync(path, "v2.0");
             Assert.Equal("v2.0", Assert.Single(await service.ListAsync(path)).Name);
@@ -58,11 +64,13 @@ public sealed class GitTagServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
-
 
     [Fact]
     public async Task DeletesOnlyExistingLocalTag()
@@ -80,6 +88,7 @@ public sealed class GitTagServiceTests
                 repository.Commit("Initial", signature, signature);
                 repository.Tags.Add("v1", repository.Head.Tip);
             }
+
             var service = new GitTagService();
             await service.DeleteAsync(path, "v1");
             Assert.Empty(await service.ListAsync(path));
@@ -88,7 +97,10 @@ public sealed class GitTagServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -108,17 +120,22 @@ public sealed class GitTagServiceTests
                 var s = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 r.Commit("Initial", s, s);
             }
+
             var service = new GitTagService();
             await service.CreateAnnotatedAsync(path, "v2", "Release 2", "Tester", "test@example.invalid");
             var tag = Assert.Single(await service.ListAsync(path));
             Assert.True(tag.IsAnnotated);
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.CreateAnnotatedAsync(path, "v2", "again", "Tester", "test@example.invalid"));
+                service.CreateAnnotatedAsync(path, "v2", "again", "Tester", "test@example.invalid")
+            );
         }
         finally
         {
             foreach (var f in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(f, File.GetAttributes(f) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -141,23 +158,44 @@ public sealed class GitTagServiceTests
                 var s = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 r.Commit("Initial", s, s);
             }
+
             Repository.Init(remote, isBare: true);
             Repository.Clone(source, clone);
             using (var r = new Repository(clone))
+            {
                 r.Network.Remotes.Update("origin", updater => updater.Url = remote);
+            }
+
             using (var r = new Repository(clone))
+            {
                 r.Tags.Add("v2", r.Head.Tip);
+            }
+
             var service = new GitTagService();
             await service.PushAsync(clone, "origin", "v2");
-            using (var r = new Repository(remote)) Assert.NotNull(r.Tags["v2"]);
+            using (var r = new Repository(remote))
+            {
+                Assert.NotNull(r.Tags["v2"]);
+            }
+
             await service.DeleteRemoteAsync(clone, "origin", "v2");
-            using (var r = new Repository(remote)) Assert.Null(r.Tags["v2"]);
-            using (var r = new Repository(clone)) Assert.NotNull(r.Tags["v2"]);
+            using (var r = new Repository(remote))
+            {
+                Assert.Null(r.Tags["v2"]);
+            }
+
+            using (var r = new Repository(clone))
+            {
+                Assert.NotNull(r.Tags["v2"]);
+            }
         }
         finally
         {
             foreach (var f in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(f, File.GetAttributes(f) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(root, true);
         }
     }

@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -22,6 +22,7 @@ public sealed class GitDiffServiceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 repository.Commit("Initial", signature, signature);
             }
+
             File.Delete(file);
             var result = await new GitDiffService().GetFileDiffAsync(path, "removed.txt");
             Assert.Empty(result.StagedPatch);
@@ -30,7 +31,10 @@ public sealed class GitDiffServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -52,7 +56,10 @@ public sealed class GitDiffServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -76,7 +83,10 @@ public sealed class GitDiffServiceTests
 
             File.WriteAllText(file, "staged\n");
             using (var repository = new Repository(path))
+            {
                 Commands.Stage(repository, "sample.txt");
+            }
+
             File.WriteAllText(file, "unstaged\n");
 
             var result = await new GitDiffService().GetFileDiffAsync(path, "sample.txt");
@@ -87,7 +97,10 @@ public sealed class GitDiffServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

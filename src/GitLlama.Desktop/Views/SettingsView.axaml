@@ -1,80 +1,695 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:GitLlama.Desktop.Controls" x:Class="GitLlama.Desktop.Views.SettingsView">
-  <Grid ColumnDefinitions="210,*" Background="#292C32">
-    <Border Background="#222428" BorderBrush="#393E47" BorderThickness="0,0,1,0"><ScrollViewer HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="16,22" Spacing="14"><StackPanel Orientation="Horizontal" Spacing="9"><controls:LlamaIcon Width="28" Height="28"/><TextBlock Text="GitLlama" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center"/></StackPanel>
-      <TextBlock Text="CURRENT PROFILE" Classes="muted" FontSize="10" Margin="8,12,0,0"/>
-      <Button x:Name="CurrentProfileButton" Classes="workspace toolbar" Command="{Binding EditProfilesCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="9">
-        <Grid ColumnDefinitions="36,*" ColumnSpacing="9"><Border Width="34" Height="34" CornerRadius="17" Background="#405570"><TextBlock Text="{Binding ProfileInitial}" FontWeight="SemiBold" FontSize="17" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3"><TextBlock Text="{Binding ActiveProfileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="Edit profiles" Classes="muted" FontSize="11"/></StackPanel></Grid>
-      </Button>
-      <TextBlock Text="PREFERENCES" Classes="muted" FontSize="10" Margin="8,8,0,0"/><ListBox ItemsSource="{Binding SettingsSections}" SelectedItem="{Binding SelectedSettingsSection}"/><TextBlock Text="Integration connections use secure Windows storage. Session tokens entered in Authentication stay in memory." Classes="muted" TextWrapping="Wrap" FontSize="11" Margin="8,16"/></StackPanel></ScrollViewer></Border>
-    <Grid Grid.Column="1" RowDefinitions="Auto,*">
-      <Border BorderBrush="#393E47" BorderThickness="0,0,0,1" Padding="26,16"><DockPanel><Button DockPanel.Dock="Right" x:Name="CloseSettingsButton" Classes="workspace toolbar" Content="✕" Command="{Binding CloseSettingsCommand}" ToolTip.Tip="Close settings (Esc)"/><TextBlock Text="{Binding SelectedSettingsSection}" FontSize="21" FontWeight="SemiBold" VerticalAlignment="Center"/></DockPanel></Border>
-      <ScrollViewer x:Name="SettingsContentScroll" Grid.Row="1" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="28,24" Spacing="18">
-        <StackPanel IsVisible="{Binding IsProfilesSettings}" Spacing="16">
-          <TextBlock Text="Your profiles" FontSize="18" FontWeight="SemiBold"/>
-          <TextBlock Text="Keep work and personal Git identities and connection preferences together. Your repositories, layout and refresh preferences are shared." Classes="muted" TextWrapping="Wrap"/>
-          <Border Classes="card"><StackPanel Spacing="12"><TextBlock Text="Switch profile" FontWeight="SemiBold"/>
-            <ListBox x:Name="ProfilesList" ItemsSource="{Binding Profiles}" SelectedItem="{Binding ProfileToSwitch}" MaxHeight="160"><ListBox.ItemTemplate><DataTemplate><StackPanel Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding AuthorEmail}" Classes="muted" FontSize="11"/></StackPanel></DataTemplate></ListBox.ItemTemplate></ListBox>
-            <WrapPanel ItemSpacing="8"><Button Classes="workspace primary" Content="Use selected profile" Command="{Binding SwitchProfileCommand}"/><Button Classes="workspace" Content="New profile" Command="{Binding CreateProfileCommand}"/></WrapPanel>
-          </StackPanel></Border>
-          <Border Classes="card"><StackPanel Spacing="12"><TextBlock Text="Edit current profile" FontWeight="SemiBold"/><TextBlock Text="Profile name" Classes="muted"/><TextBox x:Name="ProfileNameInput" Text="{Binding ProfileName}" MaxLength="60" Watermark="Work, Personal…"/>
-            <TextBlock Text="Commit identity" FontWeight="SemiBold" Margin="0,4,0,0"/><TextBox Text="{Binding ProfileAuthorName}" Watermark="Author name"/><TextBox Text="{Binding ProfileAuthorEmail}" Watermark="Author email"/>
-            <TextBlock Text="Leave both fields blank to use the repository's Git identity. A profile identity is used for commits in GitLlama without changing Git configuration." Classes="muted" TextWrapping="Wrap"/>
-            <WrapPanel ItemSpacing="8"><Button Classes="workspace primary" Content="Save profile" Command="{Binding SaveProfileCommand}"/><Button Classes="workspace toolbar" Content="Remove current profile" Command="{Binding RemoveProfileCommand}"/></WrapPanel>
-          </StackPanel></Border>
-          <TextBlock Text="SSH keys and connection preferences belong to the current profile. Switching restores its saved OAuth connections and clears manual session tokens. The system Git helper and SSH agent remain shared." Classes="muted" TextWrapping="Wrap"/>
-          <TextBlock Text="{Binding ProfileFeedback}" TextWrapping="Wrap"/>
-        </StackPanel>
-        <StackPanel IsVisible="{Binding IsGeneralSettings}" Spacing="16"><TextBlock Text="Keep your workspace up to date" FontSize="18" FontWeight="SemiBold"/><CheckBox Content="Automatically refresh when repository files change" IsChecked="{Binding AutoRefresh}"/><CheckBox Content="Show author and remote pictures" IsChecked="{Binding LoadAvatars}" ToolTip.Tip="Fetches pictures from GitHub, Gravatar and remote hosts. Gravatar receives a hash of each commit author's email address."/><TextBlock Text="Your open tabs, selected repository and workspace layout are restored when you return." Classes="muted" TextWrapping="Wrap"/></StackPanel>
-        <StackPanel IsVisible="{Binding IsAuthenticationSettings}" Spacing="16">
-          <TextBlock Text="HTTPS connections" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="Use your existing Git accounts and browser sign-in through Git Credential Manager, or enter a token for this session." Classes="muted" TextWrapping="Wrap"/>
-          <Border Classes="card"><StackPanel Spacing="10"><CheckBox IsEnabled="{Binding !IsAuthenticationBusy}" Content="Use the configured Git credential helper" IsChecked="{Binding UseCredentialManager}"/><TextBlock Text="Requires system Git and a configured helper such as Git Credential Manager. The helper manages sign-in and credential storage; GitLlama does not save passwords to its settings." Classes="muted" TextWrapping="Wrap"/></StackPanel></Border>
-          <Border Classes="card"><StackPanel Spacing="10"><TextBlock Text="Session token" FontWeight="SemiBold"/><TextBlock Text="{Binding NetworkCredentialHost}" Classes="muted"/><TextBox IsEnabled="{Binding !IsAuthenticationBusy}" Text="{Binding NetworkUsername}" Watermark="Username (optional for tokens)"/><TextBox IsEnabled="{Binding !IsAuthenticationBusy}" Text="{Binding NetworkSecret}" PasswordChar="●" Watermark="Personal access token"/><TextBlock Text="A session token takes priority for the displayed host. It is cleared when the repository or host changes. Most providers require a token instead of your account password." TextWrapping="Wrap" Classes="muted"/></StackPanel></Border>
-          <TextBlock Text="Check repository access" FontWeight="SemiBold"/><TextBox IsEnabled="{Binding !IsAuthenticationBusy}" Text="{Binding AuthenticationTestUrl}" Watermark="https://host/owner/repository.git"/><WrapPanel ItemSpacing="8"><Button Classes="workspace primary" Content="Connect / check access" Command="{Binding TestAuthenticationCommand}" IsEnabled="{Binding !IsAuthenticationBusy}"/><Button Classes="workspace" Content="Cancel" Command="{Binding CancelAuthenticationCommand}" IsVisible="{Binding IsAuthenticationBusy}"/><Button Classes="workspace" Content="Forget saved login" Command="{Binding ForgetSavedLoginCommand}" IsEnabled="{Binding !IsAuthenticationBusy}"/><Button Classes="workspace toolbar" Content="Clear session credentials" Command="{Binding ClearSessionCredentialsCommand}"/></WrapPanel><TextBlock Text="{Binding AuthenticationFeedback}" TextWrapping="Wrap" Classes="muted"/>
-        </StackPanel>
-        <StackPanel IsVisible="{Binding IsSshSettings}" Spacing="16"><TextBlock Text="SSH connections" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="PuTTY .ppk keys can be unlocked directly in GitLlama for this session. Standard keys use OpenSSH. Enable agent mode to use an external SSH agent or Pageant instead. HTTPS tokens are never used for SSH." TextWrapping="Wrap" Classes="muted"/><CheckBox IsEnabled="{Binding !IsAuthenticationBusy}" Content="Use the local SSH agent" IsChecked="{Binding UseSshAgent}"/><Border Classes="card"><StackPanel Spacing="10"><TextBlock Text="SSH private key" FontWeight="SemiBold"/><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox x:Name="SshPrivateKeyInput" IsEnabled="{Binding !IsAuthenticationBusy}" Text="{Binding SshPrivateKeyPath}" Watermark="Path to your SSH private key"/><Button Grid.Column="1" Classes="workspace" Content="Browse…" Click="BrowseSshKey_Click"/></Grid><TextBlock Text="SSH public key" FontWeight="SemiBold"/>
-<Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8"><TextBox x:Name="SshPublicKeyInput" IsEnabled="{Binding !IsAuthenticationBusy}" Text="{Binding SshPublicKeyPath}" Watermark="Path to your public .pub file"/><Button Grid.Column="1" Classes="workspace" Content="Browse…" Click="BrowseSshPublicKey_Click"/><Button x:Name="CopyPublicKeyButton" Grid.Column="2" Classes="workspace" Content="Copy" Click="CopyPublicKey_Click" IsEnabled="{Binding HasLoadedPublicKey}"/></Grid>
-<TextBox Classes="code" Text="{Binding SshPublicKeyText}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MaxHeight="90" IsVisible="{Binding HasLoadedPublicKey}"/>
-<TextBlock Text="{Binding SshKeyFeedback}" TextWrapping="Wrap" Classes="muted"/>
-<TextBlock Text="With agent mode off, GitLlama asks for your PuTTY key passphrase when connecting. With agent mode on, .ppk keys use PuTTY and Pageant; standard keys use your local SSH agent." TextWrapping="Wrap" Classes="muted"/><TextBlock Text="Unlocked PuTTY keys stay in memory for this session. Passphrases and unencrypted keys are never written to settings or disk. Use Lock SSH keys to require the passphrase again. OpenSSH encrypted keys use your SSH agent." Classes="muted" TextWrapping="Wrap"/></StackPanel></Border><TextBlock Text="GitLlama asks you to verify new or changed SSH server fingerprints for direct PuTTY connections. Agent mode uses PuTTY trusted hosts or OpenSSH known_hosts." Classes="muted" TextWrapping="Wrap"/><TextBox IsEnabled="{Binding !IsAuthenticationBusy}" Text="{Binding AuthenticationTestUrl}" Watermark="git@host:owner/repository.git"/><Button Classes="workspace" Content="Lock SSH keys" Command="{Binding LockSshSessionCommand}" HorizontalAlignment="Left"/><Button x:Name="LoadPageantKeyButton" IsVisible="{Binding UseSshAgent}" Classes="workspace" Content="Load key in Pageant…" Click="LoadPageantKey_Click" HorizontalAlignment="Left"/><Button x:Name="VerifyPuttyHostButton" IsVisible="{Binding UseSshAgent}" Classes="workspace" Content="Verify host in PuTTY…" Click="VerifyPuttyHost_Click" HorizontalAlignment="Left"/><Button Classes="workspace primary" Content="Check SSH access" Command="{Binding TestAuthenticationCommand}" IsEnabled="{Binding !IsAuthenticationBusy}" HorizontalAlignment="Left"/><Button Classes="workspace" Content="Cancel" Command="{Binding CancelAuthenticationCommand}" IsVisible="{Binding IsAuthenticationBusy}" HorizontalAlignment="Left"/><TextBlock Text="{Binding AuthenticationFeedback}" TextWrapping="Wrap" Classes="muted"/></StackPanel>
-        <StackPanel IsVisible="{Binding IsIntegrationsSettings}" Spacing="16" MaxWidth="780" HorizontalAlignment="Left">
-          <TextBlock Text="Connect your hosting accounts" FontSize="18" FontWeight="SemiBold"/>
-          <TextBlock Text="Use integrations for pull requests, issues and repository access. Each profile keeps its own connected accounts." TextWrapping="Wrap" Classes="muted"/>
-          <Border Classes="card"><Expander x:Name="GithubIntegrationExpander" Classes="navigation" IsExpanded="{Binding IsGithubIntegrationExpanded}">
-            <Expander.Header><StackPanel Spacing="4"><TextBlock Text="GitHub" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{Binding GithubAccountStatus}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Expander.Header>
-            <StackPanel Spacing="12" Margin="8,14,8,8">
-            <TextBlock Text="Sign in through your browser and approve GitLlama on GitHub. Public repository access is requested by default." IsVisible="{Binding !IsGithubConnected}" Classes="muted" TextWrapping="Wrap"/>
-            <CheckBox Content="Include private repositories" IsVisible="{Binding !IsGithubConnected}" IsChecked="{Binding GithubIncludePrivateRepositories}" IsEnabled="{Binding !IsAuthenticationBusy}"/>
-            <WrapPanel ItemSpacing="8"><Button x:Name="GithubOAuthSignInButton" Classes="workspace primary" Content="Sign in with GitHub" IsVisible="{Binding !IsGithubConnected}" Command="{Binding SignInGithubOAuthCommand}" IsEnabled="{Binding !IsAuthenticationBusy}"/><Button Classes="workspace" Content="Reconnect / update permissions…" Command="{Binding ReconnectGithubPermissionsCommand}" IsVisible="{Binding IsGithubConnected}" IsEnabled="{Binding !IsAuthenticationBusy}"/><Button x:Name="GithubDisconnectButton" Classes="workspace" Content="Disconnect" IsVisible="{Binding CanDisconnectGithub}" Command="{Binding DisconnectGithubCommand}" IsEnabled="{Binding !IsAuthenticationBusy}"/><Button Classes="workspace" Content="Cancel" Command="{Binding CancelAuthenticationCommand}" IsVisible="{Binding IsAuthenticationBusy}"/></WrapPanel>
-            <Border IsVisible="{Binding HasGithubOAuthCode}" BorderBrush="#7F9FC9" BorderThickness="1" CornerRadius="5" Padding="14"><StackPanel Spacing="10"><TextBlock Text="Enter this code at github.com/login/device"/><TextBlock Text="{Binding GithubOAuthUserCode}" FontSize="24" FontWeight="SemiBold" FontFamily="Cascadia Code,Consolas"/><WrapPanel ItemSpacing="8"><Button Classes="workspace" Content="Copy code" Click="CopyGithubCode_Click"/><Button Classes="workspace" Content="Open GitHub sign-in page" Click="OpenGithubSignIn_Click"/></WrapPanel></StackPanel></Border>
-            <TextBlock Text="{Binding GithubSessionExpiryText}" IsVisible="{Binding CanDisconnectGithub}" Classes="muted" TextWrapping="Wrap"/><TextBlock Text="{Binding GithubStorageFeedback}" Classes="muted" TextWrapping="Wrap"/>
-            <TextBlock Text="This account is used for GitHub HTTPS operations when no separate session token is entered. SSH still uses your SSH keys or agent. Organization SSO approval may also be required." Classes="muted" TextWrapping="Wrap"/>
-            <Expander Header="Advanced: token or Git credential helper"><StackPanel Margin="8" Spacing="10"><TextBox IsEnabled="{Binding !IsAuthenticationBusy}" Text="{Binding GithubToken}" PasswordChar="●" Watermark="GitHub token (or leave blank to use your Git helper)"/><Button Classes="workspace" Content="Verify token / Git helper" Command="{Binding ConnectGithubCommand}" IsEnabled="{Binding !IsAuthenticationBusy}" HorizontalAlignment="Left"/></StackPanel></Expander>
-          </StackPanel></Expander></Border>
-          <Border Classes="card"><Expander x:Name="AzureIntegrationExpander" Classes="navigation" IsExpanded="False">
-            <Expander.Header><StackPanel Spacing="4"><TextBlock Text="Azure DevOps" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{Binding AzureAccountStatus}" Classes="muted" TextWrapping="Wrap"/></StackPanel></Expander.Header>
-            <StackPanel Spacing="16" Margin="8,14,8,8">
-            <Border Background="#292C32" CornerRadius="5" Padding="14"><TextBlock Text="Microsoft's newer Entra OAuth integration does not currently support personal Microsoft accounts (MSA) for Azure DevOps. GitLlama uses personal access tokens for Azure connections." Classes="muted" TextWrapping="Wrap"/></Border>
-            <TextBlock Text="Connect an organization" FontSize="16" FontWeight="SemiBold"/>
-            <TextBlock Text="Organization name or URL" Classes="muted"/>
-            <TextBox x:Name="AzureOrganizationInput" Text="{Binding AzureOrganizationInput}" Watermark="https://dev.azure.com/your-organization" IsEnabled="{Binding !IsAuthenticationBusy}"/>
-            <TextBlock Text="Personal access token" Classes="muted"/>
-            <TextBox x:Name="AzurePatInput" Text="{Binding AzurePatInput}" PasswordChar="●" Watermark="Paste your organization’s token" IsEnabled="{Binding !IsAuthenticationBusy}"/>
-            <TextBlock Text="Choose Code (Read) to browse, clone and fetch. Choose Code (Read &amp; write) if you also want to push. Add each organization separately; reconnect to replace its token." Classes="muted" TextWrapping="Wrap"/>
-            <WrapPanel ItemSpacing="8" LineSpacing="8"><Button x:Name="AzurePatConnectButton" Classes="workspace primary" Content="Connect with token" Command="{Binding ConnectAzurePatCommand}" IsEnabled="{Binding !IsAuthenticationBusy}"/><Button Classes="workspace" Content="Create / manage tokens…" Command="{Binding OpenAzureTokenPageCommand}"/><Button Classes="workspace" Content="Cancel" Command="{Binding CancelAuthenticationCommand}" IsVisible="{Binding IsAuthenticationBusy}"/></WrapPanel>
-            <TextBlock Text="{Binding AzureOrganizationFeedback}" TextWrapping="Wrap"/>
-            <Border IsVisible="{Binding IsAzureConnected}" BorderBrush="#454951" BorderThickness="0,1,0,0" Padding="0,16,0,0"><StackPanel Spacing="12">
-              <TextBlock Text="Connected organizations" FontSize="16" FontWeight="SemiBold"/>
-              <ListBox x:Name="AzureOrganizationConnectionsList" ItemsSource="{Binding AzureOrganizations}" SelectedItem="{Binding SelectedAzureOrganization}" MaxHeight="230" IsEnabled="{Binding !IsAuthenticationBusy}"><ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="4,8"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/><Button Grid.Column="1" Classes="workspace toolbar" Content="Remove token" Tag="{Binding}" Click="RemoveAzureOrganization_Click"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox>
-              <Button Classes="workspace" Content="Open repository manager" Command="{Binding ShowCloneableRepositoriesCommand}" IsEnabled="{Binding !IsAuthenticationBusy}" HorizontalAlignment="Left"/>
-              <Button Classes="workspace toolbar" Content="Remove all Azure connections" Command="{Binding DisconnectAzureCommand}" IsEnabled="{Binding !IsAuthenticationBusy}" HorizontalAlignment="Left"/>
-            </StackPanel></Border>
-            <TextBlock Text="{Binding AzureStorageFeedback}" Classes="muted" TextWrapping="Wrap"/>
-          </StackPanel></Expander></Border>
-          <Border Classes="card"><Expander Classes="navigation" Header="More integrations" IsExpanded="False"><StackPanel Spacing="10" Margin="8,14,8,8"><TextBlock Text="GitLab · Bitbucket" FontWeight="SemiBold"/><TextBlock Text="Planned for a later update." Classes="muted"/></StackPanel></Expander></Border>
-        </StackPanel>
-        <StackPanel IsVisible="{Binding IsIdentitySettings}" Spacing="16"><TextBlock Text="Commit identity" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="Commit authorship is separate from authentication. These settings apply to the selected repository." Classes="muted" TextWrapping="Wrap"/><TextBlock Text="{Binding SelectedRepository.Name}" FontWeight="SemiBold"/><TextBox IsEnabled="{Binding !IsAuthenticationBusy}" Text="{Binding LocalIdentityName}" Watermark="Author name"/><TextBox IsEnabled="{Binding !IsAuthenticationBusy}" Text="{Binding LocalIdentityEmail}" Watermark="Author email"/><Button Classes="workspace primary" Content="Save repository identity" Command="{Binding SaveLocalIdentityCommand}" IsEnabled="{Binding HasRepository}" HorizontalAlignment="Left"/><TextBlock Text="{Binding ConfiguredIdentity}" TextWrapping="Wrap" Classes="muted"/></StackPanel>
-        <StackPanel IsVisible="{Binding IsDiagnosticsSettings}" Spacing="16"><TextBlock Text="Diagnostics" FontSize="18" FontWeight="SemiBold"/><WrapPanel ItemSpacing="8"><Button Classes="workspace" Content="Refresh diagnostics" Command="{Binding RefreshDiagnosticsCommand}"/><Button Classes="workspace" Content="Export diagnostics…" Click="ExportDiagnostics_Click"/></WrapPanel><TextBox Classes="code" Text="{Binding DiagnosticsText}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="260"/></StackPanel>
-      </StackPanel></ScrollViewer>
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:GitLlama.Desktop.Controls"
+             x:Class="GitLlama.Desktop.Views.SettingsView">
+    <Grid ColumnDefinitions="210,*" Background="#292C32">
+        <Border Background="#222428"
+                BorderBrush="#393E47"
+                BorderThickness="0,0,1,0">
+            <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="16,22" Spacing="14">
+                    <StackPanel Orientation="Horizontal" Spacing="9">
+                        <controls:LlamaIcon Width="28" Height="28" />
+
+                        <TextBlock Text="GitLlama"
+                                   FontSize="19"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <TextBlock Text="CURRENT PROFILE"
+                               Classes="muted"
+                               FontSize="10"
+                               Margin="8,12,0,0" />
+
+                    <Button x:Name="CurrentProfileButton"
+                            Classes="workspace toolbar"
+                            Command="{Binding EditProfilesCommand}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            Padding="9">
+                        <Grid ColumnDefinitions="36,*" ColumnSpacing="9">
+                            <Border Width="34"
+                                    Height="34"
+                                    CornerRadius="17"
+                                    Background="#405570">
+                                <TextBlock Text="{Binding ProfileInitial}"
+                                           FontWeight="SemiBold"
+                                           FontSize="17"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+
+                            <StackPanel Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        Spacing="3">
+                                <TextBlock Text="{Binding ActiveProfileName}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+
+                                <TextBlock Text="Edit profiles"
+                                           Classes="muted"
+                                           FontSize="11" />
+                            </StackPanel>
+                        </Grid>
+                    </Button>
+
+                    <TextBlock Text="PREFERENCES"
+                               Classes="muted"
+                               FontSize="10"
+                               Margin="8,8,0,0" />
+
+                    <ListBox ItemsSource="{Binding SettingsSections}" SelectedItem="{Binding SelectedSettingsSection}" />
+
+                    <TextBlock Text="Integration connections use secure Windows storage. Session tokens entered in Authentication stay in memory."
+                               Classes="muted"
+                               TextWrapping="Wrap"
+                               FontSize="11"
+                               Margin="8,16" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Grid Grid.Column="1" RowDefinitions="Auto,*">
+            <Border BorderBrush="#393E47"
+                    BorderThickness="0,0,0,1"
+                    Padding="26,16">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right"
+                            x:Name="CloseSettingsButton"
+                            Classes="workspace toolbar"
+                            Content="✕"
+                            Command="{Binding CloseSettingsCommand}"
+                            ToolTip.Tip="Close settings (Esc)" />
+
+                    <TextBlock Text="{Binding SelectedSettingsSection}"
+                               FontSize="21"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                </DockPanel>
+            </Border>
+
+            <ScrollViewer x:Name="SettingsContentScroll"
+                          Grid.Row="1"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="28,24" Spacing="18">
+                    <StackPanel IsVisible="{Binding IsProfilesSettings}" Spacing="16">
+                        <TextBlock Text="Your profiles"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+
+                        <TextBlock Text="Keep work and personal Git identities and connection preferences together. Your repositories, layout and refresh preferences are shared."
+                                   Classes="muted"
+                                   TextWrapping="Wrap" />
+
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Switch profile" FontWeight="SemiBold" />
+
+                                <ListBox x:Name="ProfilesList"
+                                         ItemsSource="{Binding Profiles}"
+                                         SelectedItem="{Binding ProfileToSwitch}"
+                                         MaxHeight="160">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Spacing="3">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+
+                                                <TextBlock Text="{Binding AuthorEmail}"
+                                                           Classes="muted"
+                                                           FontSize="11" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <WrapPanel ItemSpacing="8">
+                                    <Button Classes="workspace primary"
+                                            Content="Use selected profile"
+                                            Command="{Binding SwitchProfileCommand}" />
+
+                                    <Button Classes="workspace"
+                                            Content="New profile"
+                                            Command="{Binding CreateProfileCommand}" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="card">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="Edit current profile" FontWeight="SemiBold" />
+                                <TextBlock Text="Profile name" Classes="muted" />
+
+                                <TextBox x:Name="ProfileNameInput"
+                                         Text="{Binding ProfileName}"
+                                         MaxLength="60"
+                                         Watermark="Work, Personal…" />
+
+                                <TextBlock Text="Commit identity"
+                                           FontWeight="SemiBold"
+                                           Margin="0,4,0,0" />
+
+                                <TextBox Text="{Binding ProfileAuthorName}" Watermark="Author name" />
+                                <TextBox Text="{Binding ProfileAuthorEmail}" Watermark="Author email" />
+
+                                <TextBlock Text="Leave both fields blank to use the repository's Git identity. A profile identity is used for commits in GitLlama without changing Git configuration."
+                                           Classes="muted"
+                                           TextWrapping="Wrap" />
+
+                                <WrapPanel ItemSpacing="8">
+                                    <Button Classes="workspace primary"
+                                            Content="Save profile"
+                                            Command="{Binding SaveProfileCommand}" />
+
+                                    <Button Classes="workspace toolbar"
+                                            Content="Remove current profile"
+                                            Command="{Binding RemoveProfileCommand}" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="SSH keys and connection preferences belong to the current profile. Switching restores its saved OAuth connections and clears manual session tokens. The system Git helper and SSH agent remain shared."
+                                   Classes="muted"
+                                   TextWrapping="Wrap" />
+
+                        <TextBlock Text="{Binding ProfileFeedback}" TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel IsVisible="{Binding IsGeneralSettings}" Spacing="16">
+                        <TextBlock Text="Keep your workspace up to date"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+
+                        <CheckBox Content="Automatically refresh when repository files change" IsChecked="{Binding AutoRefresh}" />
+
+                        <CheckBox Content="Show author and remote pictures"
+                                  IsChecked="{Binding LoadAvatars}"
+                                  ToolTip.Tip="Fetches pictures from GitHub, Gravatar and remote hosts. Gravatar receives a hash of each commit author's email address." />
+
+                        <TextBlock Text="Your open tabs, selected repository and workspace layout are restored when you return."
+                                   Classes="muted"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <StackPanel IsVisible="{Binding IsAuthenticationSettings}" Spacing="16">
+                        <TextBlock Text="HTTPS connections"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+
+                        <TextBlock Text="Use your existing Git accounts and browser sign-in through Git Credential Manager, or enter a token for this session."
+                                   Classes="muted"
+                                   TextWrapping="Wrap" />
+
+                        <Border Classes="card">
+                            <StackPanel Spacing="10">
+                                <CheckBox IsEnabled="{Binding !IsAuthenticationBusy}"
+                                          Content="Use the configured Git credential helper"
+                                          IsChecked="{Binding UseCredentialManager}" />
+
+                                <TextBlock Text="Requires system Git and a configured helper such as Git Credential Manager. The helper manages sign-in and credential storage; GitLlama does not save passwords to its settings."
+                                           Classes="muted"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="card">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Session token" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding NetworkCredentialHost}" Classes="muted" />
+
+                                <TextBox IsEnabled="{Binding !IsAuthenticationBusy}"
+                                         Text="{Binding NetworkUsername}"
+                                         Watermark="Username (optional for tokens)" />
+
+                                <TextBox IsEnabled="{Binding !IsAuthenticationBusy}"
+                                         Text="{Binding NetworkSecret}"
+                                         PasswordChar="●"
+                                         Watermark="Personal access token" />
+
+                                <TextBlock Text="A session token takes priority for the displayed host. It is cleared when the repository or host changes. Most providers require a token instead of your account password."
+                                           TextWrapping="Wrap"
+                                           Classes="muted" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="Check repository access" FontWeight="SemiBold" />
+
+                        <TextBox IsEnabled="{Binding !IsAuthenticationBusy}"
+                                 Text="{Binding AuthenticationTestUrl}"
+                                 Watermark="https://host/owner/repository.git" />
+
+                        <WrapPanel ItemSpacing="8">
+                            <Button Classes="workspace primary"
+                                    Content="Connect / check access"
+                                    Command="{Binding TestAuthenticationCommand}"
+                                    IsEnabled="{Binding !IsAuthenticationBusy}" />
+
+                            <Button Classes="workspace"
+                                    Content="Cancel"
+                                    Command="{Binding CancelAuthenticationCommand}"
+                                    IsVisible="{Binding IsAuthenticationBusy}" />
+
+                            <Button Classes="workspace"
+                                    Content="Forget saved login"
+                                    Command="{Binding ForgetSavedLoginCommand}"
+                                    IsEnabled="{Binding !IsAuthenticationBusy}" />
+
+                            <Button Classes="workspace toolbar"
+                                    Content="Clear session credentials"
+                                    Command="{Binding ClearSessionCredentialsCommand}" />
+                        </WrapPanel>
+
+                        <TextBlock Text="{Binding AuthenticationFeedback}"
+                                   TextWrapping="Wrap"
+                                   Classes="muted" />
+                    </StackPanel>
+
+                    <StackPanel IsVisible="{Binding IsSshSettings}" Spacing="16">
+                        <TextBlock Text="SSH connections"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+
+                        <TextBlock Text="PuTTY .ppk keys can be unlocked directly in GitLlama for this session. Standard keys use OpenSSH. Enable agent mode to use an external SSH agent or Pageant instead. HTTPS tokens are never used for SSH."
+                                   TextWrapping="Wrap"
+                                   Classes="muted" />
+
+                        <CheckBox IsEnabled="{Binding !IsAuthenticationBusy}"
+                                  Content="Use the local SSH agent"
+                                  IsChecked="{Binding UseSshAgent}" />
+
+                        <Border Classes="card">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="SSH private key" FontWeight="SemiBold" />
+
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <TextBox x:Name="SshPrivateKeyInput"
+                                             IsEnabled="{Binding !IsAuthenticationBusy}"
+                                             Text="{Binding SshPrivateKeyPath}"
+                                             Watermark="Path to your SSH private key" />
+
+                                    <Button Grid.Column="1"
+                                            Classes="workspace"
+                                            Content="Browse…"
+                                            Click="BrowseSshKey_Click" />
+                                </Grid>
+
+                                <TextBlock Text="SSH public key" FontWeight="SemiBold" />
+
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <TextBox x:Name="SshPublicKeyInput"
+                                             IsEnabled="{Binding !IsAuthenticationBusy}"
+                                             Text="{Binding SshPublicKeyPath}"
+                                             Watermark="Path to your public .pub file" />
+
+                                    <Button Grid.Column="1"
+                                            Classes="workspace"
+                                            Content="Browse…"
+                                            Click="BrowseSshPublicKey_Click" />
+
+                                    <Button x:Name="CopyPublicKeyButton"
+                                            Grid.Column="2"
+                                            Classes="workspace"
+                                            Content="Copy"
+                                            Click="CopyPublicKey_Click"
+                                            IsEnabled="{Binding HasLoadedPublicKey}" />
+                                </Grid>
+
+                                <TextBox Classes="code"
+                                         Text="{Binding SshPublicKeyText}"
+                                         IsReadOnly="True"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"
+                                         MaxHeight="90"
+                                         IsVisible="{Binding HasLoadedPublicKey}" />
+
+                                <TextBlock Text="{Binding SshKeyFeedback}"
+                                           TextWrapping="Wrap"
+                                           Classes="muted" />
+
+                                <TextBlock Text="With agent mode off, GitLlama asks for your PuTTY key passphrase when connecting. With agent mode on, .ppk keys use PuTTY and Pageant; standard keys use your local SSH agent."
+                                           TextWrapping="Wrap"
+                                           Classes="muted" />
+
+                                <TextBlock Text="Unlocked PuTTY keys stay in memory for this session. Passphrases and unencrypted keys are never written to settings or disk. Use Lock SSH keys to require the passphrase again. OpenSSH encrypted keys use your SSH agent."
+                                           Classes="muted"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="GitLlama asks you to verify new or changed SSH server fingerprints for direct PuTTY connections. Agent mode uses PuTTY trusted hosts or OpenSSH known_hosts."
+                                   Classes="muted"
+                                   TextWrapping="Wrap" />
+
+                        <TextBox IsEnabled="{Binding !IsAuthenticationBusy}"
+                                 Text="{Binding AuthenticationTestUrl}"
+                                 Watermark="git@host:owner/repository.git" />
+
+                        <Button Classes="workspace"
+                                Content="Lock SSH keys"
+                                Command="{Binding LockSshSessionCommand}"
+                                HorizontalAlignment="Left" />
+
+                        <Button x:Name="LoadPageantKeyButton"
+                                IsVisible="{Binding UseSshAgent}"
+                                Classes="workspace"
+                                Content="Load key in Pageant…"
+                                Click="LoadPageantKey_Click"
+                                HorizontalAlignment="Left" />
+
+                        <Button x:Name="VerifyPuttyHostButton"
+                                IsVisible="{Binding UseSshAgent}"
+                                Classes="workspace"
+                                Content="Verify host in PuTTY…"
+                                Click="VerifyPuttyHost_Click"
+                                HorizontalAlignment="Left" />
+
+                        <Button Classes="workspace primary"
+                                Content="Check SSH access"
+                                Command="{Binding TestAuthenticationCommand}"
+                                IsEnabled="{Binding !IsAuthenticationBusy}"
+                                HorizontalAlignment="Left" />
+
+                        <Button Classes="workspace"
+                                Content="Cancel"
+                                Command="{Binding CancelAuthenticationCommand}"
+                                IsVisible="{Binding IsAuthenticationBusy}"
+                                HorizontalAlignment="Left" />
+
+                        <TextBlock Text="{Binding AuthenticationFeedback}"
+                                   TextWrapping="Wrap"
+                                   Classes="muted" />
+                    </StackPanel>
+
+                    <StackPanel IsVisible="{Binding IsIntegrationsSettings}"
+                                Spacing="16"
+                                MaxWidth="780"
+                                HorizontalAlignment="Left">
+                        <TextBlock Text="Connect your hosting accounts"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+
+                        <TextBlock Text="Use integrations for pull requests, issues and repository access. Each profile keeps its own connected accounts."
+                                   TextWrapping="Wrap"
+                                   Classes="muted" />
+
+                        <Border Classes="card">
+                            <Expander x:Name="GithubIntegrationExpander"
+                                      Classes="navigation"
+                                      IsExpanded="{Binding IsGithubIntegrationExpanded}">
+                                <Expander.Header>
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="GitHub"
+                                                   FontSize="18"
+                                                   FontWeight="SemiBold" />
+
+                                        <TextBlock Text="{Binding GithubAccountStatus}"
+                                                   Classes="muted"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Expander.Header>
+
+                                <StackPanel Spacing="12" Margin="8,14,8,8">
+                                    <TextBlock Text="Sign in through your browser and approve GitLlama on GitHub. Public repository access is requested by default."
+                                               IsVisible="{Binding !IsGithubConnected}"
+                                               Classes="muted"
+                                               TextWrapping="Wrap" />
+
+                                    <CheckBox Content="Include private repositories"
+                                              IsVisible="{Binding !IsGithubConnected}"
+                                              IsChecked="{Binding GithubIncludePrivateRepositories}"
+                                              IsEnabled="{Binding !IsAuthenticationBusy}" />
+
+                                    <WrapPanel ItemSpacing="8">
+                                        <Button x:Name="GithubOAuthSignInButton"
+                                                Classes="workspace primary"
+                                                Content="Sign in with GitHub"
+                                                IsVisible="{Binding !IsGithubConnected}"
+                                                Command="{Binding SignInGithubOAuthCommand}"
+                                                IsEnabled="{Binding !IsAuthenticationBusy}" />
+
+                                        <Button Classes="workspace"
+                                                Content="Reconnect / update permissions…"
+                                                Command="{Binding ReconnectGithubPermissionsCommand}"
+                                                IsVisible="{Binding IsGithubConnected}"
+                                                IsEnabled="{Binding !IsAuthenticationBusy}" />
+
+                                        <Button x:Name="GithubDisconnectButton"
+                                                Classes="workspace"
+                                                Content="Disconnect"
+                                                IsVisible="{Binding CanDisconnectGithub}"
+                                                Command="{Binding DisconnectGithubCommand}"
+                                                IsEnabled="{Binding !IsAuthenticationBusy}" />
+
+                                        <Button Classes="workspace"
+                                                Content="Cancel"
+                                                Command="{Binding CancelAuthenticationCommand}"
+                                                IsVisible="{Binding IsAuthenticationBusy}" />
+                                    </WrapPanel>
+
+                                    <Border IsVisible="{Binding HasGithubOAuthCode}"
+                                            BorderBrush="#7F9FC9"
+                                            BorderThickness="1"
+                                            CornerRadius="5"
+                                            Padding="14">
+                                        <StackPanel Spacing="10">
+                                            <TextBlock Text="Enter this code at github.com/login/device" />
+
+                                            <TextBlock Text="{Binding GithubOAuthUserCode}"
+                                                       FontSize="24"
+                                                       FontWeight="SemiBold"
+                                                       FontFamily="Cascadia Code,Consolas" />
+
+                                            <WrapPanel ItemSpacing="8">
+                                                <Button Classes="workspace"
+                                                        Content="Copy code"
+                                                        Click="CopyGithubCode_Click" />
+
+                                                <Button Classes="workspace"
+                                                        Content="Open GitHub sign-in page"
+                                                        Click="OpenGithubSignIn_Click" />
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <TextBlock Text="{Binding GithubSessionExpiryText}"
+                                               IsVisible="{Binding CanDisconnectGithub}"
+                                               Classes="muted"
+                                               TextWrapping="Wrap" />
+
+                                    <TextBlock Text="{Binding GithubStorageFeedback}"
+                                               Classes="muted"
+                                               TextWrapping="Wrap" />
+
+                                    <TextBlock Text="This account is used for GitHub HTTPS operations when no separate session token is entered. SSH still uses your SSH keys or agent. Organization SSO approval may also be required."
+                                               Classes="muted"
+                                               TextWrapping="Wrap" />
+
+                                    <Expander Header="Advanced: token or Git credential helper">
+                                        <StackPanel Margin="8" Spacing="10">
+                                            <TextBox IsEnabled="{Binding !IsAuthenticationBusy}"
+                                                     Text="{Binding GithubToken}"
+                                                     PasswordChar="●"
+                                                     Watermark="GitHub token (or leave blank to use your Git helper)" />
+
+                                            <Button Classes="workspace"
+                                                    Content="Verify token / Git helper"
+                                                    Command="{Binding ConnectGithubCommand}"
+                                                    IsEnabled="{Binding !IsAuthenticationBusy}"
+                                                    HorizontalAlignment="Left" />
+                                        </StackPanel>
+                                    </Expander>
+                                </StackPanel>
+                            </Expander>
+                        </Border>
+
+                        <Border Classes="card">
+                            <Expander x:Name="AzureIntegrationExpander"
+                                      Classes="navigation"
+                                      IsExpanded="False">
+                                <Expander.Header>
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Azure DevOps"
+                                                   FontSize="18"
+                                                   FontWeight="SemiBold" />
+
+                                        <TextBlock Text="{Binding AzureAccountStatus}"
+                                                   Classes="muted"
+                                                   TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Expander.Header>
+
+                                <StackPanel Spacing="16" Margin="8,14,8,8">
+                                    <Border Background="#292C32"
+                                            CornerRadius="5"
+                                            Padding="14">
+                                        <TextBlock Text="Microsoft's newer Entra OAuth integration does not currently support personal Microsoft accounts (MSA) for Azure DevOps. GitLlama uses personal access tokens for Azure connections."
+                                                   Classes="muted"
+                                                   TextWrapping="Wrap" />
+                                    </Border>
+
+                                    <TextBlock Text="Connect an organization"
+                                               FontSize="16"
+                                               FontWeight="SemiBold" />
+
+                                    <TextBlock Text="Organization name or URL" Classes="muted" />
+
+                                    <TextBox x:Name="AzureOrganizationInput"
+                                             Text="{Binding AzureOrganizationInput}"
+                                             Watermark="https://dev.azure.com/your-organization"
+                                             IsEnabled="{Binding !IsAuthenticationBusy}" />
+
+                                    <TextBlock Text="Personal access token" Classes="muted" />
+
+                                    <TextBox x:Name="AzurePatInput"
+                                             Text="{Binding AzurePatInput}"
+                                             PasswordChar="●"
+                                             Watermark="Paste your organization’s token"
+                                             IsEnabled="{Binding !IsAuthenticationBusy}" />
+
+                                    <TextBlock Text="Choose Code (Read) to browse, clone and fetch. Choose Code (Read &amp; write) if you also want to push. Add each organization separately; reconnect to replace its token."
+                                               Classes="muted"
+                                               TextWrapping="Wrap" />
+
+                                    <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                        <Button x:Name="AzurePatConnectButton"
+                                                Classes="workspace primary"
+                                                Content="Connect with token"
+                                                Command="{Binding ConnectAzurePatCommand}"
+                                                IsEnabled="{Binding !IsAuthenticationBusy}" />
+
+                                        <Button Classes="workspace"
+                                                Content="Create / manage tokens…"
+                                                Command="{Binding OpenAzureTokenPageCommand}" />
+
+                                        <Button Classes="workspace"
+                                                Content="Cancel"
+                                                Command="{Binding CancelAuthenticationCommand}"
+                                                IsVisible="{Binding IsAuthenticationBusy}" />
+                                    </WrapPanel>
+
+                                    <TextBlock Text="{Binding AzureOrganizationFeedback}" TextWrapping="Wrap" />
+
+                                    <Border IsVisible="{Binding IsAzureConnected}"
+                                            BorderBrush="#454951"
+                                            BorderThickness="0,1,0,0"
+                                            Padding="0,16,0,0">
+                                        <StackPanel Spacing="12">
+                                            <TextBlock Text="Connected organizations"
+                                                       FontSize="16"
+                                                       FontWeight="SemiBold" />
+
+                                            <ListBox x:Name="AzureOrganizationConnectionsList"
+                                                     ItemsSource="{Binding AzureOrganizations}"
+                                                     SelectedItem="{Binding SelectedAzureOrganization}"
+                                                     MaxHeight="230"
+                                                     IsEnabled="{Binding !IsAuthenticationBusy}">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid ColumnDefinitions="*,Auto"
+                                                              ColumnSpacing="12"
+                                                              Margin="4,8">
+                                                            <TextBlock Text="{Binding Name}"
+                                                                       FontWeight="SemiBold"
+                                                                       TextTrimming="CharacterEllipsis"
+                                                                       VerticalAlignment="Center" />
+
+                                                            <Button Grid.Column="1"
+                                                                    Classes="workspace toolbar"
+                                                                    Content="Remove token"
+                                                                    Tag="{Binding}"
+                                                                    Click="RemoveAzureOrganization_Click" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+
+                                            <Button Classes="workspace"
+                                                    Content="Open repository manager"
+                                                    Command="{Binding ShowCloneableRepositoriesCommand}"
+                                                    IsEnabled="{Binding !IsAuthenticationBusy}"
+                                                    HorizontalAlignment="Left" />
+
+                                            <Button Classes="workspace toolbar"
+                                                    Content="Remove all Azure connections"
+                                                    Command="{Binding DisconnectAzureCommand}"
+                                                    IsEnabled="{Binding !IsAuthenticationBusy}"
+                                                    HorizontalAlignment="Left" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <TextBlock Text="{Binding AzureStorageFeedback}"
+                                               Classes="muted"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Expander>
+                        </Border>
+
+                        <Border Classes="card">
+                            <Expander Classes="navigation"
+                                      Header="More integrations"
+                                      IsExpanded="False">
+                                <StackPanel Spacing="10" Margin="8,14,8,8">
+                                    <TextBlock Text="GitLab · Bitbucket" FontWeight="SemiBold" />
+                                    <TextBlock Text="Planned for a later update." Classes="muted" />
+                                </StackPanel>
+                            </Expander>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel IsVisible="{Binding IsIdentitySettings}" Spacing="16">
+                        <TextBlock Text="Commit identity"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+
+                        <TextBlock Text="Commit authorship is separate from authentication. These settings apply to the selected repository."
+                                   Classes="muted"
+                                   TextWrapping="Wrap" />
+
+                        <TextBlock Text="{Binding SelectedRepository.Name}" FontWeight="SemiBold" />
+
+                        <TextBox IsEnabled="{Binding !IsAuthenticationBusy}"
+                                 Text="{Binding LocalIdentityName}"
+                                 Watermark="Author name" />
+
+                        <TextBox IsEnabled="{Binding !IsAuthenticationBusy}"
+                                 Text="{Binding LocalIdentityEmail}"
+                                 Watermark="Author email" />
+
+                        <Button Classes="workspace primary"
+                                Content="Save repository identity"
+                                Command="{Binding SaveLocalIdentityCommand}"
+                                IsEnabled="{Binding HasRepository}"
+                                HorizontalAlignment="Left" />
+
+                        <TextBlock Text="{Binding ConfiguredIdentity}"
+                                   TextWrapping="Wrap"
+                                   Classes="muted" />
+                    </StackPanel>
+
+                    <StackPanel IsVisible="{Binding IsDiagnosticsSettings}" Spacing="16">
+                        <TextBlock Text="Diagnostics"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+
+                        <WrapPanel ItemSpacing="8">
+                            <Button Classes="workspace"
+                                    Content="Refresh diagnostics"
+                                    Command="{Binding RefreshDiagnosticsCommand}" />
+
+                            <Button Classes="workspace"
+                                    Content="Export diagnostics…"
+                                    Click="ExportDiagnostics_Click" />
+                        </WrapPanel>
+
+                        <TextBox Classes="code"
+                                 Text="{Binding DiagnosticsText}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 MinHeight="260" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
     </Grid>
-  </Grid>
 </UserControl>

@@ -35,7 +35,10 @@ public sealed class AvatarTests
         Assert.Equal(expected, AvatarCache.RemoteAvatarUrl(remote));
 
     [Theory]
-    [InlineData("""{"author":{"login":"FailMelon","avatar_url":"https://avatars.githubusercontent.com/u/3711395?v=4"}}""", "https://avatars.githubusercontent.com/u/3711395?v=4&s=64")]
+    [InlineData(
+        """{"author":{"login":"FailMelon","avatar_url":"https://avatars.githubusercontent.com/u/3711395?v=4"}}""",
+        "https://avatars.githubusercontent.com/u/3711395?v=4&s=64"
+    )]
     [InlineData("""{"author":null}""", null)]
     [InlineData("""{"author":{"avatar_url":"https://evil.example/u/1"}}""", null)]
     public void GitHubCommitAuthorPictureComesOnlyFromGitHub(string json, string? expected)

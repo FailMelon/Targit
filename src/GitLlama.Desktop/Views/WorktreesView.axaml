@@ -1,12 +1,69 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GitLlama.Desktop.Views.WorktreesView">
-  <Grid Margin="12" RowDefinitions="Auto,180,*" RowSpacing="10">
-    <DockPanel><TextBlock Text="Worktrees" FontSize="18" FontWeight="SemiBold"/><Button Classes="workspace" Content="Refresh" Command="{Binding RefreshCommand}" HorizontalAlignment="Right"/></DockPanel>
-    <ListBox Grid.Row="1" ItemsSource="{Binding Worktrees}" SelectedItem="{Binding SelectedWorktree}"/>
-    <ScrollViewer Grid.Row="2"><StackPanel Spacing="12">
-      <WrapPanel ItemSpacing="8" LineSpacing="8"><Button Classes="workspace" Content="Open selected" Command="{Binding OpenWorktreeCommand}"/><Button Classes="workspace" Content="Lock / unlock" Command="{Binding ToggleWorktreeLockCommand}"/></WrapPanel>
-      <Border Classes="card"><StackPanel Spacing="8"><TextBlock Text="Create a worktree" Classes="section"/><TextBox Text="{Binding WorktreeName}" Watermark="Worktree name (different from a branch name)"/><TextBox Text="{Binding WorktreeDestination}" Watermark="New destination folder"/><ComboBox ItemsSource="{Binding BranchLines}" SelectedItem="{Binding WorktreeBranch}" PlaceholderText="Choose an unused local branch" HorizontalAlignment="Stretch"/><Button Classes="workspace" Content="Create worktree" Command="{Binding CreateWorktreeCommand}"/></StackPanel></Border>
-      <Expander Header="Remove selected worktree"><StackPanel Spacing="8" Margin="8"><TextBlock Text="The worktree must be clean and unlocked. Its folder is preserved as a sibling backup before its Git registration is removed." TextWrapping="Wrap" Classes="muted"/><TextBox Text="{Binding WorktreeRemoveConfirmation}" Watermark="Type the selected worktree name"/><Button Classes="workspace" Content="Remove worktree and preserve folder" Command="{Binding RemoveWorktreeCommand}"/></StackPanel></Expander>
-      <TextBlock Text="{Binding Status}" TextWrapping="Wrap"/>
-    </StackPanel></ScrollViewer>
-  </Grid>
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GitLlama.Desktop.Views.WorktreesView">
+    <Grid Margin="12"
+          RowDefinitions="Auto,180,*"
+          RowSpacing="10">
+        <DockPanel>
+            <TextBlock Text="Worktrees"
+                       FontSize="18"
+                       FontWeight="SemiBold" />
+
+            <Button Classes="workspace"
+                    Content="Refresh"
+                    Command="{Binding RefreshCommand}"
+                    HorizontalAlignment="Right" />
+        </DockPanel>
+
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding Worktrees}"
+                 SelectedItem="{Binding SelectedWorktree}" />
+
+        <ScrollViewer Grid.Row="2">
+            <StackPanel Spacing="12">
+                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                    <Button Classes="workspace"
+                            Content="Open selected"
+                            Command="{Binding OpenWorktreeCommand}" />
+
+                    <Button Classes="workspace"
+                            Content="Lock / unlock"
+                            Command="{Binding ToggleWorktreeLockCommand}" />
+                </WrapPanel>
+
+                <Border Classes="card">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Create a worktree" Classes="section" />
+                        <TextBox Text="{Binding WorktreeName}" Watermark="Worktree name (different from a branch name)" />
+                        <TextBox Text="{Binding WorktreeDestination}" Watermark="New destination folder" />
+
+                        <ComboBox ItemsSource="{Binding BranchLines}"
+                                  SelectedItem="{Binding WorktreeBranch}"
+                                  PlaceholderText="Choose an unused local branch"
+                                  HorizontalAlignment="Stretch" />
+
+                        <Button Classes="workspace"
+                                Content="Create worktree"
+                                Command="{Binding CreateWorktreeCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <Expander Header="Remove selected worktree">
+                    <StackPanel Spacing="8" Margin="8">
+                        <TextBlock Text="The worktree must be clean and unlocked. Its folder is preserved as a sibling backup before its Git registration is removed."
+                                   TextWrapping="Wrap"
+                                   Classes="muted" />
+
+                        <TextBox Text="{Binding WorktreeRemoveConfirmation}" Watermark="Type the selected worktree name" />
+
+                        <Button Classes="workspace"
+                                Content="Remove worktree and preserve folder"
+                                Command="{Binding RemoveWorktreeCommand}" />
+                    </StackPanel>
+                </Expander>
+
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
 </UserControl>

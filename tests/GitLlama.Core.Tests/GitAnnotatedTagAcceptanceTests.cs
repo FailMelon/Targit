@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -22,6 +22,7 @@ public sealed class GitAnnotatedTagAcceptanceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 sha = repo.Commit("initial", signature, signature).Sha;
             }
+
             var service = new GitTagService();
             await service.CreateAnnotatedAsync(path, "v2.0.0", "Release notes", "Tagger", "tagger@example.invalid");
             var info = Assert.Single(await service.ListAsync(path));
@@ -35,13 +36,18 @@ public sealed class GitAnnotatedTagAcceptanceTests
                 Assert.Equal("Tagger", annotation.Tagger.Name);
                 Assert.Equal("tagger@example.invalid", annotation.Tagger.Email);
             }
+
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.CreateAnnotatedAsync(path, "v2.0.0", "again", "Tagger", "tagger@example.invalid"));
+                service.CreateAnnotatedAsync(path, "v2.0.0", "again", "Tagger", "tagger@example.invalid")
+            );
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

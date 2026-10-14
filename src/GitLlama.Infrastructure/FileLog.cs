@@ -9,7 +9,9 @@ public static class FileLog
     private static readonly object Gate = new();
     private static readonly string LogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "GitLlama", "gitllama.log");
+        "GitLlama",
+        "gitllama.log"
+    );
 
     public static void Error(Exception exception, string context)
     {
@@ -18,8 +20,12 @@ public static class FileLog
             lock (Gate)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
-                File.AppendAllText(LogPath,
-                    SecretRedactor.Redact($"[{DateTimeOffset.UtcNow:O}] ERROR {context}{Environment.NewLine}{exception}{Environment.NewLine}"));
+                File.AppendAllText(
+                    LogPath,
+                    SecretRedactor.Redact(
+                        $"[{DateTimeOffset.UtcNow:O}] ERROR {context}{Environment.NewLine}{exception}{Environment.NewLine}"
+                    )
+                );
             }
         }
         catch (Exception)

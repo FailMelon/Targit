@@ -1,4 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../GitLlama.Core.Tests/GitLlama.Core.Tests.csproj" /></ItemGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="../GitLlama.Core.Tests/GitLlama.Core.Tests.csproj" />
+    </ItemGroup>
 </Project>

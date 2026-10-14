@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -22,6 +22,7 @@ public sealed class GitCommitAmendAcceptanceTests
                 var signature = new Signature("Tester", "test@example.invalid", DateTimeOffset.UtcNow);
                 originalSha = repo.Commit("old message", signature, signature).Sha;
             }
+
             var service = new GitCommitAmendService();
             var amendedSha = await service.AmendLatestMessageAsync(path, "new message");
             Assert.NotEqual(originalSha, amendedSha);
@@ -31,12 +32,18 @@ public sealed class GitCommitAmendAcceptanceTests
                 Assert.Equal("content", File.ReadAllText(Path.Combine(path, "file.txt")));
                 repo.Refs.Add("refs/remotes/origin/main", repo.Head.Tip.Id);
             }
-            await Assert.ThrowsAsync<InvalidOperationException>(() => service.AmendLatestMessageAsync(path, "must fail"));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.AmendLatestMessageAsync(path, "must fail")
+            );
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

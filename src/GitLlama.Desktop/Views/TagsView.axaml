@@ -1,3 +1,74 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GitLlama.Desktop.Views.TagsView">
-  <Grid Margin="12" RowDefinitions="Auto,170,*" RowSpacing="10"><TextBlock Text="Tags" FontSize="18" FontWeight="SemiBold"/><ListBox Grid.Row="1" ItemsSource="{Binding Tags}" SelectedItem="{Binding SelectedTag}"><ListBox.ItemTemplate><DataTemplate><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock Text="{Binding Name}"/><TextBlock Grid.Column="1" Text="{Binding TargetSha}" TextTrimming="CharacterEllipsis" MaxWidth="180" Classes="muted"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox><ScrollViewer Grid.Row="2"><StackPanel Spacing="10"><TextBox Text="{Binding NewTagName}" Watermark="New lightweight tag name at HEAD"/><Button Classes="workspace" Content="Create lightweight tag" Command="{Binding CreateLightweightTagCommand}"/><Expander Header="Annotated tag"><StackPanel Margin="8" Spacing="8"><TextBox Text="{Binding AnnotatedTagName}" Watermark="Tag name"/><TextBox Text="{Binding AnnotatedTagMessage}" Watermark="Tag message"/><TextBox Text="{Binding AnnotatedTagAuthorName}" Watermark="Author name"/><TextBox Text="{Binding AnnotatedTagAuthorEmail}" Watermark="Author email"/><Button Classes="workspace" Content="Create annotated tag" Command="{Binding CreateAnnotatedTagCommand}"/></StackPanel></Expander><Button Classes="workspace" Content="Push selected tag to selected remote" Command="{Binding PushSelectedTagCommand}"/><Expander Header="Delete a tag"><StackPanel Margin="8" Spacing="8"><TextBox Text="{Binding TagDeletionConfirmation}" Watermark="Type the tag name for local deletion"/><Button Classes="workspace" Content="Delete local tag" Command="{Binding DeleteSelectedTagCommand}"/><TextBox Text="{Binding RemoteTagDeletionConfirmation}" Watermark="Type the remote/tag confirmation"/><Button Classes="workspace" Content="Delete selected remote tag" Command="{Binding DeleteSelectedRemoteTagCommand}"/></StackPanel></Expander><TextBlock Text="{Binding Status}" TextWrapping="Wrap"/></StackPanel></ScrollViewer></Grid>
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GitLlama.Desktop.Views.TagsView">
+    <Grid Margin="12"
+          RowDefinitions="Auto,170,*"
+          RowSpacing="10">
+        <TextBlock Text="Tags"
+                   FontSize="18"
+                   FontWeight="SemiBold" />
+
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding Tags}"
+                 SelectedItem="{Binding SelectedTag}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBlock Text="{Binding Name}" />
+
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding TargetSha}"
+                                   TextTrimming="CharacterEllipsis"
+                                   MaxWidth="180"
+                                   Classes="muted" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <ScrollViewer Grid.Row="2">
+            <StackPanel Spacing="10">
+                <TextBox Text="{Binding NewTagName}" Watermark="New lightweight tag name at HEAD" />
+
+                <Button Classes="workspace"
+                        Content="Create lightweight tag"
+                        Command="{Binding CreateLightweightTagCommand}" />
+
+                <Expander Header="Annotated tag">
+                    <StackPanel Margin="8" Spacing="8">
+                        <TextBox Text="{Binding AnnotatedTagName}" Watermark="Tag name" />
+                        <TextBox Text="{Binding AnnotatedTagMessage}" Watermark="Tag message" />
+                        <TextBox Text="{Binding AnnotatedTagAuthorName}" Watermark="Author name" />
+                        <TextBox Text="{Binding AnnotatedTagAuthorEmail}" Watermark="Author email" />
+
+                        <Button Classes="workspace"
+                                Content="Create annotated tag"
+                                Command="{Binding CreateAnnotatedTagCommand}" />
+                    </StackPanel>
+                </Expander>
+
+                <Button Classes="workspace"
+                        Content="Push selected tag to selected remote"
+                        Command="{Binding PushSelectedTagCommand}" />
+
+                <Expander Header="Delete a tag">
+                    <StackPanel Margin="8" Spacing="8">
+                        <TextBox Text="{Binding TagDeletionConfirmation}" Watermark="Type the tag name for local deletion" />
+
+                        <Button Classes="workspace"
+                                Content="Delete local tag"
+                                Command="{Binding DeleteSelectedTagCommand}" />
+
+                        <TextBox Text="{Binding RemoteTagDeletionConfirmation}" Watermark="Type the remote/tag confirmation" />
+
+                        <Button Classes="workspace"
+                                Content="Delete selected remote tag"
+                                Command="{Binding DeleteSelectedRemoteTagCommand}" />
+                    </StackPanel>
+                </Expander>
+
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
 </UserControl>

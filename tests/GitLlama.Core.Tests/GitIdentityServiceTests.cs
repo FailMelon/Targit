@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -19,6 +19,7 @@ public sealed class GitIdentityServiceTests
                 repository.Config.Set("user.name", "GitLlama Test");
                 repository.Config.Set("user.email", "test@example.invalid");
             }
+
             var identity = await new GitIdentityService().ReadAsync(path);
             Assert.Equal("GitLlama Test", identity.Name);
             Assert.Equal("test@example.invalid", identity.Email);
@@ -26,10 +27,14 @@ public sealed class GitIdentityServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
+
     [Fact]
     public async Task SetsRepositoryLocalIdentity()
     {
@@ -49,9 +54,11 @@ public sealed class GitIdentityServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
-
 }

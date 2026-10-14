@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -34,10 +34,11 @@ public sealed class RebaseEditTests
                 targetSha = repo.Commit("target", sig, sig).Sha;
                 Commands.Checkout(repo, repo.Branches[source]);
             }
+
             var plan = new[] { new GitRebaseStep(sha, "editable", GitRebaseAction.Edit) };
             var edits = new Dictionary<string, IReadOnlyDictionary<string, string>>
             {
-                [sha] = new Dictionary<string, string> { ["edit.txt"] = "after" }
+                [sha] = new Dictionary<string, string> { ["edit.txt"] = "after" },
             };
             await new GitLinearRebaseService().RebaseWithEditsAsync(path, "target", plan, null, edits);
             using var check = new Repository(path);
@@ -49,7 +50,10 @@ public sealed class RebaseEditTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

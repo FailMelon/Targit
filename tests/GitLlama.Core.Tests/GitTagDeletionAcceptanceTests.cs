@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -22,6 +22,7 @@ public sealed class GitTagDeletionAcceptanceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 sha = repo.Commit("initial", signature, signature).Sha;
             }
+
             var service = new GitTagService();
             await service.CreateAsync(path, "delete-me");
             await service.CreateAsync(path, "keep-me");
@@ -30,13 +31,19 @@ public sealed class GitTagDeletionAcceptanceTests
             Assert.Equal("keep-me", remaining.Name);
             Assert.Equal(sha, remaining.TargetSha);
             using (var repo = new Repository(path))
+            {
                 Assert.Equal(sha, repo.Head.Tip!.Sha);
+            }
+
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeleteAsync(path, "delete-me"));
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

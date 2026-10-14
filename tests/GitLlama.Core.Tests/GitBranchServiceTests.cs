@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -24,10 +24,13 @@ public sealed class GitBranchServiceTests
                 source.Commit("Initial", signature, signature);
                 source.CreateBranch("feature/remote");
             }
+
             Repository.Clone(sourcePath, localPath);
             var service = new GitBranchService();
-            Assert.Equal("feature/remote", await service.CheckoutRemoteBranchAsync(
-                localPath, "origin", "feature/remote", "feature/remote"));
+            Assert.Equal(
+                "feature/remote",
+                await service.CheckoutRemoteBranchAsync(localPath, "origin", "feature/remote", "feature/remote")
+            );
             using (var local = new Repository(localPath))
             {
                 Assert.Equal("feature/remote", local.Head.FriendlyName);
@@ -35,15 +38,21 @@ public sealed class GitBranchServiceTests
                 Assert.Equal("origin", local.Head.RemoteName);
                 Assert.Equal("refs/remotes/origin/feature/remote", local.Head.TrackedBranch?.CanonicalName);
             }
+
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.CheckoutRemoteBranchAsync(localPath, "origin", "feature/remote", "feature/remote"));
+                service.CheckoutRemoteBranchAsync(localPath, "origin", "feature/remote", "feature/remote")
+            );
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.CheckoutRemoteBranchAsync(localPath, "origin", "missing", "missing"));
+                service.CheckoutRemoteBranchAsync(localPath, "origin", "missing", "missing")
+            );
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(root, true);
         }
     }
@@ -66,6 +75,7 @@ public sealed class GitBranchServiceTests
                 initialSha = repository.Commit("Initial", signature, signature).Sha;
                 initialBranch = repository.Head.FriendlyName;
             }
+
             var service = new GitBranchService();
             Assert.Equal("renamed", await service.RenameAsync(path, initialBranch, "renamed"));
             using (var repository = new Repository(path))
@@ -75,6 +85,7 @@ public sealed class GitBranchServiceTests
                 Assert.Null(repository.Branches[$"refs/heads/{initialBranch}"]);
                 Assert.NotNull(repository.Branches["refs/heads/renamed"]);
             }
+
             await service.CreateAsync(path, "existing");
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.RenameAsync(path, "renamed", "existing"));
             await Assert.ThrowsAsync<ArgumentException>(() => service.RenameAsync(path, "renamed", "invalid name"));
@@ -83,7 +94,10 @@ public sealed class GitBranchServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -103,6 +117,7 @@ public sealed class GitBranchServiceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 repository.Commit("Initial", signature, signature);
             }
+
             var service = new GitBranchService();
             Assert.Equal("feature/test", await service.CreateAsync(path, "feature/test"));
             Assert.Equal("feature/test", await service.CheckoutAsync(path, "feature/test"));
@@ -113,7 +128,10 @@ public sealed class GitBranchServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -140,6 +158,7 @@ public sealed class GitBranchServiceTests
                 repository.Commit("Other change", signature, signature);
                 Commands.Checkout(repository, repository.Branches.First(b => b.FriendlyName != "other" && !b.IsRemote));
             }
+
             File.WriteAllText(file, "local edits\n");
             var service = new GitBranchService();
             await Assert.ThrowsAnyAsync<Exception>(() => service.CheckoutAsync(path, "other"));
@@ -148,7 +167,10 @@ public sealed class GitBranchServiceTests
         finally
         {
             foreach (var item in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(item, File.GetAttributes(item) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -170,6 +192,7 @@ public sealed class GitBranchServiceTests
                 repository.Commit("Initial", signature, signature);
                 initialBranch = repository.Head.FriendlyName;
             }
+
             var service = new GitBranchService();
             await service.CreateAsync(path, "feature/delete-me");
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.DeleteAsync(path, initialBranch));
@@ -181,7 +204,10 @@ public sealed class GitBranchServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -205,12 +231,16 @@ public sealed class GitBranchServiceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 repository.Commit("Initial", signature, signature);
             }
+
             await Assert.ThrowsAsync<ArgumentException>(() => new GitBranchService().CreateAsync(path, name));
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

@@ -1,7 +1,9 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
+
 namespace GitLlama.Core.Tests;
+
 public sealed class Phase42Tests
 {
     [Fact]
@@ -24,6 +26,7 @@ public sealed class Phase42Tests
                 Commands.Stage(repo, "file.txt");
                 secondSha = repo.Commit("second", signature, signature).Sha;
             }
+
             var service = new GitCommitAncestryService();
             var root = await service.InspectAsync(path, firstSha);
             Assert.Empty(root.Parents);
@@ -38,7 +41,10 @@ public sealed class Phase42Tests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

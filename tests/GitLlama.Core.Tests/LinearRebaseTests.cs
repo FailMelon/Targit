@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -34,6 +34,7 @@ public sealed class LinearRebaseTests
                 targetOriginal = repo.Commit("target", sig, sig).Sha;
                 Commands.Checkout(repo, repo.Branches[sourceName]);
             }
+
             var rewritten = await new GitLinearRebaseService().RebaseOntoAsync(path, "target");
             using var check = new Repository(path);
             Assert.Equal(sourceName, check.Head.FriendlyName);
@@ -47,7 +48,10 @@ public sealed class LinearRebaseTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

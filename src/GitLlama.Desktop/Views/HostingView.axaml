@@ -1,22 +1,147 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GitLlama.Desktop.Views.HostingView">
-  <Grid Margin="10" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
-    <Grid ColumnDefinitions="*,*,110,Auto" ColumnSpacing="8"><TextBox Watermark="GitHub owner" Text="{Binding GithubOwner}"/><TextBox Grid.Column="1" Watermark="Repository" Text="{Binding GithubRepository}"/><ComboBox Grid.Column="2" ItemsSource="{Binding HostingStates}" SelectedItem="{Binding HostingState}"/><Button x:Name="RefreshItems" Grid.Column="3" Classes="workspace" Content="Refresh" IsEnabled="{Binding !IsHostingBusy}"/></Grid>
-    <Expander Grid.Row="1" Header="GitHub access"><StackPanel Spacing="6" Margin="8"><TextBox PasswordChar="●" Text="{Binding GithubToken}" Watermark="GitHub token (this session only)"/><TextBlock Text="Public repositories can be read without a token. Private repositories and write actions need the relevant token permissions. Tokens are not saved." TextWrapping="Wrap" Classes="muted"/></StackPanel></Expander>
-    <Grid Grid.Row="2" ColumnDefinitions="*,4,*">
-      <Grid RowDefinitions="*,Auto"><ListBox x:Name="HostingItems"/><Button x:Name="MoreItems" Grid.Row="1" Classes="workspace" Content="Load more"/></Grid>
-      <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="#3F3F46"/>
-      <ScrollViewer Grid.Column="2" Margin="10,0,0,0"><StackPanel Spacing="12">
-        <SelectableTextBlock Text="{Binding HostingDetails}" TextWrapping="Wrap"/>
-        <Button Classes="workspace" Content="Open selected on GitHub" Click="OpenItem_Click"/>
-        <ItemsControl ItemsSource="{Binding HostingComments}"><ItemsControl.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,0,0,8"><StackPanel Spacing="5"><TextBlock Text="{Binding Author}" FontWeight="SemiBold"/><SelectableTextBlock Text="{Binding Body}" TextWrapping="Wrap"/></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
-        <TextBox Text="{Binding HostingComment}" Watermark="Comment or review message" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90"/>
-        <Button Classes="workspace" Content="Post comment" Command="{Binding PostHostingCommentCommand}" IsEnabled="{Binding !IsHostingBusy}"/>
-        <WrapPanel IsVisible="{Binding IsPullRequestWorkspace}" ItemSpacing="8" LineSpacing="8"><Button Classes="workspace" Content="Approve" Command="{Binding ApprovePullRequestCommand}"/><Button Classes="workspace" Content="Request changes" Command="{Binding RequestPullRequestChangesCommand}"/></WrapPanel>
-        <Expander Header="Merge selected pull request" IsVisible="{Binding IsPullRequestWorkspace}"><StackPanel Spacing="8" Margin="8"><TextBlock Text="GitHub checks the loaded head commit and repository merge rules before merging." Classes="muted" TextWrapping="Wrap"/><TextBox Text="{Binding MergePullRequestConfirmation}" Watermark="Type MERGE #number"/><Button Classes="workspace" Content="Merge pull request" Command="{Binding MergePullRequestCommand}"/></StackPanel></Expander>
-        <Button Classes="workspace" Content="Close / reopen selected issue" Command="{Binding ToggleIssueStateCommand}" IsVisible="{Binding !IsPullRequestWorkspace}"/>
-        <Expander Header="Create new item"><StackPanel Spacing="8" Margin="8"><TextBox Text="{Binding HostingDraftTitle}" Watermark="Title"/><TextBox Text="{Binding HostingDraftBody}" Watermark="Description" AcceptsReturn="True" MinHeight="80" TextWrapping="Wrap"/><TextBox Text="{Binding PullRequestHead}" Watermark="Head branch (push it first)" IsVisible="{Binding IsPullRequestWorkspace}"/><TextBox Text="{Binding PullRequestBase}" Watermark="Base branch" IsVisible="{Binding IsPullRequestWorkspace}"/><Button x:Name="CreateItem" Classes="workspace" Content="Create" IsEnabled="{Binding !IsHostingBusy}"/></StackPanel></Expander>
-      </StackPanel></ScrollViewer>
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GitLlama.Desktop.Views.HostingView">
+    <Grid Margin="10"
+          RowDefinitions="Auto,Auto,*,Auto"
+          RowSpacing="8">
+        <Grid ColumnDefinitions="*,*,110,Auto" ColumnSpacing="8">
+            <TextBox Watermark="GitHub owner" Text="{Binding GithubOwner}" />
+
+            <TextBox Grid.Column="1"
+                     Watermark="Repository"
+                     Text="{Binding GithubRepository}" />
+
+            <ComboBox Grid.Column="2"
+                      ItemsSource="{Binding HostingStates}"
+                      SelectedItem="{Binding HostingState}" />
+
+            <Button x:Name="RefreshItems"
+                    Grid.Column="3"
+                    Classes="workspace"
+                    Content="Refresh"
+                    IsEnabled="{Binding !IsHostingBusy}" />
+        </Grid>
+
+        <Expander Grid.Row="1" Header="GitHub access">
+            <StackPanel Spacing="6" Margin="8">
+                <TextBox PasswordChar="●"
+                         Text="{Binding GithubToken}"
+                         Watermark="GitHub token (this session only)" />
+
+                <TextBlock Text="Public repositories can be read without a token. Private repositories and write actions need the relevant token permissions. Tokens are not saved."
+                           TextWrapping="Wrap"
+                           Classes="muted" />
+            </StackPanel>
+        </Expander>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,4,*">
+            <Grid RowDefinitions="*,Auto">
+                <ListBox x:Name="HostingItems" />
+
+                <Button x:Name="MoreItems"
+                        Grid.Row="1"
+                        Classes="workspace"
+                        Content="Load more" />
+            </Grid>
+
+            <GridSplitter Grid.Column="1"
+                          ResizeDirection="Columns"
+                          Background="#3F3F46" />
+
+            <ScrollViewer Grid.Column="2" Margin="10,0,0,0">
+                <StackPanel Spacing="12">
+                    <SelectableTextBlock Text="{Binding HostingDetails}" TextWrapping="Wrap" />
+
+                    <Button Classes="workspace"
+                            Content="Open selected on GitHub"
+                            Click="OpenItem_Click" />
+
+                    <ItemsControl ItemsSource="{Binding HostingComments}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Classes="card" Margin="0,0,0,8">
+                                    <StackPanel Spacing="5">
+                                        <TextBlock Text="{Binding Author}" FontWeight="SemiBold" />
+                                        <SelectableTextBlock Text="{Binding Body}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBox Text="{Binding HostingComment}"
+                             Watermark="Comment or review message"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="90" />
+
+                    <Button Classes="workspace"
+                            Content="Post comment"
+                            Command="{Binding PostHostingCommentCommand}"
+                            IsEnabled="{Binding !IsHostingBusy}" />
+
+                    <WrapPanel IsVisible="{Binding IsPullRequestWorkspace}"
+                               ItemSpacing="8"
+                               LineSpacing="8">
+                        <Button Classes="workspace"
+                                Content="Approve"
+                                Command="{Binding ApprovePullRequestCommand}" />
+
+                        <Button Classes="workspace"
+                                Content="Request changes"
+                                Command="{Binding RequestPullRequestChangesCommand}" />
+                    </WrapPanel>
+
+                    <Expander Header="Merge selected pull request" IsVisible="{Binding IsPullRequestWorkspace}">
+                        <StackPanel Spacing="8" Margin="8">
+                            <TextBlock Text="GitHub checks the loaded head commit and repository merge rules before merging."
+                                       Classes="muted"
+                                       TextWrapping="Wrap" />
+
+                            <TextBox Text="{Binding MergePullRequestConfirmation}" Watermark="Type MERGE #number" />
+
+                            <Button Classes="workspace"
+                                    Content="Merge pull request"
+                                    Command="{Binding MergePullRequestCommand}" />
+                        </StackPanel>
+                    </Expander>
+
+                    <Button Classes="workspace"
+                            Content="Close / reopen selected issue"
+                            Command="{Binding ToggleIssueStateCommand}"
+                            IsVisible="{Binding !IsPullRequestWorkspace}" />
+
+                    <Expander Header="Create new item">
+                        <StackPanel Spacing="8" Margin="8">
+                            <TextBox Text="{Binding HostingDraftTitle}" Watermark="Title" />
+
+                            <TextBox Text="{Binding HostingDraftBody}"
+                                     Watermark="Description"
+                                     AcceptsReturn="True"
+                                     MinHeight="80"
+                                     TextWrapping="Wrap" />
+
+                            <TextBox Text="{Binding PullRequestHead}"
+                                     Watermark="Head branch (push it first)"
+                                     IsVisible="{Binding IsPullRequestWorkspace}" />
+
+                            <TextBox Text="{Binding PullRequestBase}"
+                                     Watermark="Base branch"
+                                     IsVisible="{Binding IsPullRequestWorkspace}" />
+
+                            <Button x:Name="CreateItem"
+                                    Classes="workspace"
+                                    Content="Create"
+                                    IsEnabled="{Binding !IsHostingBusy}" />
+                        </StackPanel>
+                    </Expander>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <TextBlock Grid.Row="3"
+                   Text="{Binding HostingStatus}"
+                   Classes="muted"
+                   TextWrapping="Wrap" />
     </Grid>
-    <TextBlock Grid.Row="3" Text="{Binding HostingStatus}" Classes="muted" TextWrapping="Wrap"/>
-  </Grid>
 </UserControl>

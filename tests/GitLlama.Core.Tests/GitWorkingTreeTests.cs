@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -22,19 +22,23 @@ public sealed class GitWorkingTreeTests
                 var author = new Signature("Test", "test@example.com", DateTimeOffset.UtcNow);
                 repository.Commit("Initial", author, author);
             }
+
             File.WriteAllText(Path.Combine(path, "one.txt"), "first");
             File.WriteAllText(Path.Combine(path, "two.txt"), "not staged");
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.CommitAsync(path, "empty", "Test", "test@example.com"));
+                service.CommitAsync(path, "empty", "Test", "test@example.com")
+            );
             await service.StageAsync(path, "one.txt");
             using (var repository = new Repository(path))
             {
                 Assert.True((repository.RetrieveStatus("one.txt") & FileStatus.NewInIndex) != 0);
                 Assert.True((repository.RetrieveStatus("two.txt") & FileStatus.NewInWorkdir) != 0);
             }
+
             await service.UnstageAsync(path, "one.txt");
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.CommitAsync(path, "still empty", "Test", "test@example.com"));
+                service.CommitAsync(path, "still empty", "Test", "test@example.com")
+            );
             await service.StageAsync(path, "one.txt");
             var sha = await service.CommitAsync(path, "First commit", "Test", "test@example.com");
             using var result = new Repository(path);
@@ -46,7 +50,10 @@ public sealed class GitWorkingTreeTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -74,7 +81,10 @@ public sealed class GitWorkingTreeTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -95,6 +105,7 @@ public sealed class GitWorkingTreeTests
                 var author = new Signature("Test", "test@example.com", DateTimeOffset.UtcNow);
                 repo.Commit("Base", author, author);
             }
+
             File.WriteAllText(Path.Combine(path, "modify.txt"), "new");
             File.Delete(Path.Combine(path, "delete.txt"));
             var service = new GitWorkingTreeService();
@@ -109,7 +120,10 @@ public sealed class GitWorkingTreeTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -136,7 +150,10 @@ public sealed class GitWorkingTreeTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -153,12 +170,16 @@ public sealed class GitWorkingTreeTests
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.StageAsync(path, "file.txt"));
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.UnstageAsync(path, "file.txt"));
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.CommitAsync(path, "Message", "Test", "test@example.com"));
+                service.CommitAsync(path, "Message", "Test", "test@example.com")
+            );
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -167,9 +188,7 @@ public sealed class GitWorkingTreeTests
     public async Task CommitRequiresValidInputs()
     {
         var service = new GitWorkingTreeService();
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            service.CommitAsync(".", " ", "Test", "test@example.com"));
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            service.CommitAsync(".", "message", "", "test@example.com"));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CommitAsync(".", " ", "Test", "test@example.com"));
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CommitAsync(".", "message", "", "test@example.com"));
     }
 }

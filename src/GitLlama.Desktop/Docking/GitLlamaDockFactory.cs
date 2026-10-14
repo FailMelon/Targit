@@ -17,8 +17,20 @@ public sealed class GitLlamaDockFactory : Factory
     public override IRootDock CreateLayout()
     {
         var history = new Document { Id = "history", Title = "History" };
-        var repositories = new Tool { Id = "repositories", Title = "Repository", CanClose = false, CanFloat = false };
-        var inspector = new Tool { Id = "inspector", Title = "Inspector", CanClose = false, CanFloat = false };
+        var repositories = new Tool
+        {
+            Id = "repositories",
+            Title = "Repository",
+            CanClose = false,
+            CanFloat = false,
+        };
+        var inspector = new Tool
+        {
+            Id = "inspector",
+            Title = "Inspector",
+            CanClose = false,
+            CanFloat = false,
+        };
 
         var left = new ToolDock
         {
@@ -27,7 +39,7 @@ public sealed class GitLlamaDockFactory : Factory
             Alignment = Alignment.Left,
             Proportion = 0.18,
             ActiveDockable = repositories,
-            VisibleDockables = CreateList<IDockable>(repositories)
+            VisibleDockables = CreateList<IDockable>(repositories),
         };
         var documents = new DocumentDock
         {
@@ -36,7 +48,7 @@ public sealed class GitLlamaDockFactory : Factory
             Proportion = 1.0,
             CanCloseLastDockable = false,
             ActiveDockable = history,
-            VisibleDockables = CreateList<IDockable>(history)
+            VisibleDockables = CreateList<IDockable>(history),
         };
         var right = new ToolDock
         {
@@ -45,20 +57,26 @@ public sealed class GitLlamaDockFactory : Factory
             Alignment = Alignment.Right,
             Proportion = 0.29,
             ActiveDockable = inspector,
-            VisibleDockables = CreateList<IDockable>(inspector)
+            VisibleDockables = CreateList<IDockable>(inspector),
         };
         var documentWorkspace = new ProportionalDock
         {
             Id = "document-workspace",
             Orientation = Orientation.Vertical,
             Proportion = 0.53,
-            VisibleDockables = CreateList<IDockable>(documents)
+            VisibleDockables = CreateList<IDockable>(documents),
         };
         var main = new ProportionalDock
         {
             Id = "main",
             Orientation = Orientation.Horizontal,
-            VisibleDockables = CreateList<IDockable>(left, new ProportionalDockSplitter(), documentWorkspace, new ProportionalDockSplitter(), right)
+            VisibleDockables = CreateList<IDockable>(
+                left,
+                new ProportionalDockSplitter(),
+                documentWorkspace,
+                new ProportionalDockSplitter(),
+                right
+            ),
         };
         var root = CreateRootDock();
         root.Id = "root-v3";
@@ -72,17 +90,29 @@ public sealed class GitLlamaDockFactory : Factory
     public IRootDock CreatePreset(string name)
     {
         var root = CreateLayout();
-        if (root.ActiveDockable is not ProportionalDock main || main.VisibleDockables is not { } regions) return root;
+        if (root.ActiveDockable is not ProportionalDock main || main.VisibleDockables is not { } regions)
+        {
+            return root;
+        }
+
         var left = regions.OfType<ToolDock>().First(d => d.Id == "left-tools");
         var right = regions.OfType<ToolDock>().First(d => d.Id == "right-tools");
         var workspace = regions.OfType<ProportionalDock>().First(d => d.Id == "document-workspace");
         var documents = workspace.VisibleDockables!.OfType<DocumentDock>().First();
-        if (name == "Review") { left.Proportion = .15; workspace.Proportion = .55; right.Proportion = .30; }
+        if (name == "Review")
+        {
+            left.Proportion = .15;
+            workspace.Proportion = .55;
+            right.Proportion = .30;
+        }
+
         if (name == "Merge Resolution")
         {
-            left.Proportion = .15; workspace.Proportion = .60; right.Proportion = .25;
-
+            left.Proportion = .15;
+            workspace.Proportion = .60;
+            right.Proportion = .25;
         }
+
         return root;
     }
 
@@ -92,7 +122,7 @@ public sealed class GitLlamaDockFactory : Factory
         DockableLocator = new Dictionary<string, Func<IDockable?>>();
         HostWindowLocator = new Dictionary<string, Func<IHostWindow?>>
         {
-            [nameof(IDockWindow)] = () => new HostWindow()
+            [nameof(IDockWindow)] = () => new HostWindow(),
         };
         base.InitLayout(layout);
     }

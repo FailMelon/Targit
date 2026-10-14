@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -32,6 +32,7 @@ public sealed class ThreeWayConflictTests
                 repo.Commit("theirs", sig, sig);
                 Commands.Checkout(repo, repo.Branches[source]);
             }
+
             var status = await new GitMergeService().MergeAsync(path, "other");
             Assert.Equal(MergeStatus.Conflicts, status);
             var stage = await new GitThreeWayConflictService().InspectAsync(path, "conflict.txt");
@@ -48,7 +49,10 @@ public sealed class ThreeWayConflictTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

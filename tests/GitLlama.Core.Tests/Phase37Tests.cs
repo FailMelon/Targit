@@ -1,7 +1,9 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
+
 namespace GitLlama.Core.Tests;
+
 public sealed class Phase37Tests
 {
     [Fact]
@@ -22,15 +24,23 @@ public sealed class Phase37Tests
                 Commands.Stage(repo, "file.txt");
                 repo.Commit("second", sig, sig);
             }
-            var nodes = await new GitGraphLaneService().GetAsync(path); Assert.Equal(2, nodes.Count); Assert.Equal(0, nodes[0].Lane); Assert.Equal(0, nodes[1].Lane);
+
+            var nodes = await new GitGraphLaneService().GetAsync(path);
+            Assert.Equal(2, nodes.Count);
+            Assert.Equal(0, nodes[0].Lane);
+            Assert.Equal(0, nodes[1].Lane);
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
+
     [Fact]
     public async Task ValidatesEdgeCases()
     {
@@ -39,14 +49,18 @@ public sealed class Phase37Tests
         try
         {
             Repository.Init(path);
-            var service = new GitGraphLaneService(); Assert.Empty(await service.GetAsync(path)); await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.GetAsync(path, 0));
+            var service = new GitGraphLaneService();
+            Assert.Empty(await service.GetAsync(path));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.GetAsync(path, 0));
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
-
 }

@@ -1,19 +1,23 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using Microsoft.Extensions.DependencyInjection;
 using GitLlama.Application;
 using GitLlama.Core;
+using GitLlama.Desktop.Docking;
+using GitLlama.Desktop.ViewModels;
+using GitLlama.Desktop.Views;
 using GitLlama.Git;
 using GitLlama.Infrastructure;
-using GitLlama.Desktop.ViewModels;
-using GitLlama.Desktop.Docking;
-using GitLlama.Desktop.Views;
+using Microsoft.Extensions.DependencyInjection;
+
 namespace GitLlama.Desktop;
+
 public partial class App : Avalonia.Application
 {
     private ServiceProvider? _provider;
+
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
+
     public override void OnFrameworkInitializationCompleted()
     {
         var services = new ServiceCollection();
@@ -32,6 +36,7 @@ public partial class App : Avalonia.Application
             desktop.MainWindow = new MainWindow { DataContext = vm };
             desktop.Exit += (_, _) => _provider.Dispose();
         }
+
         base.OnFrameworkInitializationCompleted();
     }
 }

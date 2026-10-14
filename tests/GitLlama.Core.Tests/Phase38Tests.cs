@@ -1,7 +1,9 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
+
 namespace GitLlama.Core.Tests;
+
 public sealed class Phase38Tests
 {
     [Fact]
@@ -22,15 +24,22 @@ public sealed class Phase38Tests
                 Commands.Stage(repo, "file.txt");
                 repo.Commit("second", sig, sig);
             }
-            var hits = await new GitCommitSearchService().SearchAsync(path, "second"); Assert.Equal("second", Assert.Single(hits).Subject); Assert.Empty(await new GitCommitSearchService().SearchAsync(path, "absent"));
+
+            var hits = await new GitCommitSearchService().SearchAsync(path, "second");
+            Assert.Equal("second", Assert.Single(hits).Subject);
+            Assert.Empty(await new GitCommitSearchService().SearchAsync(path, "absent"));
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
+
     [Fact]
     public async Task ValidatesEdgeCases()
     {
@@ -39,14 +48,19 @@ public sealed class Phase38Tests
         try
         {
             Repository.Init(path);
-            var service = new GitCommitSearchService(); await Assert.ThrowsAsync<ArgumentException>(() => service.SearchAsync(path, " ")); await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.SearchAsync(path, "test", 0)); Assert.Empty(await service.SearchAsync(path, "missing"));
+            var service = new GitCommitSearchService();
+            await Assert.ThrowsAsync<ArgumentException>(() => service.SearchAsync(path, " "));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => service.SearchAsync(path, "test", 0));
+            Assert.Empty(await service.SearchAsync(path, "missing"));
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
-
 }

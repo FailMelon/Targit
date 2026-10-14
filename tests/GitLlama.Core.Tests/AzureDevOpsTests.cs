@@ -17,57 +17,123 @@ public sealed class AzureDevOpsTests
     [InlineData("ssh://git@ssh.dev.azure.com/v3/team/My%20Project/client")]
     public void RemoteUrlsResolveAzureRepository(string url)
     {
-        var target = AzureDevOpsRemote.Parse(url); Assert.NotNull(target); Assert.Equal("team", target.Organization); Assert.Equal("My Project", target.Project); Assert.Equal("client", target.Repository);
+        var target = AzureDevOpsRemote.Parse(url);
+        Assert.NotNull(target);
+        Assert.Equal("team", target.Organization);
+        Assert.Equal("My Project", target.Project);
+        Assert.Equal("client", target.Repository);
     }
+
     [Fact]
     public void PatCredentialsAreRestrictedToHttpsAndTheConnectedOrganization()
     {
-        var options = new GitNetworkOptions { AzurePersonalAccessToken = "azure-secret", AzureCredentialScopeUrl = "https://dev.azure.com/team/" };
+        var options = new GitNetworkOptions
+        {
+            AzurePersonalAccessToken = "azure-secret",
+            AzureCredentialScopeUrl = "https://dev.azure.com/team/",
+        };
         Assert.True(options.UsesAzureToken("https://dev.azure.com/team/project/_git/repo"));
         Assert.False(options.UsesAzureToken("https://dev.azure.com/other/project/_git/repo"));
         Assert.False(options.UsesAzureToken("https://dev.azure.com.attacker.example/team/project/_git/repo"));
         Assert.False(options.UsesAzureToken("git@ssh.dev.azure.com:v3/team/project/repo"));
         Assert.Null(AzureDevOpsRemote.Parse("https://github.com/team/repo"));
-        Assert.Throws<ArgumentException>(() => AzureDevOpsRemote.NormalizeOrganization("https://attacker.example/team"));
+        Assert.Throws<ArgumentException>(() =>
+            AzureDevOpsRemote.NormalizeOrganization("https://attacker.example/team")
+        );
         Assert.Equal("team", AzureDevOpsRemote.NormalizeOrganization("https://dev.azure.com/team/"));
     }
+
     [Fact]
     public void GitPatHeaderIsScopedAndNeverPlacedInArguments()
     {
-        var start = new ProcessStartInfo("git"); start.ArgumentList.Add("fetch");
-        GitSystemTransport.ConfigureAzurePatEnvironment(start, new GitNetworkOptions { AzurePersonalAccessToken = "azure-secret", AzureCredentialScopeUrl = "https://dev.azure.com/team/" });
+        var start = new ProcessStartInfo("git");
+        start.ArgumentList.Add("fetch");
+        GitSystemTransport.ConfigureAzurePatEnvironment(
+            start,
+            new GitNetworkOptions
+            {
+                AzurePersonalAccessToken = "azure-secret",
+                AzureCredentialScopeUrl = "https://dev.azure.com/team/",
+            }
+        );
         Assert.DoesNotContain(start.ArgumentList, item => item.Contains("azure-secret"));
         Assert.Equal("http.https://dev.azure.com/team/.extraheader", start.Environment["GIT_CONFIG_KEY_0"]);
-        Assert.Equal("Authorization: Basic " + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(":azure-secret")), start.Environment["GIT_CONFIG_VALUE_0"]);
-        Assert.Equal("false", start.Environment["GIT_CONFIG_VALUE_1"]); Assert.Equal("true", start.Environment["GIT_CONFIG_VALUE_3"]);
-        Assert.Throws<InvalidOperationException>(() => GitSystemTransport.ConfigureAzurePatEnvironment(start, new GitNetworkOptions { AzurePersonalAccessToken = "secret\r\ninjected", AzureCredentialScopeUrl = "https://dev.azure.com/team/" }));
+        Assert.Equal(
+            "Authorization: Basic " + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(":azure-secret")),
+            start.Environment["GIT_CONFIG_VALUE_0"]
+        );
+        Assert.Equal("false", start.Environment["GIT_CONFIG_VALUE_1"]);
+        Assert.Equal("true", start.Environment["GIT_CONFIG_VALUE_3"]);
+        Assert.Throws<InvalidOperationException>(() =>
+            GitSystemTransport.ConfigureAzurePatEnvironment(
+                start,
+                new GitNetworkOptions
+                {
+                    AzurePersonalAccessToken = "secret\r\ninjected",
+                    AzureCredentialScopeUrl = "https://dev.azure.com/team/",
+                }
+            )
+        );
     }
+
     [Fact]
     public async Task RepositoryDiscoveryUsesBasicPatAndOnlyReturnsTheOrganization()
     {
-        using var handler = new Handler("{\"value\":[{\"id\":\"1\",\"name\":\"client\",\"project\":{\"name\":\"My Project\"},\"remoteUrl\":\"https://team@dev.azure.com/team/My%20Project/_git/client\"},{\"id\":\"2\",\"name\":\"other\",\"project\":{\"name\":\"project\"},\"remoteUrl\":\"https://dev.azure.com/other/project/_git/other\"}]}");
-        using var client = new HttpClient(handler); using var service = new AzureDevOpsService(client);
+        using var handler = new Handler(
+            "{\"value\":[{\"id\":\"1\",\"name\":\"client\",\"project\":{\"name\":\"My Project\"},\"remoteUrl\":\"https://team@dev.azure.com/team/My%20Project/_git/client\"},{\"id\":\"2\",\"name\":\"other\",\"project\":{\"name\":\"project\"},\"remoteUrl\":\"https://dev.azure.com/other/project/_git/other\"}]}"
+        );
+        using var client = new HttpClient(handler);
+        using var service = new AzureDevOpsService(client);
         var repositories = await service.RepositoriesAsync("team", "azure-secret");
-        Assert.Single(repositories); Assert.Equal("https://dev.azure.com/team/My%20Project/_git/client", repositories[0].CloneUrl);
-        Assert.Equal("Basic " + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(":azure-secret")), handler.Authorization); Assert.StartsWith("https://dev.azure.com/team/_apis/git/repositories", handler.Url);
+        Assert.Single(repositories);
+        Assert.Equal("https://dev.azure.com/team/My%20Project/_git/client", repositories[0].CloneUrl);
+        Assert.Equal(
+            "Basic " + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(":azure-secret")),
+            handler.Authorization
+        );
+        Assert.StartsWith("https://dev.azure.com/team/_apis/git/repositories", handler.Url);
         handler.Status = HttpStatusCode.Forbidden;
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.RepositoriesAsync("team", "azure-secret")); Assert.Contains("denied access", error.Message); Assert.DoesNotContain("azure-secret", error.Message);
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.RepositoriesAsync("team", "azure-secret")
+        );
+        Assert.Contains("denied access", error.Message);
+        Assert.DoesNotContain("azure-secret", error.Message);
     }
+
     [Fact]
     public void OrganizationAccessCannotFallBackToManualTokensOrGitHelpers()
     {
-        var denied = new GitNetworkOptions { AllowedAzureOrganizations = [], Secret = "manual-token", UseCredentialManager = true };
+        var denied = new GitNetworkOptions
+        {
+            AllowedAzureOrganizations = [],
+            Secret = "manual-token",
+            UseCredentialManager = true,
+        };
         var url = "https://dev.azure.com/team/project/_git/repo";
         Assert.Throws<InvalidOperationException>(() => denied.UsesAzureAuthorization(url));
-        Assert.Throws<InvalidOperationException>(() => denied.Fetch(CancellationToken.None).CredentialsProvider(url, "git", LibGit2Sharp.SupportedCredentialTypes.UsernamePassword));
+        Assert.Throws<InvalidOperationException>(() =>
+            denied
+                .Fetch(CancellationToken.None)
+                .CredentialsProvider(url, "git", LibGit2Sharp.SupportedCredentialTypes.UsernamePassword)
+        );
         var expired = new GitNetworkOptions { AllowedAzureOrganizations = ["team"], UseCredentialManager = true };
         Assert.Throws<InvalidOperationException>(() => expired.EnsureAzureAccess(url));
-        var allowed = new GitNetworkOptions { AllowedAzureOrganizations = ["team"], AzurePersonalAccessToken = "azure-token", AzureCredentialScopeUrl = "https://dev.azure.com/team/" };
+        var allowed = new GitNetworkOptions
+        {
+            AllowedAzureOrganizations = ["team"],
+            AzurePersonalAccessToken = "azure-token",
+            AzureCredentialScopeUrl = "https://dev.azure.com/team/",
+        };
         Assert.True(allowed.UsesAzureAuthorization(url));
-        Assert.Throws<InvalidOperationException>(() => allowed.UsesAzureAuthorization("https://dev.azure.com/other/project/_git/repo"));
-        Assert.Throws<InvalidOperationException>(() => denied.EnsureAzureAccess("git@ssh.dev.azure.com:v3/team/project/repo"));
+        Assert.Throws<InvalidOperationException>(() =>
+            allowed.UsesAzureAuthorization("https://dev.azure.com/other/project/_git/repo")
+        );
+        Assert.Throws<InvalidOperationException>(() =>
+            denied.EnsureAzureAccess("git@ssh.dev.azure.com:v3/team/project/repo")
+        );
         allowed.EnsureAzureAccess("git@ssh.dev.azure.com:v3/team/project/repo");
     }
+
     [Theory]
     [InlineData(HttpStatusCode.Redirect)]
     [InlineData(HttpStatusCode.Unauthorized)]
@@ -75,18 +141,30 @@ public sealed class AzureDevOpsTests
     public async Task RejectedPatReturnsAnActionableErrorWithoutTheSecret(HttpStatusCode status)
     {
         using var handler = new Handler("sensitive provider response azure-secret") { Status = status };
-        using var client = new HttpClient(handler); using var service = new AzureDevOpsService(client);
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.RepositoriesAsync("team", "azure-secret"));
-        Assert.Contains("token expiry", error.Message); Assert.DoesNotContain("azure-secret", error.Message);
+        using var client = new HttpClient(handler);
+        using var service = new AzureDevOpsService(client);
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.RepositoriesAsync("team", "azure-secret")
+        );
+        Assert.Contains("token expiry", error.Message);
+        Assert.DoesNotContain("azure-secret", error.Message);
         handler.Status = HttpStatusCode.OK;
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.RepositoriesAsync("team", "secret\r\ninjected"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.RepositoriesAsync("team", "secret\r\ninjected")
+        );
     }
+
     private sealed class Handler(string body) : HttpMessageHandler
     {
         public HttpStatusCode Status { get; set; } = HttpStatusCode.OK;
         public string? Authorization { get; private set; }
         public string Url { get; private set; } = "";
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
-        { Authorization = request.Headers.Authorization?.ToString(); Url = request.RequestUri!.AbsoluteUri; return Task.FromResult(new HttpResponseMessage(Status) { Content = new StringContent(body) }); }
+        {
+            Authorization = request.Headers.Authorization?.ToString();
+            Url = request.RequestUri!.AbsoluteUri;
+            return Task.FromResult(new HttpResponseMessage(Status) { Content = new StringContent(body) });
+        }
     }
 }

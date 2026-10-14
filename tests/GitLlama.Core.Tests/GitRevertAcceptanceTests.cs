@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -25,6 +25,7 @@ public sealed class GitRevertAcceptanceTests
                 Commands.Stage(repo, "file.txt");
                 targetSha = repo.Commit("change", signature, signature).Sha;
             }
+
             var service = new GitRevertService();
             File.WriteAllText(Path.Combine(path, "file.txt"), "dirty");
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.RevertAsync(path, targetSha));
@@ -40,7 +41,10 @@ public sealed class GitRevertAcceptanceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

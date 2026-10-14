@@ -11,8 +11,9 @@ public sealed class RepositorySessionManager : IDisposable
 {
     private readonly IRepositoryReader _reader;
     private readonly IRepositoryOverviewReader _overview;
-    private readonly ConcurrentDictionary<string, RepositorySession> _sessions =
-        new(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, RepositorySession> _sessions = new(
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal
+    );
 
     public RepositorySessionManager(IRepositoryReader reader, IRepositoryOverviewReader overview)
     {
@@ -29,7 +30,11 @@ public sealed class RepositorySessionManager : IDisposable
 
     public void Dispose()
     {
-        foreach (var session in _sessions.Values) session.Dispose();
+        foreach (var session in _sessions.Values)
+        {
+            session.Dispose();
+        }
+
         _sessions.Clear();
     }
 }
@@ -71,7 +76,10 @@ public sealed class RepositorySession : IDisposable
             LastOverview = overview;
             return overview;
         }
-        finally { _refreshLock.Release(); }
+        finally
+        {
+            _refreshLock.Release();
+        }
     }
 
     public void Dispose()

@@ -3,6 +3,7 @@ using GitLlama.Git;
 namespace GitLlama.Desktop.ViewModels;
 
 public sealed record GraphSegment(int FromLane, double FromY, int ToLane, double ToY, int ColorLane);
+
 public sealed record HistoryReferenceLabel(string Name, bool IsCurrentBranch)
 {
     public string DisplayName => IsCurrentBranch ? "✓ " + Name : Name;
@@ -22,11 +23,22 @@ public sealed record HistoryRow(GitCommitNode Commit, int Lane, double GraphWidt
     public string FullDate => Commit.Timestamp.ToString("yyyy-MM-dd HH:mm:ss zzz");
     public IReadOnlyList<string> Labels => Commit.Labels;
     public string? CurrentLocalBranch { get; init; }
-    public bool IsCurrentBranchTip => CurrentLocalBranch is not null && Labels.Contains(CurrentLocalBranch, StringComparer.Ordinal);
-    public IEnumerable<HistoryReferenceLabel> ReferenceLabels => Labels.Select(name => new HistoryReferenceLabel(name, CurrentLocalBranch is not null && name == CurrentLocalBranch)).OrderByDescending(label => label.IsCurrentBranch);
+    public bool IsCurrentBranchTip =>
+        CurrentLocalBranch is not null && Labels.Contains(CurrentLocalBranch, StringComparer.Ordinal);
+    public IEnumerable<HistoryReferenceLabel> ReferenceLabels =>
+        Labels
+            .Select(name => new HistoryReferenceLabel(
+                name,
+                CurrentLocalBranch is not null && name == CurrentLocalBranch
+            ))
+            .OrderByDescending(label => label.IsCurrentBranch);
 
     // Keep lanes stable until their pending parent is reached. Vacant lanes are reused.
-    public static IReadOnlyList<HistoryRow> Layout(IReadOnlyList<GitCommitNode> commits, string? currentLocalBranch = null, string? currentHeadSha = null)
+    public static IReadOnlyList<HistoryRow> Layout(
+        IReadOnlyList<GitCommitNode> commits,
+        string? currentLocalBranch = null,
+        string? currentHeadSha = null
+    )
     {
         var pending = new List<string?>();
         var lanes = new int[commits.Count];
@@ -38,18 +50,33 @@ public sealed record HistoryRow(GitCommitNode Commit, int Lane, double GraphWidt
             if (lane < 0)
             {
                 lane = pending.IndexOf(null);
-                if (lane < 0) { lane = pending.Count; pending.Add(null); }
+                if (lane < 0)
+                {
+                    lane = pending.Count;
+                    pending.Add(null);
+                }
             }
+
             lanes[i] = lane;
             pending[lane] = null;
             foreach (var parent in commit.Parents)
             {
-                if (pending.Contains(parent)) continue;
+                if (pending.Contains(parent))
+                {
+                    continue;
+                }
+
                 var free = pending.IndexOf(null);
-                if (free < 0) { free = pending.Count; pending.Add(null); }
+                if (free < 0)
+                {
+                    free = pending.Count;
+                    pending.Add(null);
+                }
+
                 pending[free] = parent;
             }
         }
+
         var segments = Enumerable.Range(0, commits.Count).Select(_ => new List<GraphSegment>()).ToArray();
         for (var i = 0; i < commits.Count; i++)
         {
@@ -64,11 +91,25 @@ public sealed record HistoryRow(GitCommitNode Commit, int Lane, double GraphWidt
                 var track = parent == commits[i].Parents[0] ? lanes[i] : lanes[end];
                 var color = parent == commits[i].Parents[0] ? lanes[i] : lanes[end];
                 segments[i].Add(new(lanes[i], .5, track, 1, color));
-                for (var j = i + 1; j < end; j++) segments[j].Add(new(track, 0, track, 1, color));
+                for (var j = i + 1; j < end; j++)
+                {
+                    segments[j].Add(new(track, 0, track, 1, color));
+                }
+
                 segments[end].Add(new(track, 0, lanes[end], .5, color));
             }
         }
+
         var width = Math.Max(84, (lanes.DefaultIfEmpty(0).Max() + 1) * 18 + 24);
-        return commits.Select((c, i) => new HistoryRow(c, lanes[i], width, segments[i]) { CurrentLocalBranch = currentHeadSha is null || c.Sha == currentHeadSha ? currentLocalBranch : null }).ToArray();
+        return commits
+            .Select(
+                (c, i) =>
+                    new HistoryRow(c, lanes[i], width, segments[i])
+                    {
+                        CurrentLocalBranch =
+                            currentHeadSha is null || c.Sha == currentHeadSha ? currentLocalBranch : null,
+                    }
+            )
+            .ToArray();
     }
 }

@@ -1,11 +1,184 @@
-<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" x:Class="GitLlama.Desktop.Views.BranchesView">
-  <Grid Margin="10" RowDefinitions="Auto,*" RowSpacing="8">
-    <DockPanel><TextBlock Text="Merge and conflict resolution" FontSize="18" FontWeight="SemiBold"/><TextBlock Text="{Binding CurrentBranch}" Classes="muted" HorizontalAlignment="Right"/></DockPanel>
-    <ListBox Grid.Row="1" ItemsSource="{Binding BranchLines}" SelectedItem="{Binding SelectedBranchLine}"/>
-    <TabControl Grid.Row="1">
-      <TabItem Header="Merge"><ScrollViewer><StackPanel Margin="10" Spacing="10"><ComboBox ItemsSource="{Binding BranchLines}" SelectedItem="{Binding SelectedBranchLine}" HorizontalAlignment="Stretch" PlaceholderText="Branch to merge into current"/><TextBlock Text="Merge the selected branch into the current branch. Conflicts remain available in the Conflicts tab." TextWrapping="Wrap" Classes="muted"/><Button Classes="workspace" Content="Merge selected into current" Command="{Binding MergeSelectedBranchCommand}"/><TextBox Text="{Binding MergeCommitMessage}" Watermark="Merge commit message"/><WrapPanel ItemSpacing="8"><Button Classes="workspace" Content="Continue resolved merge" Command="{Binding ContinueMergeCommand}"/><Button Classes="workspace" Content="Abort merge" Command="{Binding AbortMergeCommand}"/></WrapPanel><TextBlock Text="{Binding ConflictSummary}" TextWrapping="Wrap"/></StackPanel></ScrollViewer></TabItem>
-      <TabItem Header="Conflicts"><Grid Margin="8" RowDefinitions="Auto,Auto,130,*,Auto" RowSpacing="8"><ComboBox ItemsSource="{Binding MergeConflicts}" SelectedItem="{Binding ConflictPath}" HorizontalAlignment="Stretch" PlaceholderText="Select a conflicted file"/><WrapPanel Grid.Row="1" ItemSpacing="6" LineSpacing="6"><Button Classes="workspace" Content="Refresh conflicts" Command="{Binding InspectMergeConflictsCommand}"/><Button Classes="workspace" Content="Accept ours" Command="{Binding AcceptOursCommand}"/><Button Classes="workspace" Content="Accept theirs" Command="{Binding AcceptTheirsCommand}"/></WrapPanel><Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="6"><TextBox Classes="code" Text="{Binding ConflictBaseText}" IsReadOnly="True" AcceptsReturn="True" Watermark="Base"/><TextBox Grid.Column="1" Classes="code" Text="{Binding ConflictOursText}" IsReadOnly="True" AcceptsReturn="True" Watermark="Ours"/><TextBox Grid.Column="2" Classes="code" Text="{Binding ConflictTheirsText}" IsReadOnly="True" AcceptsReturn="True" Watermark="Theirs"/></Grid><TextBox Grid.Row="3" Classes="code" Text="{Binding ConflictResultText}" AcceptsReturn="True" Watermark="Edit the resolved file content"/><WrapPanel Grid.Row="4" ItemSpacing="6"><Button Classes="workspace" Content="Save result and mark resolved" Command="{Binding SaveConflictResultCommand}"/><Button Classes="workspace" Content="Mark working file resolved" Command="{Binding ResolveConflictUsingWorkingTreeCommand}"/></WrapPanel></Grid></TabItem>
-      <TabItem Header="Rebase"><ScrollViewer><StackPanel Margin="10" Spacing="10"><TextBlock Text="Rebase replays an unpublished linear history onto a different local branch. Merge histories and published commits are guarded by the Git service." TextWrapping="Wrap" Classes="muted"/><ComboBox ItemsSource="{Binding BranchLines}" SelectedItem="{Binding RebaseTargetBranch}" HorizontalAlignment="Stretch" PlaceholderText="Target local branch"/><TextBox Text="{Binding RebaseUpstreamSha}" Watermark="Ancestor SHA for the plan preview"/><Button Classes="workspace" Content="Preview outgoing commits" Command="{Binding PreviewRebasePlanCommand}"/><TextBox Classes="code" Text="{Binding RebasePlanPreview}" IsReadOnly="True" AcceptsReturn="True" MinHeight="90"/><TextBox Text="{Binding RebaseConfirmation}" Watermark="Type REBASE to confirm rewriting local commits"/><Button Classes="workspace" Content="Rebase current branch onto target" Command="{Binding RebaseCurrentOntoTargetCommand}"/><Expander Header="Edit replay plan"><StackPanel Margin="8" Spacing="8"><TextBox Classes="code" Text="{Binding EditableRebasePlan}" AcceptsReturn="True" MinHeight="100" Watermark="pick FULL_SHA, drop FULL_SHA, reword FULL_SHA message…"/><Button Classes="workspace" Content="Execute reviewed plan" Command="{Binding ExecuteEditableRebasePlanCommand}"/></StackPanel></Expander><TextBox Text="{Binding SequencerCommitMessage}" Watermark="Resolution commit message"/><WrapPanel ItemSpacing="8"><Button Classes="workspace" Content="Continue cherry-pick / revert" Command="{Binding ContinueSequencerCommand}"/><Button Classes="workspace" Content="Abort cherry-pick / revert" Command="{Binding AbortSequencerCommand}"/></WrapPanel><TextBlock Text="{Binding Status}" TextWrapping="Wrap"/></StackPanel></ScrollViewer></TabItem>
-    </TabControl>
-  </Grid>
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GitLlama.Desktop.Views.BranchesView">
+    <Grid Margin="10"
+          RowDefinitions="Auto,*"
+          RowSpacing="8">
+        <DockPanel>
+            <TextBlock Text="Merge and conflict resolution"
+                       FontSize="18"
+                       FontWeight="SemiBold" />
+
+            <TextBlock Text="{Binding CurrentBranch}"
+                       Classes="muted"
+                       HorizontalAlignment="Right" />
+        </DockPanel>
+
+        <ListBox Grid.Row="1"
+                 ItemsSource="{Binding BranchLines}"
+                 SelectedItem="{Binding SelectedBranchLine}" />
+
+        <TabControl Grid.Row="1">
+            <TabItem Header="Merge">
+                <ScrollViewer>
+                    <StackPanel Margin="10" Spacing="10">
+                        <ComboBox ItemsSource="{Binding BranchLines}"
+                                  SelectedItem="{Binding SelectedBranchLine}"
+                                  HorizontalAlignment="Stretch"
+                                  PlaceholderText="Branch to merge into current" />
+
+                        <TextBlock Text="Merge the selected branch into the current branch. Conflicts remain available in the Conflicts tab."
+                                   TextWrapping="Wrap"
+                                   Classes="muted" />
+
+                        <Button Classes="workspace"
+                                Content="Merge selected into current"
+                                Command="{Binding MergeSelectedBranchCommand}" />
+
+                        <TextBox Text="{Binding MergeCommitMessage}" Watermark="Merge commit message" />
+
+                        <WrapPanel ItemSpacing="8">
+                            <Button Classes="workspace"
+                                    Content="Continue resolved merge"
+                                    Command="{Binding ContinueMergeCommand}" />
+
+                            <Button Classes="workspace"
+                                    Content="Abort merge"
+                                    Command="{Binding AbortMergeCommand}" />
+                        </WrapPanel>
+
+                        <TextBlock Text="{Binding ConflictSummary}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Conflicts">
+                <Grid Margin="8"
+                      RowDefinitions="Auto,Auto,130,*,Auto"
+                      RowSpacing="8">
+                    <ComboBox ItemsSource="{Binding MergeConflicts}"
+                              SelectedItem="{Binding ConflictPath}"
+                              HorizontalAlignment="Stretch"
+                              PlaceholderText="Select a conflicted file" />
+
+                    <WrapPanel Grid.Row="1"
+                               ItemSpacing="6"
+                               LineSpacing="6">
+                        <Button Classes="workspace"
+                                Content="Refresh conflicts"
+                                Command="{Binding InspectMergeConflictsCommand}" />
+
+                        <Button Classes="workspace"
+                                Content="Accept ours"
+                                Command="{Binding AcceptOursCommand}" />
+
+                        <Button Classes="workspace"
+                                Content="Accept theirs"
+                                Command="{Binding AcceptTheirsCommand}" />
+                    </WrapPanel>
+
+                    <Grid Grid.Row="2"
+                          ColumnDefinitions="*,*,*"
+                          ColumnSpacing="6">
+                        <TextBox Classes="code"
+                                 Text="{Binding ConflictBaseText}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 Watermark="Base" />
+
+                        <TextBox Grid.Column="1"
+                                 Classes="code"
+                                 Text="{Binding ConflictOursText}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 Watermark="Ours" />
+
+                        <TextBox Grid.Column="2"
+                                 Classes="code"
+                                 Text="{Binding ConflictTheirsText}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 Watermark="Theirs" />
+                    </Grid>
+
+                    <TextBox Grid.Row="3"
+                             Classes="code"
+                             Text="{Binding ConflictResultText}"
+                             AcceptsReturn="True"
+                             Watermark="Edit the resolved file content" />
+
+                    <WrapPanel Grid.Row="4" ItemSpacing="6">
+                        <Button Classes="workspace"
+                                Content="Save result and mark resolved"
+                                Command="{Binding SaveConflictResultCommand}" />
+
+                        <Button Classes="workspace"
+                                Content="Mark working file resolved"
+                                Command="{Binding ResolveConflictUsingWorkingTreeCommand}" />
+                    </WrapPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Rebase">
+                <ScrollViewer>
+                    <StackPanel Margin="10" Spacing="10">
+                        <TextBlock Text="Rebase replays an unpublished linear history onto a different local branch. Merge histories and published commits are guarded by the Git service."
+                                   TextWrapping="Wrap"
+                                   Classes="muted" />
+
+                        <ComboBox ItemsSource="{Binding BranchLines}"
+                                  SelectedItem="{Binding RebaseTargetBranch}"
+                                  HorizontalAlignment="Stretch"
+                                  PlaceholderText="Target local branch" />
+
+                        <TextBox Text="{Binding RebaseUpstreamSha}" Watermark="Ancestor SHA for the plan preview" />
+
+                        <Button Classes="workspace"
+                                Content="Preview outgoing commits"
+                                Command="{Binding PreviewRebasePlanCommand}" />
+
+                        <TextBox Classes="code"
+                                 Text="{Binding RebasePlanPreview}"
+                                 IsReadOnly="True"
+                                 AcceptsReturn="True"
+                                 MinHeight="90" />
+
+                        <TextBox Text="{Binding RebaseConfirmation}" Watermark="Type REBASE to confirm rewriting local commits" />
+
+                        <Button Classes="workspace"
+                                Content="Rebase current branch onto target"
+                                Command="{Binding RebaseCurrentOntoTargetCommand}" />
+
+                        <Expander Header="Edit replay plan">
+                            <StackPanel Margin="8" Spacing="8">
+                                <TextBox Classes="code"
+                                         Text="{Binding EditableRebasePlan}"
+                                         AcceptsReturn="True"
+                                         MinHeight="100"
+                                         Watermark="pick FULL_SHA, drop FULL_SHA, reword FULL_SHA message…" />
+
+                                <Button Classes="workspace"
+                                        Content="Execute reviewed plan"
+                                        Command="{Binding ExecuteEditableRebasePlanCommand}" />
+                            </StackPanel>
+                        </Expander>
+
+                        <TextBox Text="{Binding SequencerCommitMessage}" Watermark="Resolution commit message" />
+
+                        <WrapPanel ItemSpacing="8">
+                            <Button Classes="workspace"
+                                    Content="Continue cherry-pick / revert"
+                                    Command="{Binding ContinueSequencerCommand}" />
+
+                            <Button Classes="workspace"
+                                    Content="Abort cherry-pick / revert"
+                                    Command="{Binding AbortSequencerCommand}" />
+                        </WrapPanel>
+
+                        <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </Grid>
 </UserControl>

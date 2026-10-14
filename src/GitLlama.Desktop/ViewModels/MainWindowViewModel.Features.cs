@@ -22,7 +22,9 @@ public partial class MainWindowViewModel
     public ObservableCollection<GitWorktreeInfo> Worktrees { get; } = [];
     public ObservableCollection<GitReflogInfo> Reflog { get; } = [];
     public ObservableCollection<GitSubmoduleInfo> Submodules { get; } = [];
-    [ObservableProperty] private GitSubmoduleInfo? selectedSubmodule;
+
+    [ObservableProperty]
+    private GitSubmoduleInfo? selectedSubmodule;
     public ObservableCollection<GitFileInfo> RepositoryFiles { get; } = [];
     public ObservableCollection<GitFileInfo> FilteredRepositoryFiles { get; } = [];
     public ObservableCollection<GitPatchLine> PatchLines { get; } = [];
@@ -30,312 +32,763 @@ public partial class MainWindowViewModel
     public ObservableCollection<HostingItem> PullRequests { get; } = [];
     public ObservableCollection<HostingItem> Issues { get; } = [];
     public ObservableCollection<HostingComment> HostingComments { get; } = [];
-    [ObservableProperty] private string cloneUrl = "";
-    [ObservableProperty] private string newRepositoryDestination = "";
-    [ObservableProperty] private string worktreeName = "";
-    [ObservableProperty] private string worktreeDestination = "";
-    [ObservableProperty] private string worktreeBranch = "";
-    [ObservableProperty] private string worktreeRemoveConfirmation = "";
-    [ObservableProperty] private GitWorktreeInfo? selectedWorktree;
-    [ObservableProperty] private GitReflogInfo? selectedReflog;
-    [ObservableProperty] private string recoveredBranchName = "";
-    [ObservableProperty] private GitFileInfo? selectedRepositoryFile;
-    [ObservableProperty] private string fileSearch = "";
-    [ObservableProperty] private string selectedFilePreview = "Choose a file to view its committed content.";
-    [ObservableProperty] private string selectedHistoryScope = "All branches";
-    [ObservableProperty] private string historyAuthorFilter = "";
-    [ObservableProperty] private DateTimeOffset? historySince;
-    [ObservableProperty] private DateTimeOffset? historyUntil;
-    [ObservableProperty] private bool hasMoreHistory;
-    [ObservableProperty] private bool isFeatureBusy;
-    [ObservableProperty] private bool isNetworkBusy;
-    [ObservableProperty] private string networkProgressText = "";
-    [ObservableProperty] private string networkUsername = "";
-    [ObservableProperty] private string networkSecret = "";
-    [ObservableProperty] private string networkCredentialHost = "";
-    [ObservableProperty] private string remoteLocalBranchName = "";
-    [ObservableProperty] private bool reviewStagedPatch;
-    [ObservableProperty] private GitPatchLine? selectedPatchLine;
-    [ObservableProperty] private bool amendStagedCommit;
-    [ObservableProperty] private string conflictResultText = "";
-    [ObservableProperty] private string githubOwner = "";
-    [ObservableProperty] private string githubRepository = "";
-    [ObservableProperty] private string githubToken = "";
-    [ObservableProperty] private string hostingState = "open";
-    [ObservableProperty] private bool isHostingBusy;
-    [ObservableProperty] private string hostingStatus = "Choose a GitHub repository and refresh to load items.";
-    [ObservableProperty] private HostingItem? selectedPullRequest;
-    [ObservableProperty] private HostingItem? selectedIssue;
-    [ObservableProperty] private string hostingDraftTitle = "";
-    [ObservableProperty] private string hostingDraftBody = "";
-    [ObservableProperty] private string hostingComment = "";
-    [ObservableProperty] private string pullRequestHead = "";
-    [ObservableProperty] private string pullRequestBase = "main";
-    [ObservableProperty] private string mergePullRequestConfirmation = "";
-    [ObservableProperty] private string hostingDetails = "Select a pull request or issue.";
-    private int _pullPage = 1, _issuePage = 1;
-    [ObservableProperty] private bool hasMorePullRequests;
-    [ObservableProperty] private bool hasMoreIssues;
-    [ObservableProperty] private bool isPullRequestWorkspace = true;
+
+    [ObservableProperty]
+    private string cloneUrl = "";
+
+    [ObservableProperty]
+    private string newRepositoryDestination = "";
+
+    [ObservableProperty]
+    private string worktreeName = "";
+
+    [ObservableProperty]
+    private string worktreeDestination = "";
+
+    [ObservableProperty]
+    private string worktreeBranch = "";
+
+    [ObservableProperty]
+    private string worktreeRemoveConfirmation = "";
+
+    [ObservableProperty]
+    private GitWorktreeInfo? selectedWorktree;
+
+    [ObservableProperty]
+    private GitReflogInfo? selectedReflog;
+
+    [ObservableProperty]
+    private string recoveredBranchName = "";
+
+    [ObservableProperty]
+    private GitFileInfo? selectedRepositoryFile;
+
+    [ObservableProperty]
+    private string fileSearch = "";
+
+    [ObservableProperty]
+    private string selectedFilePreview = "Choose a file to view its committed content.";
+
+    [ObservableProperty]
+    private string selectedHistoryScope = "All branches";
+
+    [ObservableProperty]
+    private string historyAuthorFilter = "";
+
+    [ObservableProperty]
+    private DateTimeOffset? historySince;
+
+    [ObservableProperty]
+    private DateTimeOffset? historyUntil;
+
+    [ObservableProperty]
+    private bool hasMoreHistory;
+
+    [ObservableProperty]
+    private bool isFeatureBusy;
+
+    [ObservableProperty]
+    private bool isNetworkBusy;
+
+    [ObservableProperty]
+    private string networkProgressText = "";
+
+    [ObservableProperty]
+    private string networkUsername = "";
+
+    [ObservableProperty]
+    private string networkSecret = "";
+
+    [ObservableProperty]
+    private string networkCredentialHost = "";
+
+    [ObservableProperty]
+    private string remoteLocalBranchName = "";
+
+    [ObservableProperty]
+    private bool reviewStagedPatch;
+
+    [ObservableProperty]
+    private GitPatchLine? selectedPatchLine;
+
+    [ObservableProperty]
+    private bool amendStagedCommit;
+
+    [ObservableProperty]
+    private string conflictResultText = "";
+
+    [ObservableProperty]
+    private string githubOwner = "";
+
+    [ObservableProperty]
+    private string githubRepository = "";
+
+    [ObservableProperty]
+    private string githubToken = "";
+
+    [ObservableProperty]
+    private string hostingState = "open";
+
+    [ObservableProperty]
+    private bool isHostingBusy;
+
+    [ObservableProperty]
+    private string hostingStatus = "Choose a GitHub repository and refresh to load items.";
+
+    [ObservableProperty]
+    private HostingItem? selectedPullRequest;
+
+    [ObservableProperty]
+    private HostingItem? selectedIssue;
+
+    [ObservableProperty]
+    private string hostingDraftTitle = "";
+
+    [ObservableProperty]
+    private string hostingDraftBody = "";
+
+    [ObservableProperty]
+    private string hostingComment = "";
+
+    [ObservableProperty]
+    private string pullRequestHead = "";
+
+    [ObservableProperty]
+    private string pullRequestBase = "main";
+
+    [ObservableProperty]
+    private string mergePullRequestConfirmation = "";
+
+    [ObservableProperty]
+    private string hostingDetails = "Select a pull request or issue.";
+    private int _pullPage = 1,
+        _issuePage = 1;
+
+    [ObservableProperty]
+    private bool hasMorePullRequests;
+
+    [ObservableProperty]
+    private bool hasMoreIssues;
+
+    [ObservableProperty]
+    private bool isPullRequestWorkspace = true;
     public IReadOnlyList<string> HostingStates { get; } = ["open", "closed", "all"];
-    public string HistoryReference => SelectedHistoryScope == "All branches" ? "" : SelectedHistoryScope == "Current branch" ? "HEAD" : SelectedHistoryScope;
+    public string HistoryReference =>
+        SelectedHistoryScope == "All branches" ? ""
+        : SelectedHistoryScope == "Current branch" ? "HEAD"
+        : SelectedHistoryScope;
 
     private void ResetFeatures()
     {
-        Interlocked.Increment(ref _featureRevision); Interlocked.Increment(ref _hostingRevision); Interlocked.Increment(ref _historyPageRevision);
+        Interlocked.Increment(ref _featureRevision);
+        Interlocked.Increment(ref _hostingRevision);
+        Interlocked.Increment(ref _historyPageRevision);
         CancelNetwork();
-        Worktrees.Clear(); Reflog.Clear(); RepositoryFiles.Clear(); FilteredRepositoryFiles.Clear(); PatchLines.Clear();
-        Submodules.Clear(); SelectedSubmodule = null;
-        SelectedWorktree = null; SelectedReflog = null; SelectedRepositoryFile = null;
-        _loadedGraphNodes.Clear(); HasMoreHistory = false; SelectedHistoryScope = "All branches";
-        HistoryAuthorFilter = ""; HistorySince = HistoryUntil = null;
-        NetworkSecret = ""; NetworkUsername = ""; NetworkCredentialHost = "";
-        PullRequests.Clear(); Issues.Clear(); HostingComments.Clear(); SelectedPullRequest = SelectedIssue = null;
-        HostingDetails = "Select a pull request or issue."; HostingStatus = "Choose a GitHub repository and refresh to load items.";
-        GithubOwner = GithubRepository = ""; _pullPage = _issuePage = 1;
+        Worktrees.Clear();
+        Reflog.Clear();
+        RepositoryFiles.Clear();
+        FilteredRepositoryFiles.Clear();
+        PatchLines.Clear();
+        Submodules.Clear();
+        SelectedSubmodule = null;
+        SelectedWorktree = null;
+        SelectedReflog = null;
+        SelectedRepositoryFile = null;
+        _loadedGraphNodes.Clear();
+        HasMoreHistory = false;
+        SelectedHistoryScope = "All branches";
+        HistoryAuthorFilter = "";
+        HistorySince = HistoryUntil = null;
+        NetworkSecret = "";
+        NetworkUsername = "";
+        NetworkCredentialHost = "";
+        PullRequests.Clear();
+        Issues.Clear();
+        HostingComments.Clear();
+        SelectedPullRequest = SelectedIssue = null;
+        HostingDetails = "Select a pull request or issue.";
+        HostingStatus = "Choose a GitHub repository and refresh to load items.";
+        GithubOwner = GithubRepository = "";
+        _pullPage = _issuePage = 1;
     }
+
     private void UpdateNetworkAndHostingTarget(GitRemoteInfo? remote)
     {
         var host = Uri.TryCreate(remote?.Url, UriKind.Absolute, out var uri) ? uri.Authority : "";
-        if (!string.Equals(host, NetworkCredentialHost, StringComparison.OrdinalIgnoreCase)) { NetworkSecret = ""; NetworkUsername = ""; }
+        if (!string.Equals(host, NetworkCredentialHost, StringComparison.OrdinalIgnoreCase))
+        {
+            NetworkSecret = "";
+            NetworkUsername = "";
+        }
+
         NetworkCredentialHost = host;
         var repository = GitHubProvider.FromRemote(remote?.Url ?? "");
         if (remote is not null && AzureDevOpsRemote.Parse(remote.Url) is not null)
         {
-            GithubOwner = GithubRepository = ""; InvalidateHosting(); HostingStatus = "Azure pull requests and Boards are not connected yet. Use Integrations for Azure repository access.";
+            GithubOwner = GithubRepository = "";
+            InvalidateHosting();
+            HostingStatus =
+                "Azure pull requests and Boards are not connected yet. Use Integrations for Azure repository access.";
         }
+
         if (repository is not null && (GithubOwner != repository.Owner || GithubRepository != repository.Name))
         {
             Interlocked.Increment(ref _hostingRevision);
-            GithubOwner = repository.Owner; GithubRepository = repository.Name;
-            PullRequests.Clear(); Issues.Clear(); HostingComments.Clear(); SelectedPullRequest = SelectedIssue = null;
-            HasMorePullRequests = HasMoreIssues = false; _pullPage = _issuePage = 1;
+            GithubOwner = repository.Owner;
+            GithubRepository = repository.Name;
+            PullRequests.Clear();
+            Issues.Clear();
+            HostingComments.Clear();
+            SelectedPullRequest = SelectedIssue = null;
+            HasMorePullRequests = HasMoreIssues = false;
+            _pullPage = _issuePage = 1;
             HostingDetails = "Select a pull request or issue.";
         }
     }
-    internal GitNetworkOptions NetworkOptions(long version, bool cloning = false, string? remoteUrl = null) => new()
-    {
-        AzurePersonalAccessToken = AzurePatFor(remoteUrl ?? (cloning ? CloneUrl : SelectedRemote?.Url ?? "")),
-        AllowedAzureOrganizations = AzureOrganizations.Select(org => org.Name).ToArray(),
-        AzureCredentialScopeUrl = AzureScopeFor(remoteUrl ?? (cloning ? CloneUrl : SelectedRemote?.Url ?? "")),
-        Username = string.IsNullOrWhiteSpace(NetworkSecret) && NetworkCredentialHost.Equals("github.com", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(GithubUsableToken) ? "x-access-token" : NetworkUsername,
-        Secret = string.IsNullOrWhiteSpace(NetworkSecret) && NetworkCredentialHost.Equals("github.com", StringComparison.OrdinalIgnoreCase) ? GithubUsableToken : NetworkSecret, CredentialHost = NetworkCredentialHost,
-        UseCredentialManager = UseCredentialManager, RepositoryPath = cloning ? "" : SelectedRepository?.Path ?? "", UseSshAgent = UseSshAgent, SshPrivateKeyPath = SshPrivateKeyPath,
-        SshSession = SshSession, SshHelperCommand = GitSystemTransport.QuoteSshArgument(Environment.ProcessPath!) + (string.Equals(Path.GetFileNameWithoutExtension(Environment.ProcessPath), "dotnet", StringComparison.OrdinalIgnoreCase) ? " " + GitSystemTransport.QuoteSshArgument(Path.Combine(AppContext.BaseDirectory, "GitLlama.dll")) : ""),
-        Progress = new Progress<GitNetworkProgress>(p => { if (IsNetworkBusy && version == Interlocked.Read(ref _repositorySelectionVersion)) NetworkProgressText = p.Description; })
-    };
+
+    internal GitNetworkOptions NetworkOptions(long version, bool cloning = false, string? remoteUrl = null) =>
+        new()
+        {
+            AzurePersonalAccessToken = AzurePatFor(remoteUrl ?? (cloning ? CloneUrl : SelectedRemote?.Url ?? "")),
+            AllowedAzureOrganizations = AzureOrganizations.Select(org => org.Name).ToArray(),
+            AzureCredentialScopeUrl = AzureScopeFor(remoteUrl ?? (cloning ? CloneUrl : SelectedRemote?.Url ?? "")),
+            Username =
+                string.IsNullOrWhiteSpace(NetworkSecret)
+                && NetworkCredentialHost.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(GithubUsableToken)
+                    ? "x-access-token"
+                    : NetworkUsername,
+            Secret =
+                string.IsNullOrWhiteSpace(NetworkSecret)
+                && NetworkCredentialHost.Equals("github.com", StringComparison.OrdinalIgnoreCase)
+                    ? GithubUsableToken
+                    : NetworkSecret,
+            CredentialHost = NetworkCredentialHost,
+            UseCredentialManager = UseCredentialManager,
+            RepositoryPath = cloning ? "" : SelectedRepository?.Path ?? "",
+            UseSshAgent = UseSshAgent,
+            SshPrivateKeyPath = SshPrivateKeyPath,
+            SshSession = SshSession,
+            SshHelperCommand =
+                GitSystemTransport.QuoteSshArgument(Environment.ProcessPath!)
+                + (
+                    string.Equals(
+                        Path.GetFileNameWithoutExtension(Environment.ProcessPath),
+                        "dotnet",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                        ? " "
+                            + GitSystemTransport.QuoteSshArgument(
+                                Path.Combine(AppContext.BaseDirectory, "GitLlama.dll")
+                            )
+                        : ""
+                ),
+            Progress = new Progress<GitNetworkProgress>(p =>
+            {
+                if (IsNetworkBusy && version == Interlocked.Read(ref _repositorySelectionVersion))
+                {
+                    NetworkProgressText = p.Description;
+                }
+            }),
+        };
+
     partial void OnCloneUrlChanged(string value)
     {
         var host = Uri.TryCreate(value, UriKind.Absolute, out var uri) ? uri.Authority : "";
-        if (!string.Equals(host, NetworkCredentialHost, StringComparison.OrdinalIgnoreCase)) { NetworkSecret = ""; NetworkUsername = ""; }
+        if (!string.Equals(host, NetworkCredentialHost, StringComparison.OrdinalIgnoreCase))
+        {
+            NetworkSecret = "";
+            NetworkUsername = "";
+        }
+
         NetworkCredentialHost = host;
     }
+
     partial void OnAmendStagedCommitChanged(bool value) => OnPropertyChanged(nameof(CommitButtonText));
-    [RelayCommand] private void CancelNetwork()
+
+    [RelayCommand]
+    private void CancelNetwork()
     {
-        FetchRemoteCommand.Cancel(); PushRemoteCommand.Cancel(); PullFastForwardCommand.Cancel(); CloneRepositoryCommand.Cancel();
-        PushSelectedTagCommand.Cancel(); DeleteSelectedRemoteTagCommand.Cancel(); UpdateSubmoduleCommand.Cancel();
+        FetchRemoteCommand.Cancel();
+        PushRemoteCommand.Cancel();
+        PullFastForwardCommand.Cancel();
+        CloneRepositoryCommand.Cancel();
+        PushSelectedTagCommand.Cancel();
+        DeleteSelectedRemoteTagCommand.Cancel();
+        UpdateSubmoduleCommand.Cancel();
         ChangeRemoteBranchCommand.Cancel();
     }
+
     public bool RepositoryCreationSucceeded { get; private set; }
+
     [RelayCommand]
     private async Task InitializeRepositoryAsync()
     {
-        if (IsFeatureBusy) return;
+        if (IsFeatureBusy)
+        {
+            return;
+        }
+
         RepositoryCreationSucceeded = false;
         IsFeatureBusy = true;
         try
         {
             RepositoryPath = await new GitRepositoryLifecycleService().InitializeAsync(NewRepositoryDestination);
             await AddRepositoryCommand.ExecuteAsync(null);
-            RepositoryCreationSucceeded = string.IsNullOrWhiteSpace(RepositoryPath) && SelectedRepository?.Path == Path.GetFullPath(NewRepositoryDestination.Trim());
-            if (RepositoryCreationSucceeded) Status = "Repository initialized.";
+            RepositoryCreationSucceeded =
+                string.IsNullOrWhiteSpace(RepositoryPath)
+                && SelectedRepository?.Path == Path.GetFullPath(NewRepositoryDestination.Trim());
+            if (RepositoryCreationSucceeded)
+            {
+                Status = "Repository initialized.";
+            }
         }
-        catch (Exception e) { Status = SafeMessage(e); }
-        finally { IsFeatureBusy = false; }
+        catch (Exception e)
+        {
+            Status = SafeMessage(e);
+        }
+        finally
+        {
+            IsFeatureBusy = false;
+        }
     }
+
     [RelayCommand(IncludeCancelCommand = true)]
     private async Task CloneRepositoryAsync(CancellationToken ct)
     {
-        if (IsNetworkBusy) return;
+        if (IsNetworkBusy)
+        {
+            return;
+        }
+
         RepositoryCreationSucceeded = false;
         IsNetworkBusy = true;
         try
         {
             var network = NetworkOptions(Interlocked.Read(ref _repositorySelectionVersion), cloning: true);
-            RepositoryPath = await new GitRepositoryLifecycleService().CloneAsync(CloneUrl, NewRepositoryDestination, network, ct);
+            RepositoryPath = await new GitRepositoryLifecycleService().CloneAsync(
+                CloneUrl,
+                NewRepositoryDestination,
+                network,
+                ct
+            );
             await AddRepositoryCommand.ExecuteAsync(null);
-            RepositoryCreationSucceeded = string.IsNullOrWhiteSpace(RepositoryPath) && SelectedRepository?.Path == Path.GetFullPath(NewRepositoryDestination.Trim());
-            if (RepositoryCreationSucceeded) Status = "Clone complete.";
+            RepositoryCreationSucceeded =
+                string.IsNullOrWhiteSpace(RepositoryPath)
+                && SelectedRepository?.Path == Path.GetFullPath(NewRepositoryDestination.Trim());
+            if (RepositoryCreationSucceeded)
+            {
+                Status = "Clone complete.";
+            }
         }
-        catch (OperationCanceledException) { Status = "Clone canceled; the destination may contain downloaded files."; }
-        catch (Exception e) { Status = SafeMessage(e); }
-        finally { IsNetworkBusy = false; }
+        catch (OperationCanceledException)
+        {
+            Status = "Clone canceled; the destination may contain downloaded files.";
+        }
+        catch (Exception e)
+        {
+            Status = SafeMessage(e);
+        }
+        finally
+        {
+            IsNetworkBusy = false;
+        }
     }
+
     private async Task RunFeatureMutationAsync(Func<string, Task> action, string success)
     {
         var repository = SelectedRepository;
-        if (repository is null) return;
+        if (repository is null)
+        {
+            return;
+        }
+
         var version = Interlocked.Read(ref _repositorySelectionVersion);
         await _gitMutationLock.WaitAsync();
         IsFeatureBusy = true;
         try
         {
-            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            if (version != Interlocked.Read(ref _repositorySelectionVersion))
+            {
+                return;
+            }
+
             await action(repository.Path);
-            if (version != Interlocked.Read(ref _repositorySelectionVersion)) return;
+            if (version != Interlocked.Read(ref _repositorySelectionVersion))
+            {
+                return;
+            }
+
             await RefreshAsync();
             Status = success;
         }
-        catch (Exception e) { if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = SafeMessage(e); }
-        finally { IsFeatureBusy = false; _gitMutationLock.Release(); }
+        catch (Exception e)
+        {
+            if (version == Interlocked.Read(ref _repositorySelectionVersion))
+            {
+                Status = SafeMessage(e);
+            }
+        }
+        finally
+        {
+            IsFeatureBusy = false;
+            _gitMutationLock.Release();
+        }
     }
+
     private string SafeMessage(Exception e)
     {
         var message = e.Message;
-        foreach (var secret in new[] { NetworkSecret, GithubToken, AzurePatInput }.Concat(_azurePersonalAccessTokens.Values)) if (!string.IsNullOrEmpty(secret)) message = message.Replace(secret, "[redacted]", StringComparison.Ordinal);
+        foreach (
+            var secret in new[] { NetworkSecret, GithubToken, AzurePatInput }.Concat(_azurePersonalAccessTokens.Values)
+        )
+        {
+            if (!string.IsNullOrEmpty(secret))
+            {
+                message = message.Replace(secret, "[redacted]", StringComparison.Ordinal);
+            }
+        }
+
         return SecretRedactor.Redact(message);
     }
-    [RelayCommand] private Task CreateWorktreeAsync()
+
+    [RelayCommand]
+    private Task CreateWorktreeAsync()
     {
-        var name = WorktreeName; var destination = WorktreeDestination; var branch = WorktreeBranch;
-        return RunFeatureMutationAsync(path => _worktrees.CreateAsync(path, name, destination, branch), "Worktree created.");
+        var name = WorktreeName;
+        var destination = WorktreeDestination;
+        var branch = WorktreeBranch;
+        return RunFeatureMutationAsync(
+            path => _worktrees.CreateAsync(path, name, destination, branch),
+            "Worktree created."
+        );
     }
-    [RelayCommand] private async Task OpenWorktreeAsync()
+
+    [RelayCommand]
+    private async Task OpenWorktreeAsync()
     {
-        if (SelectedWorktree is not { } worktree) return;
-        RepositoryPath = worktree.Path; await AddRepositoryCommand.ExecuteAsync(null);
+        if (SelectedWorktree is not { } worktree)
+        {
+            return;
+        }
+
+        RepositoryPath = worktree.Path;
+        await AddRepositoryCommand.ExecuteAsync(null);
     }
-    [RelayCommand] private Task ToggleWorktreeLockAsync()
+
+    [RelayCommand]
+    private Task ToggleWorktreeLockAsync()
     {
         var selected = SelectedWorktree;
-        return selected is null ? Task.CompletedTask : RunFeatureMutationAsync(path => _worktrees.SetLockedAsync(path, selected.Name, !selected.IsLocked), "Worktree lock updated.");
+        return selected is null
+            ? Task.CompletedTask
+            : RunFeatureMutationAsync(
+                path => _worktrees.SetLockedAsync(path, selected.Name, !selected.IsLocked),
+                "Worktree lock updated."
+            );
     }
-    [RelayCommand] private async Task RemoveWorktreeAsync()
+
+    [RelayCommand]
+    private async Task RemoveWorktreeAsync()
     {
-        if (SelectedWorktree is not { } selected) return;
-        var confirmation = WorktreeRemoveConfirmation; var backup = "";
-        await RunFeatureMutationAsync(async path => backup = await _worktrees.RemoveAsync(path, selected.Name, confirmation), "Worktree removed.");
-        if (backup.Length > 0) { WorktreeRemoveConfirmation = ""; Status = $"Worktree removed. Folder preserved at {backup}"; }
+        if (SelectedWorktree is not { } selected)
+        {
+            return;
+        }
+
+        var confirmation = WorktreeRemoveConfirmation;
+        var backup = "";
+        await RunFeatureMutationAsync(
+            async path => backup = await _worktrees.RemoveAsync(path, selected.Name, confirmation),
+            "Worktree removed."
+        );
+        if (backup.Length > 0)
+        {
+            WorktreeRemoveConfirmation = "";
+            Status = $"Worktree removed. Folder preserved at {backup}";
+        }
     }
-    [RelayCommand] private Task RecoverReflogBranchAsync()
+
+    [RelayCommand]
+    private Task RecoverReflogBranchAsync()
     {
-        var selected = SelectedReflog; var name = RecoveredBranchName;
-        return selected is null ? Task.CompletedTask : RunFeatureMutationAsync(path => new GitReflogService().RecoverBranchAsync(path, selected.Sha, name), "Recovery branch created without changing working files.");
+        var selected = SelectedReflog;
+        var name = RecoveredBranchName;
+        return selected is null
+            ? Task.CompletedTask
+            : RunFeatureMutationAsync(
+                path => new GitReflogService().RecoverBranchAsync(path, selected.Sha, name),
+                "Recovery branch created without changing working files."
+            );
     }
-    [RelayCommand] private Task SaveConflictResultAsync()
+
+    [RelayCommand]
+    private Task SaveConflictResultAsync()
     {
-        var path = ConflictPath; var result = ConflictResultText;
-        return RunFeatureMutationAsync(repo => _conflictResolution.WriteAndResolveAsync(repo, path, result), "Conflict result saved and staged.");
+        var path = ConflictPath;
+        var result = ConflictResultText;
+        return RunFeatureMutationAsync(
+            repo => _conflictResolution.WriteAndResolveAsync(repo, path, result),
+            "Conflict result saved and staged."
+        );
     }
-    [RelayCommand(IncludeCancelCommand = true)] private async Task UpdateSubmoduleAsync(CancellationToken ct)
+
+    [RelayCommand(IncludeCancelCommand = true)]
+    private async Task UpdateSubmoduleAsync(CancellationToken ct)
     {
         var module = SelectedSubmodule;
-        if (module is null) return;
+        if (module is null)
+        {
+            return;
+        }
+
         var version = Interlocked.Read(ref _repositorySelectionVersion);
         IsNetworkBusy = true;
-        try { await RunFeatureMutationAsync(repo => new GitSubmoduleService().UpdateAsync(repo, module.Name, NetworkOptions(version), ct), "Submodule updated."); }
-        finally { IsNetworkBusy = false; NetworkProgressText = ""; }
+        try
+        {
+            await RunFeatureMutationAsync(
+                repo => new GitSubmoduleService().UpdateAsync(repo, module.Name, NetworkOptions(version), ct),
+                "Submodule updated."
+            );
+        }
+        finally
+        {
+            IsNetworkBusy = false;
+            NetworkProgressText = "";
+        }
     }
-    [RelayCommand] private Task StageAllAsync() => StageFilesAsync(false);
-    [RelayCommand] private Task UnstageAllAsync() => StageFilesAsync(true);
+
+    [RelayCommand]
+    private Task StageAllAsync() => StageFilesAsync(false);
+
+    [RelayCommand]
+    private Task UnstageAllAsync() => StageFilesAsync(true);
+
     private Task StageFilesAsync(bool unstage)
     {
         var files = WorkingFiles.Where(file => !unstage || file.IsStaged).Select(file => file.Path).ToArray();
-        return RunFeatureMutationAsync(async path =>
-        {
-            foreach (var file in files) if (unstage) await _gitActions.UnstageAsync(path, file); else await _gitActions.StageAsync(path, file);
-        }, unstage ? "Files unstaged." : "Files staged.");
+        return RunFeatureMutationAsync(
+            async path =>
+            {
+                foreach (var file in files)
+                {
+                    if (unstage)
+                    {
+                        await _gitActions.UnstageAsync(path, file);
+                    }
+                    else
+                    {
+                        await _gitActions.StageAsync(path, file);
+                    }
+                }
+            },
+            unstage ? "Files unstaged." : "Files staged."
+        );
     }
-    partial void OnReviewStagedPatchChanged(bool value) { UpdatePatchLines(); NotifyCenterReview(); NotifyWorkingSelection(); if (IsWorkingFileReview && FileReviewMode == "File") _ = LoadWorkingContentAsync(); }
+
+    partial void OnReviewStagedPatchChanged(bool value)
+    {
+        UpdatePatchLines();
+        NotifyCenterReview();
+        NotifyWorkingSelection();
+        if (IsWorkingFileReview && FileReviewMode == "File")
+        {
+            _ = LoadWorkingContentAsync();
+        }
+    }
+
     private void UpdatePatchLines()
     {
-        PatchLines.Clear(); SelectedPatchLine = null;
-        foreach (var line in GitPartialStageService.Lines(ReviewStagedPatch ? StagedDiffText : UnstagedDiffText)) PatchLines.Add(line);
+        PatchLines.Clear();
+        SelectedPatchLine = null;
+        foreach (var line in GitPartialStageService.Lines(ReviewStagedPatch ? StagedDiffText : UnstagedDiffText))
+        {
+            PatchLines.Add(line);
+        }
     }
-    [RelayCommand(CanExecute = nameof(CanApplySelectedLine))] private Task ApplySelectedLineAsync() => ApplyPartialAsync(false);
-    [RelayCommand(CanExecute = nameof(CanApplySelectedHunk))] private Task ApplySelectedHunkAsync() => ApplyPartialAsync(true);
+
+    [RelayCommand(CanExecute = nameof(CanApplySelectedLine))]
+    private Task ApplySelectedLineAsync() => ApplyPartialAsync(false);
+
+    [RelayCommand(CanExecute = nameof(CanApplySelectedHunk))]
+    private Task ApplySelectedHunkAsync() => ApplyPartialAsync(true);
+
     private async Task ApplyPartialAsync(bool hunk)
     {
-        if (SelectedWorkingFile is not { } file || SelectedPatchLine is not { } selected) return;
-        var indexes = hunk ? PatchLines.Where(line => line.Hunk == selected.Hunk && line.IsChange).Select(line => line.Index).ToArray() : [selected.Index];
+        if (SelectedWorkingFile is not { } file || SelectedPatchLine is not { } selected)
+        {
+            return;
+        }
+
+        var indexes = hunk
+            ? PatchLines.Where(line => line.Hunk == selected.Hunk && line.IsChange).Select(line => line.Index).ToArray()
+            : [selected.Index];
         var expected = ReviewStagedPatch ? StagedDiffText : UnstagedDiffText;
         var unstage = ReviewStagedPatch;
-        await RunFeatureMutationAsync(path => _partialStage.ApplyAsync(path, file.Path, expected, indexes, unstage), unstage ? "Selected changes unstaged." : "Selected changes staged.");
+        await RunFeatureMutationAsync(
+            path => _partialStage.ApplyAsync(path, file.Path, expected, indexes, unstage),
+            unstage ? "Selected changes unstaged." : "Selected changes staged."
+        );
         SelectedWorkingFile = WorkingFiles.FirstOrDefault(f => f.Path == file.Path);
         IsWorkingTreeInspector = true;
     }
+
     partial void OnFileSearchChanged(string value) => FilterRepositoryFiles();
+
     private void FilterRepositoryFiles()
     {
         FilteredRepositoryFiles.Clear();
-        foreach (var file in RepositoryFiles.Where(f => f.Path.Contains(FileSearch, StringComparison.OrdinalIgnoreCase))) FilteredRepositoryFiles.Add(file);
+        foreach (
+            var file in RepositoryFiles.Where(f => f.Path.Contains(FileSearch, StringComparison.OrdinalIgnoreCase))
+        )
+        {
+            FilteredRepositoryFiles.Add(file);
+        }
     }
+
     partial void OnSelectedRepositoryFileChanged(GitFileInfo? value) => _ = PreviewRepositoryFileAsync(value);
+
     private async Task PreviewRepositoryFileAsync(GitFileInfo? file)
     {
         var revision = Interlocked.Increment(ref _featureRevision);
         var repo = SelectedRepository;
         SelectedFilePreview = "Choose a file to view its committed content.";
-        if (file is null || repo is null) return;
-        FileHistoryPath = BlamePath = file.Path; OpenFileReview("Repository", file.Path);
+        if (file is null || repo is null)
+        {
+            return;
+        }
+
+        FileHistoryPath = BlamePath = file.Path;
+        OpenFileReview("Repository", file.Path);
         try
         {
             var content = await _historyContent.GetAsync(repo.Path, "HEAD", file.Path);
-            if (revision == Interlocked.Read(ref _featureRevision)) SelectedFilePreview = content.Content;
+            if (revision == Interlocked.Read(ref _featureRevision))
+            {
+                SelectedFilePreview = content.Content;
+            }
         }
-        catch (Exception e) { if (revision == Interlocked.Read(ref _featureRevision)) SelectedFilePreview = SafeMessage(e); }
+        catch (Exception e)
+        {
+            if (revision == Interlocked.Read(ref _featureRevision))
+            {
+                SelectedFilePreview = SafeMessage(e);
+            }
+        }
     }
+
     partial void OnHistoryAuthorFilterChanged(string value) => FilterPresentationHistory();
+
     partial void OnHistorySinceChanged(DateTimeOffset? value) => FilterPresentationHistory();
+
     partial void OnHistoryUntilChanged(DateTimeOffset? value) => FilterPresentationHistory();
-    partial void OnSelectedHistoryScopeChanged(string value) { if (!_changingScopeForBranchReveal && HasRepository && _loadedGraphNodes.Count > 0) _ = ReloadHistoryAsync(); }
-    [RelayCommand] private Task ReloadHistoryAsync() => ReadHistoryPageAsync(true);
-    [RelayCommand] private Task LoadMoreHistoryAsync() => ReadHistoryPageAsync(false);
+
+    partial void OnSelectedHistoryScopeChanged(string value)
+    {
+        if (!_changingScopeForBranchReveal && HasRepository && _loadedGraphNodes.Count > 0)
+        {
+            _ = ReloadHistoryAsync();
+        }
+    }
+
+    [RelayCommand]
+    private Task ReloadHistoryAsync() => ReadHistoryPageAsync(true);
+
+    [RelayCommand]
+    private Task LoadMoreHistoryAsync() => ReadHistoryPageAsync(false);
+
     private async Task ReadHistoryPageAsync(bool reset)
     {
         var repo = SelectedRepository;
-        if (repo is null) return;
-        if (!reset && (_gitMutationLock.CurrentCount == 0 || RefreshCommand.IsRunning)) return;
+        if (repo is null)
+        {
+            return;
+        }
+
+        if (!reset && (_gitMutationLock.CurrentCount == 0 || RefreshCommand.IsRunning))
+        {
+            return;
+        }
+
         var refreshRevision = Interlocked.Read(ref _refreshRevision);
-        var version = Interlocked.Read(ref _repositorySelectionVersion); var scope = SelectedHistoryScope;
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        var scope = SelectedHistoryScope;
         var revision = Interlocked.Increment(ref _historyPageRevision);
         try
         {
-            var page = await _commitGraph.GetPageAsync(repo.Path, reset ? 0 : _loadedGraphNodes.Count, 200, string.IsNullOrEmpty(HistoryReference) ? null : HistoryReference);
-            if (version != Interlocked.Read(ref _repositorySelectionVersion) || scope != SelectedHistoryScope || revision != Interlocked.Read(ref _historyPageRevision) || refreshRevision != Interlocked.Read(ref _refreshRevision)) return;
-            if (reset) _loadedGraphNodes.Clear();
+            var page = await _commitGraph.GetPageAsync(
+                repo.Path,
+                reset ? 0 : _loadedGraphNodes.Count,
+                200,
+                string.IsNullOrEmpty(HistoryReference) ? null : HistoryReference
+            );
+            if (
+                version != Interlocked.Read(ref _repositorySelectionVersion)
+                || scope != SelectedHistoryScope
+                || revision != Interlocked.Read(ref _historyPageRevision)
+                || refreshRevision != Interlocked.Read(ref _refreshRevision)
+            )
+            {
+                return;
+            }
+
+            if (reset)
+            {
+                _loadedGraphNodes.Clear();
+            }
+
             _loadedGraphNodes.AddRange(page.Commits.Where(node => !_loadedGraphNodes.Any(n => n.Sha == node.Sha)));
             HasMoreHistory = page.HasMore;
             RebuildPagedHistory();
         }
-        catch (Exception e) { if (version == Interlocked.Read(ref _repositorySelectionVersion)) Status = SafeMessage(e); }
+        catch (Exception e)
+        {
+            if (version == Interlocked.Read(ref _repositorySelectionVersion))
+            {
+                Status = SafeMessage(e);
+            }
+        }
     }
+
     private async Task<GitHistoryPage> GetRefreshHistoryAsync(string path)
     {
         var desired = Math.Max(200, _loadedGraphNodes.Count);
-        var nodes = new List<GitCommitNode>(); var more = true;
+        var nodes = new List<GitCommitNode>();
+        var more = true;
         var reference = string.IsNullOrEmpty(HistoryReference) ? null : HistoryReference;
         while (more && nodes.Count < desired)
         {
-            var page = await _commitGraph.GetPageAsync(path, nodes.Count, Math.Min(1000, desired - nodes.Count), reference);
-            nodes.AddRange(page.Commits); more = page.HasMore;
+            var page = await _commitGraph.GetPageAsync(
+                path,
+                nodes.Count,
+                Math.Min(1000, desired - nodes.Count),
+                reference
+            );
+            nodes.AddRange(page.Commits);
+            more = page.HasMore;
         }
+
         return new(nodes, more);
     }
+
     private void RebuildPagedHistory()
     {
         _historyGraphShas.Clear();
-        CommitLines.Clear(); _commitDetails.Clear();
+        CommitLines.Clear();
+        _commitDetails.Clear();
         foreach (var node in _loadedGraphNodes)
         {
             _historyGraphShas[$"{node.Sha}  {node.Subject}  {string.Join(' ', node.Labels)}"] = node.Sha;
             var line = $"{node.Sha}  {node.Subject} — {node.Author}";
-            CommitLines.Add(line); _commitDetails[line] = new GitCommitSummary(node.Sha, node.Subject, node.Author, node.Timestamp);
+            CommitLines.Add(line);
+            _commitDetails[line] = new GitCommitSummary(node.Sha, node.Subject, node.Author, node.Timestamp);
         }
-        FilterHistoryGraph(); SetHistoryRows(_loadedGraphNodes);
+
+        FilterHistoryGraph();
+        SetHistoryRows(_loadedGraphNodes);
         OnPropertyChanged(nameof(HistoryCaption));
     }
+
     private async Task RefreshFeatureListsAsync(string path, long version, long refreshVersion)
     {
         var worktrees = await _worktrees.ListAsync(path);
@@ -343,17 +796,70 @@ public partial class MainWindowViewModel
         var files = await new GitFileBrowserService().ListAsync(path);
         var conflicts = await new GitConflictDetectionService().ListAsync(path);
         var submodules = await new GitSubmoduleService().ListAsync(path);
-        if (version != Interlocked.Read(ref _repositorySelectionVersion) || refreshVersion != Interlocked.Read(ref _refreshRevision)) return;
+        if (
+            version != Interlocked.Read(ref _repositorySelectionVersion)
+            || refreshVersion != Interlocked.Read(ref _refreshRevision)
+        )
+        {
+            return;
+        }
+
         var selectedWorktreeName = SelectedWorktree?.Name;
-        Worktrees.Clear(); foreach (var tree in worktrees) Worktrees.Add(tree);
+        Worktrees.Clear();
+        foreach (var tree in worktrees)
+        {
+            Worktrees.Add(tree);
+        }
+
         SelectedWorktree = Worktrees.FirstOrDefault(w => w.Name == selectedWorktreeName);
-        Reflog.Clear(); foreach (var entry in reflog) Reflog.Add(entry);
-        RepositoryFiles.Clear(); foreach (var file in files) RepositoryFiles.Add(file); FilterRepositoryFiles();
-        MergeConflicts.Clear(); foreach (var conflict in conflicts) MergeConflicts.Add(conflict.Path);
+        Reflog.Clear();
+        foreach (var entry in reflog)
+        {
+            Reflog.Add(entry);
+        }
+
+        RepositoryFiles.Clear();
+        foreach (var file in files)
+        {
+            RepositoryFiles.Add(file);
+        }
+
+        FilterRepositoryFiles();
+        MergeConflicts.Clear();
+        foreach (var conflict in conflicts)
+        {
+            MergeConflicts.Add(conflict.Path);
+        }
+
         ConflictSummary = $"{MergeConflicts.Count} unresolved conflicts.";
-        Submodules.Clear(); foreach (var module in submodules) Submodules.Add(module);
-        if (SelectedHistoryScope is not ("All branches" or "Current branch") && !BranchLines.Contains(SelectedHistoryScope)) SelectedHistoryScope = "All branches";
-        for (var i = HistoryScopes.Count - 1; i >= 2; i--) if (!BranchLines.Contains(HistoryScopes[i])) HistoryScopes.RemoveAt(i);
-        foreach (var branch in BranchLines) if (!HistoryScopes.Contains(branch)) HistoryScopes.Add(branch);
+        Submodules.Clear();
+        foreach (var module in submodules)
+        {
+            Submodules.Add(module);
+        }
+
+        if (
+            SelectedHistoryScope is not ("All branches" or "Current branch")
+            && !BranchLines.Contains(SelectedHistoryScope)
+        )
+        {
+            SelectedHistoryScope = "All branches";
+        }
+
+        for (var i = HistoryScopes.Count - 1; i >= 2; i--)
+        {
+            if (!BranchLines.Contains(HistoryScopes[i]))
+            {
+                HistoryScopes.RemoveAt(i);
+            }
+        }
+
+        foreach (var branch in BranchLines)
+        {
+            if (!HistoryScopes.Contains(branch))
+            {
+                HistoryScopes.Add(branch);
+            }
+        }
     }
 }

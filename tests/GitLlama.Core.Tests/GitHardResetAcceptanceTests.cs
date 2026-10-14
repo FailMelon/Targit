@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -25,6 +25,7 @@ public sealed class GitHardResetAcceptanceTests
                 Commands.Stage(repo, "file.txt");
                 repo.Commit("next", signature, signature);
             }
+
             var service = new GitHardResetService();
             File.WriteAllText(Path.Combine(path, "file.txt"), "dirty");
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.ResetToAncestorAsync(path, ancestor));
@@ -41,7 +42,10 @@ public sealed class GitHardResetAcceptanceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

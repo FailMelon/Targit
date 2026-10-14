@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -40,10 +40,11 @@ public sealed class EditableRebaseTests
                 targetSha = repo.Commit("target", sig, sig).Sha;
                 Commands.Checkout(repo, repo.Branches[sourceName]);
             }
+
             var steps = new[]
             {
                 new GitRebaseStep(firstSha, "first", GitRebaseAction.Pick),
-                new GitRebaseStep(secondSha, "second", action)
+                new GitRebaseStep(secondSha, "second", action),
             };
             var messages = new Dictionary<string, string> { [secondSha] = "custom message" };
             await new GitLinearRebaseService().RebaseWithMessagesAsync(path, "target", steps, messages);
@@ -60,14 +61,19 @@ public sealed class EditableRebaseTests
             else
             {
                 Assert.Equal(targetSha, check.Head.Tip.Parents.Single().Sha);
-                Assert.Equal(action == GitRebaseAction.Squash ? "first\n\nsecond" : "first",
-                    check.Head.Tip.Message.Trim());
+                Assert.Equal(
+                    action == GitRebaseAction.Squash ? "first\n\nsecond" : "first",
+                    check.Head.Tip.Message.Trim()
+                );
             }
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -29,6 +29,7 @@ public sealed class Phases61To65Tests
                 repo.Commit("feature", sig, sig);
                 Commands.Checkout(repo, repo.Branches[baseBranch]);
             }
+
             var result = await new GitMergeService().MergeAsync(path, "feature");
             Assert.Equal(MergeStatus.FastForward, result);
             Assert.Empty(await new GitConflictDetectionService().ListAsync(path));
@@ -37,7 +38,10 @@ public sealed class Phases61To65Tests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

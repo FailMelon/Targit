@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -26,6 +26,7 @@ public sealed class GitRemoteServiceTests
                 Commands.Stage(source, "readme.txt");
                 source.Commit("Initial", signature, signature);
             }
+
             Repository.Clone(sourcePath, clonePath);
             string initialSha;
             using (var clone = new Repository(clonePath))
@@ -38,6 +39,7 @@ public sealed class GitRemoteServiceTests
                     clone.Commit("Local", signature, signature);
                 }
             }
+
             string remoteSha;
             using (var source = new Repository(sourcePath))
             {
@@ -45,8 +47,12 @@ public sealed class GitRemoteServiceTests
                 Commands.Stage(source, "remote.txt");
                 remoteSha = source.Commit("Remote", signature, signature).Sha;
             }
+
             if (dirty)
+            {
                 File.WriteAllText(Path.Combine(clonePath, "dirty.txt"), "uncommitted\n");
+            }
+
             var service = new GitRemoteService();
             if (dirty)
             {
@@ -60,9 +66,16 @@ public sealed class GitRemoteServiceTests
             {
                 await service.PullFastForwardAsync(clonePath);
             }
+
             using var result = new Repository(clonePath);
-            if (dirty) Assert.Equal(initialSha, result.Head.Tip!.Sha);
-            else if (divergent) Assert.NotEqual(remoteSha, result.Head.Tip!.Sha);
+            if (dirty)
+            {
+                Assert.Equal(initialSha, result.Head.Tip!.Sha);
+            }
+            else if (divergent)
+            {
+                Assert.NotEqual(remoteSha, result.Head.Tip!.Sha);
+            }
             else
             {
                 Assert.Equal(remoteSha, result.Head.Tip!.Sha);
@@ -72,7 +85,10 @@ public sealed class GitRemoteServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(root, true);
         }
     }
@@ -93,15 +109,18 @@ public sealed class GitRemoteServiceTests
                 var commit = repository.Commit("Initial", signature, signature);
                 Commands.Checkout(repository, commit);
             }
+
             var service = new GitRemoteService();
-            var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.PullFastForwardAsync(path));
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.PullFastForwardAsync(path));
             Assert.Contains("checked-out branch", error.Message);
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -122,16 +141,20 @@ public sealed class GitRemoteServiceTests
                 var commit = repository.Commit("Initial", signature, signature);
                 Commands.Checkout(repository, commit);
             }
+
             var service = new GitRemoteService();
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.SetCurrentBranchUpstreamAsync(path, "origin", "main"));
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.ClearCurrentBranchUpstreamAsync(path));
+                service.SetCurrentBranchUpstreamAsync(path, "origin", "main")
+            );
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.ClearCurrentBranchUpstreamAsync(path));
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -146,9 +169,9 @@ public sealed class GitRemoteServiceTests
             Repository.Init(path);
             var service = new GitRemoteService();
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.SetCurrentBranchUpstreamAsync(path, "origin", "main"));
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.ClearCurrentBranchUpstreamAsync(path));
+                service.SetCurrentBranchUpstreamAsync(path, "origin", "main")
+            );
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.ClearCurrentBranchUpstreamAsync(path));
 
             using (var repository = new Repository(path))
             {
@@ -157,14 +180,19 @@ public sealed class GitRemoteServiceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 repository.Commit("Initial", signature, signature);
             }
+
             var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.SetCurrentBranchUpstreamAsync(path, "missing", "main"));
+                service.SetCurrentBranchUpstreamAsync(path, "missing", "main")
+            );
             Assert.Contains("does not exist", error.Message);
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -186,9 +214,14 @@ public sealed class GitRemoteServiceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 source.Commit("Initial", signature, signature);
             }
+
             Repository.Clone(sourcePath, localPath);
             string branchName;
-            using (var local = new Repository(localPath)) branchName = local.Head.FriendlyName;
+            using (var local = new Repository(localPath))
+            {
+                branchName = local.Head.FriendlyName;
+            }
+
             var service = new GitRemoteService();
             var branches = await service.ListRemoteBranchesAsync(localPath, "origin");
             var branch = Assert.Single(branches);
@@ -198,12 +231,16 @@ public sealed class GitRemoteServiceTests
             branch = Assert.Single(await service.ListRemoteBranchesAsync(localPath, "origin"));
             Assert.False(branch.IsTrackedByCurrentBranch);
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.ListRemoteBranchesAsync(localPath, "missing"));
+                service.ListRemoteBranchesAsync(localPath, "missing")
+            );
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(root, true);
         }
     }
@@ -225,30 +262,44 @@ public sealed class GitRemoteServiceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 source.Commit("Initial", signature, signature);
             }
+
             Repository.Clone(sourcePath, localPath);
             string branchName;
             using (var local = new Repository(localPath))
+            {
                 branchName = local.Head.FriendlyName;
+            }
+
             var service = new GitRemoteService();
             await service.ClearCurrentBranchUpstreamAsync(localPath);
             using (var local = new Repository(localPath))
+            {
                 Assert.False(local.Head.IsTracking);
+            }
+
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.SetCurrentBranchUpstreamAsync(localPath, "origin", "nonexistent"));
+                service.SetCurrentBranchUpstreamAsync(localPath, "origin", "nonexistent")
+            );
             await service.SetCurrentBranchUpstreamAsync(localPath, "origin", branchName);
             using (var local = new Repository(localPath))
             {
                 Assert.True(local.Head.IsTracking);
                 Assert.Equal("origin", local.Head.RemoteName);
             }
+
             await service.ClearCurrentBranchUpstreamAsync(localPath);
             using (var local = new Repository(localPath))
+            {
                 Assert.False(local.Head.IsTracking);
+            }
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(root, true);
         }
     }
@@ -268,15 +319,18 @@ public sealed class GitRemoteServiceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 repository.Commit("Initial", signature, signature);
             }
+
             var service = new GitRemoteService();
-            var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.PullFastForwardAsync(path));
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.PullFastForwardAsync(path));
             Assert.Contains("upstream", error.Message);
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -291,8 +345,7 @@ public sealed class GitRemoteServiceTests
             Repository.Init(root);
             var service = new GitRemoteService();
             await service.AddAsync(root, "origin", Path.Combine(root, "nonexistent.git"));
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.PushCurrentBranchAsync(root, "origin"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.PushCurrentBranchAsync(root, "origin"));
 
             using (var repository = new Repository(root))
             {
@@ -302,13 +355,16 @@ public sealed class GitRemoteServiceTests
                 var commit = repository.Commit("Initial", signature, signature);
                 Commands.Checkout(repository, commit);
             }
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.PushCurrentBranchAsync(root, "origin"));
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.PushCurrentBranchAsync(root, "origin"));
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(root, true);
         }
     }
@@ -336,20 +392,26 @@ public sealed class GitRemoteServiceTests
                 commitSha = commit.Sha;
                 branchName = local.Head.FriendlyName;
             }
+
             var service = new GitRemoteService();
             await service.AddAsync(localPath, "origin", remotePath);
             Assert.Equal(branchName, await service.PushCurrentBranchAsync(localPath, "origin"));
             using (var local = new Repository(localPath))
             {
-                Assert.Equal("origin", local.Head.RemoteName); Assert.Equal("refs/heads/" + branchName, local.Config.Get<string>($"branch.{branchName}.merge").Value);
+                Assert.Equal("origin", local.Head.RemoteName);
+                Assert.Equal("refs/heads/" + branchName, local.Config.Get<string>($"branch.{branchName}.merge").Value);
             }
+
             using var remote = new Repository(remotePath);
             Assert.Equal(commitSha, remote.Branches[branchName]?.Tip?.Sha);
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(root, true);
         }
     }
@@ -365,6 +427,7 @@ public sealed class GitRemoteServiceTests
         new GitNetworkOptions().Push(CancellationToken.None, value => received = value).OnPushStatusError(error);
         Assert.Same(error, received);
     }
+
     private sealed class RejectedPushStatus : PushStatusError { }
 
     [Fact]
@@ -372,29 +435,63 @@ public sealed class GitRemoteServiceTests
     {
         var root = Path.Combine(Path.GetTempPath(), "gitllama-publish-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
-        var localPath = Path.Combine(root, "local"); var originPath = Path.Combine(root, "origin.git"); var remotePath = Path.Combine(root, "GitLlama.git"); var otherPath = Path.Combine(root, "other");
+        var localPath = Path.Combine(root, "local");
+        var originPath = Path.Combine(root, "origin.git");
+        var remotePath = Path.Combine(root, "GitLlama.git");
+        var otherPath = Path.Combine(root, "other");
         try
         {
-            Repository.Init(localPath); Repository.Init(originPath, true); Repository.Init(remotePath, true);
+            Repository.Init(localPath);
+            Repository.Init(originPath, true);
+            Repository.Init(remotePath, true);
             var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
             void CommitFile(string path, string content)
             {
-                using var repository = new Repository(path); File.WriteAllText(Path.Combine(path, "README.md"), content); Commands.Stage(repository, "README.md"); repository.Commit(content, signature, signature);
+                using var repository = new Repository(path);
+                File.WriteAllText(Path.Combine(path, "README.md"), content);
+                Commands.Stage(repository, "README.md");
+                repository.Commit(content, signature, signature);
             }
+
             CommitFile(localPath, "Initial");
-            var service = new GitRemoteService(); await service.AddAsync(localPath, "origin", originPath); await service.PushCurrentBranchAsync(localPath, "origin");
-            await service.AddAsync(localPath, "GitLlama", remotePath); var branch = await service.PushCurrentBranchAsync(localPath, "GitLlama");
-            using (var local = new Repository(localPath)) Assert.Equal("origin", local.Head.RemoteName);
-            Repository.Clone(remotePath, otherPath); CommitFile(otherPath, "Remote change"); await service.PushCurrentBranchAsync(otherPath, "origin");
-            string remoteSha; using (var remote = new Repository(remotePath)) remoteSha = remote.Branches[branch].Tip.Sha;
+            var service = new GitRemoteService();
+            await service.AddAsync(localPath, "origin", originPath);
+            await service.PushCurrentBranchAsync(localPath, "origin");
+            await service.AddAsync(localPath, "GitLlama", remotePath);
+            var branch = await service.PushCurrentBranchAsync(localPath, "GitLlama");
+            using (var local = new Repository(localPath))
+            {
+                Assert.Equal("origin", local.Head.RemoteName);
+            }
+
+            Repository.Clone(remotePath, otherPath);
+            CommitFile(otherPath, "Remote change");
+            await service.PushCurrentBranchAsync(otherPath, "origin");
+            string remoteSha;
+            using (var remote = new Repository(remotePath))
+            {
+                remoteSha = remote.Branches[branch].Tip.Sha;
+            }
+
             CommitFile(localPath, "Local change");
             await Assert.ThrowsAnyAsync<Exception>(() => service.PushCurrentBranchAsync(localPath, "GitLlama"));
-            using (var remote = new Repository(remotePath)) Assert.Equal(remoteSha, remote.Branches[branch].Tip.Sha);
-            using (var local = new Repository(localPath)) Assert.Equal("origin", local.Head.RemoteName);
+            using (var remote = new Repository(remotePath))
+            {
+                Assert.Equal(remoteSha, remote.Branches[branch].Tip.Sha);
+            }
+
+            using (var local = new Repository(localPath))
+            {
+                Assert.Equal("origin", local.Head.RemoteName);
+            }
         }
         finally
         {
-            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)) File.SetAttributes(file, FileAttributes.Normal);
+            foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
+                File.SetAttributes(file, FileAttributes.Normal);
+            }
+
             Directory.Delete(root, true);
         }
     }
@@ -419,6 +516,7 @@ public sealed class GitRemoteServiceTests
                 source.Commit("Initial", signature, signature);
                 sourceBranch = source.Head.FriendlyName;
             }
+
             Repository.Init(targetPath);
             var service = new GitRemoteService();
             await service.AddAsync(targetPath, "origin", sourcePath);
@@ -429,7 +527,10 @@ public sealed class GitRemoteServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(root, true);
         }
     }
@@ -449,7 +550,10 @@ public sealed class GitRemoteServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -467,12 +571,16 @@ public sealed class GitRemoteServiceTests
             using var cancellation = new CancellationTokenSource();
             cancellation.Cancel();
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                service.FetchAsync(path, "origin", cancellation.Token));
+                service.FetchAsync(path, "origin", cancellation.Token)
+            );
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -493,7 +601,8 @@ public sealed class GitRemoteServiceTests
             Assert.Equal("origin", remote.Name);
             Assert.Equal("https://example.invalid/team/repo.git", remote.Url);
             await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.AddAsync(path, "origin", "https://example.invalid/other.git"));
+                service.AddAsync(path, "origin", "https://example.invalid/other.git")
+            );
             await service.RemoveAsync(path, "origin");
             Assert.Empty(await service.ListAsync(path));
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.RemoveAsync(path, "origin"));
@@ -501,7 +610,10 @@ public sealed class GitRemoteServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

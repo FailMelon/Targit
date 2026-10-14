@@ -9,6 +9,7 @@ public sealed class RepositorySessionTests
     private sealed class FakeReader : IRepositoryReader
     {
         public bool IsRepository(string path) => true;
+
         public Task<RepositorySnapshot> ReadAsync(string path, CancellationToken ct = default) =>
             Task.FromResult(new RepositorySnapshot(path, "main", "123", false));
     }
@@ -16,6 +17,7 @@ public sealed class RepositorySessionTests
     private sealed class FakeOverview : IRepositoryOverviewReader
     {
         public int Calls { get; private set; }
+
         public Task<RepositoryOverview> ReadOverviewAsync(string path, CancellationToken ct = default)
         {
             Calls++;

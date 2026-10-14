@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -27,6 +27,7 @@ public sealed class GitCherryPickAcceptanceTests
                 commitSha = repo.Commit("feature change", signature, signature).Sha;
                 Commands.Checkout(repo, repo.Branches["feature"]);
             }
+
             var service = new GitCherryPickService();
             File.WriteAllText(Path.Combine(path, "base.txt"), "dirty");
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.CherryPickAsync(path, commitSha));
@@ -42,7 +43,10 @@ public sealed class GitCherryPickAcceptanceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

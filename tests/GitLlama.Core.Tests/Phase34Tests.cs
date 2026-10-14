@@ -1,14 +1,30 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
 
 public sealed class Phase34Tests
 {
-    private static string NewPath() { var path = Path.Combine(Path.GetTempPath(), "gitllama-phase-34-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(path); return path; }
-    private static void Cleanup(string path) { foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories)) File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly); Directory.Delete(path, true); }
-    [Fact] public async Task PlanContainsCommitsAfterUpstream()
+    private static string NewPath()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "gitllama-phase-34-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private static void Cleanup(string path)
+    {
+        foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+        {
+            File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+        }
+
+        Directory.Delete(path, true);
+    }
+
+    [Fact]
+    public async Task PlanContainsCommitsAfterUpstream()
     {
         var path = NewPath();
         try
@@ -25,21 +41,37 @@ public sealed class Phase34Tests
                 Commands.Stage(r, "file.txt");
                 r.Commit("second", s, s);
             }
+
             var steps = await new GitRebasePlanService().PlanAsync(path, first);
             Assert.Equal("second", Assert.Single(steps).Subject);
             GitRebasePlanService.ValidatePlan(steps);
         }
-        finally { Cleanup(path); }
+        finally
+        {
+            Cleanup(path);
+        }
     }
+
     [Fact]
     public void RejectsInvalidActionsAndDuplicateSteps()
     {
         var pick = new GitRebaseStep("a", "first", GitRebaseAction.Pick);
         GitRebasePlanService.ValidatePlan(new[] { pick, new GitRebaseStep("b", "second", GitRebaseAction.Squash) });
         Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { pick, pick }));
-        Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { new GitRebaseStep("a", "first", GitRebaseAction.Fixup) }));
-        Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { new GitRebaseStep("a", "first", GitRebaseAction.Drop), new GitRebaseStep("b", "second", GitRebaseAction.Squash) }));
-        Assert.Throws<ArgumentException>(() => GitRebasePlanService.ValidatePlan(new[] { new GitRebaseStep("a", "first", (GitRebaseAction)999) }));
+        Assert.Throws<ArgumentException>(() =>
+            GitRebasePlanService.ValidatePlan(new[] { new GitRebaseStep("a", "first", GitRebaseAction.Fixup) })
+        );
+        Assert.Throws<ArgumentException>(() =>
+            GitRebasePlanService.ValidatePlan(
+                new[]
+                {
+                    new GitRebaseStep("a", "first", GitRebaseAction.Drop),
+                    new GitRebaseStep("b", "second", GitRebaseAction.Squash),
+                }
+            )
+        );
+        Assert.Throws<ArgumentException>(() =>
+            GitRebasePlanService.ValidatePlan(new[] { new GitRebaseStep("a", "first", (GitRebaseAction)999) })
+        );
     }
-
 }

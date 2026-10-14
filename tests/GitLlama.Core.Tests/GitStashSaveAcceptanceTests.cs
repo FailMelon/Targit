@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -21,6 +21,7 @@ public sealed class GitStashSaveAcceptanceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 repo.Commit("initial", signature, signature);
             }
+
             File.WriteAllText(Path.Combine(path, "tracked.txt"), "modified");
             File.WriteAllText(Path.Combine(path, "untracked.txt"), "leave me");
             var service = new GitStashService();
@@ -34,7 +35,10 @@ public sealed class GitStashSaveAcceptanceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

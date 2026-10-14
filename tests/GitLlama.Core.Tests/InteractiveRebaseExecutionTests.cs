@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -31,6 +31,7 @@ public sealed class InteractiveRebaseExecutionTests
                     Commands.Stage(repo, file);
                     repo.Commit(message, sig, sig);
                 }
+
                 CommitFile("root.txt", "root");
                 branch = repo.Head.FriendlyName;
                 repo.CreateBranch("target");
@@ -43,10 +44,11 @@ public sealed class InteractiveRebaseExecutionTests
                 target = repo.Head.Tip.Sha;
                 Commands.Checkout(repo, repo.Branches[branch]);
             }
+
             var plan = new[]
             {
                 new GitRebaseStep(first, "one", GitRebaseAction.Pick),
-                new GitRebaseStep(second, "two", action)
+                new GitRebaseStep(second, "two", action),
             };
             var messages = new Dictionary<string, string> { [second] = "replacement message" };
             var result = await new GitLinearRebaseService().RebaseWithMessagesAsync(path, "target", plan, messages);
@@ -57,18 +59,32 @@ public sealed class InteractiveRebaseExecutionTests
             Assert.True(File.Exists(Path.Combine(path, "one.txt")));
             Assert.Equal(action != GitRebaseAction.Drop, File.Exists(Path.Combine(path, "two.txt")));
             if (action == GitRebaseAction.Reword)
+            {
                 Assert.Equal("replacement message", check.Head.Tip.Message.Trim());
+            }
+
             if (action == GitRebaseAction.Squash)
+            {
                 Assert.Contains("two", check.Head.Tip.Message);
+            }
+
             if (action == GitRebaseAction.Fixup)
+            {
                 Assert.Equal("one", check.Head.Tip.Message.Trim());
+            }
+
             if (action is GitRebaseAction.Squash or GitRebaseAction.Fixup or GitRebaseAction.Drop)
+            {
                 Assert.Equal(target, check.Head.Tip.Parents.Single().Sha);
+            }
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

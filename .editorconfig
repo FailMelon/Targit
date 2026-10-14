@@ -1,0 +1,20 @@
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+
+[*.{cs,axaml,xaml,csproj,props,targets}]
+indent_size = 4
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.cs]
+# Always brace if/else/for/foreach/while bodies, and leave a blank line after a block.
+csharp_prefer_braces = true:warning
+dotnet_diagnostic.IDE0011.severity = warning
+dotnet_style_allow_statement_immediately_after_block_experimental = false:warning
+dotnet_diagnostic.IDE2003.severity = warning

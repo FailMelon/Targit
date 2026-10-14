@@ -1,1 +1,5 @@
-<Project Sdk="Microsoft.NET.Sdk"><ItemGroup><ProjectReference Include="../GitLlama.Core/GitLlama.Core.csproj"/></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk">
+    <ItemGroup>
+        <ProjectReference Include="../GitLlama.Core/GitLlama.Core.csproj" />
+    </ItemGroup>
+</Project>

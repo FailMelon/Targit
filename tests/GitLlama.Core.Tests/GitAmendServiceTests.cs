@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -25,6 +25,7 @@ public sealed class GitAmendServiceTests
                 Commands.Stage(r, "file.txt");
                 oldSha = r.Commit("Old message", s, s).Sha;
             }
+
             var service = new GitAmendService();
             var newSha = await service.AmendMessageAsync(path, "Updated message");
             Assert.NotEqual(oldSha, newSha);
@@ -33,14 +34,17 @@ public sealed class GitAmendServiceTests
                 Assert.Equal("Updated message", r.Head.Tip?.MessageShort);
                 Assert.Equal("Initial", r.Head.Tip?.Parents.Single().MessageShort);
             }
+
             File.WriteAllText(Path.Combine(path, "file.txt"), "dirty");
-            await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                service.AmendMessageAsync(path, "Should fail"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.AmendMessageAsync(path, "Should fail"));
         }
         finally
         {
             foreach (var f in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(f, File.GetAttributes(f) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

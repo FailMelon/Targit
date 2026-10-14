@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -25,20 +25,30 @@ public sealed class GitRemoteTagAcceptanceTests
                 repo.Commit("initial", signature, signature);
                 repo.Network.Remotes.Add("origin", remote);
             }
+
             var service = new GitTagService();
             await service.CreateAsync(local, "v1.0.0");
             await service.PushAsync(local, "origin", "v1.0.0");
             using (var remoteRepo = new Repository(remote))
+            {
                 Assert.NotNull(remoteRepo.Tags["v1.0.0"]);
+            }
+
             await service.DeleteRemoteAsync(local, "origin", "v1.0.0");
             using (var remoteRepo = new Repository(remote))
+            {
                 Assert.Null(remoteRepo.Tags["v1.0.0"]);
+            }
+
             Assert.Single(await service.ListAsync(local));
         }
         finally
         {
             foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(root, true);
         }
     }

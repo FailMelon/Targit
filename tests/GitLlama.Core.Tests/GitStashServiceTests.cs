@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -19,10 +19,14 @@ public sealed class GitStashServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
+
     [Fact]
     public async Task SavesTrackedChangesAndRejectsCleanRepository()
     {
@@ -38,6 +42,7 @@ public sealed class GitStashServiceTests
                 var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
                 repository.Commit("Initial", signature, signature);
             }
+
             var service = new GitStashService();
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.SaveAsync(path, "empty"));
             File.WriteAllText(Path.Combine(path, "readme.txt"), "modified");
@@ -48,11 +53,13 @@ public sealed class GitStashServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
-
 
     [Fact]
     public async Task DropsSelectedStashAndRejectsMissingIndex()
@@ -71,6 +78,7 @@ public sealed class GitStashServiceTests
                 File.WriteAllText(Path.Combine(path, "readme.txt"), "changed");
                 repository.Stashes.Add(signature, "save");
             }
+
             var service = new GitStashService();
             Assert.Single(await service.ListAsync(path));
             await service.DropAsync(path, 0);
@@ -80,7 +88,10 @@ public sealed class GitStashServiceTests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -102,6 +113,7 @@ public sealed class GitStashServiceTests
                 File.WriteAllText(Path.Combine(path, "file.txt"), "changed");
                 r.Stashes.Add(s, "saved");
             }
+
             var service = new GitStashService();
             await service.ApplyAsync(path, 0);
             Assert.Equal("changed", File.ReadAllText(Path.Combine(path, "file.txt")));
@@ -111,7 +123,10 @@ public sealed class GitStashServiceTests
         finally
         {
             foreach (var f in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(f, File.GetAttributes(f) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
@@ -133,6 +148,7 @@ public sealed class GitStashServiceTests
                 File.WriteAllText(Path.Combine(path, "file.txt"), "changed");
                 r.Stashes.Add(s, "saved");
             }
+
             var service = new GitStashService();
             await service.PopAsync(path, 0);
             Assert.Equal("changed", File.ReadAllText(Path.Combine(path, "file.txt")));
@@ -141,7 +157,10 @@ public sealed class GitStashServiceTests
         finally
         {
             foreach (var f in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(f, File.GetAttributes(f) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }

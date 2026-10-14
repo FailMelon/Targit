@@ -1,5 +1,5 @@
-using LibGit2Sharp;
 using GitLlama.Git;
+using LibGit2Sharp;
 using Xunit;
 
 namespace GitLlama.Core.Tests;
@@ -32,10 +32,17 @@ public sealed class Phase45Tests
                 Commands.Stage(repo, "other.txt");
                 branch = repo.Commit("side", sig, sig).Sha;
             }
+
             var service = new GitCommitRelationshipService();
             Assert.Equal(GitCommitRelationship.Same, (await service.InspectAsync(path, first, first)).Relationship);
-            Assert.Equal(GitCommitRelationship.FirstIsAncestor, (await service.InspectAsync(path, first, second)).Relationship);
-            Assert.Equal(GitCommitRelationship.SecondIsAncestor, (await service.InspectAsync(path, second, first)).Relationship);
+            Assert.Equal(
+                GitCommitRelationship.FirstIsAncestor,
+                (await service.InspectAsync(path, first, second)).Relationship
+            );
+            Assert.Equal(
+                GitCommitRelationship.SecondIsAncestor,
+                (await service.InspectAsync(path, second, first)).Relationship
+            );
             var diverged = await service.InspectAsync(path, second, branch);
             Assert.Equal(GitCommitRelationship.Diverged, diverged.Relationship);
             Assert.Equal(first, diverged.MergeBaseSha);
@@ -45,7 +52,10 @@ public sealed class Phase45Tests
         finally
         {
             foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
                 File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
             Directory.Delete(path, true);
         }
     }
