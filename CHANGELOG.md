@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Merging a branch from the sidebar asks with a Merge or Cancel popup instead of making you type MERGE. Abort merge and applying a stash over your changes use the same popup.
+
 ## 0.2.1 - 2026-10-14
 
 - Resolve merge conflicts in a dedicated resolver. While a merge is in progress the working changes inspector lists Conflicted files and Resolved files, with Mark all resolved for files fixed by hand (files that still contain conflict markers stay conflicted). Clicking a conflicted file shows A (ours) and B (theirs) side by side with syntax highlighting and the Output below: tick a conflict's lines from A, B or both, or hover a line and use + to keep just that line, with lines going into the output in the order you add them, step between conflicts, edit the output by hand, or use all of one side. Saving marks the file resolved and opens the next one.

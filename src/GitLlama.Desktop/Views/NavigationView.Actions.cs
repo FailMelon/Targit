@@ -469,46 +469,39 @@ public partial class NavigationView
         }
 
         var changes = vm.ChangeCount == 1 ? "1 uncommitted change" : $"{vm.ChangeCount} uncommitted changes";
-        var dialog = RemoteEditDialog.Create(action + " stash over your changes?", out var fields);
-        fields.Children.Add(
-            new TextBlock
-            {
-                Text =
-                    $"You have {changes}. The stash will be added on top of them, which can make the two harder to "
-                    + "tell apart. If the stash changes a file you've also changed, nothing is applied and the stash "
-                    + "is kept.",
-                TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-            }
+        var confirmed = await ConfirmDialog.ShowAsync(
+            owner,
+            action + " stash over your changes?",
+            $"You have {changes}. The stash will be added on top of them, which can make the two harder to tell "
+                + "apart. If the stash changes a file you've also changed, nothing is applied and the stash is kept.",
+            "Yes, " + action.ToLowerInvariant(),
+            "No"
         );
-        var buttons = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Spacing = 8,
-        };
-        var no = new Button { Content = "No" };
-        var yes = new Button { Content = "Yes, " + action.ToLowerInvariant(), Classes = { "workspace", "primary" } };
-        var confirmed = false;
-        no.Click += (_, _) => dialog.Close();
-        yes.Click += (_, _) =>
-        {
-            confirmed = true;
-            dialog.Close();
-        };
-        dialog.KeyDown += (_, e) =>
-        {
-            if (e.Key == Key.Escape)
-            {
-                dialog.Close();
-            }
-        };
-        buttons.Children.Add(no);
-        buttons.Children.Add(yes);
-        fields.Children.Add(buttons);
-        await dialog.ShowDialog(owner);
         if (confirmed && vm.SelectedStash == stash)
         {
             await command.ExecuteAsync(true);
+        }
+    }
+
+    /// <summary>Merges a branch into the current one after a quick confirmation.</summary>
+    private async Task MergeBranchAsync(string branch)
+    {
+        if (DataContext is not MainWindowViewModel vm || TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
+        var current = vm.CurrentBranch;
+        var confirmed = await ConfirmDialog.ShowAsync(
+            owner,
+            $"Merge {branch} into {current}?",
+            $"The changes from {branch} are merged into {current}. If any files conflict, the merge stops so you "
+                + "can resolve them before it's committed.",
+            "Merge"
+        );
+        if (confirmed && vm.SelectedBranchLine == branch && vm.CurrentBranch == current)
+        {
+            await vm.MergeSelectedBranchCommand.ExecuteAsync(null);
         }
     }
 
@@ -572,19 +565,7 @@ public partial class NavigationView
             () => CheckoutSidebarBranchAsync(branch),
             branch != vm.CurrentBranch && !branch.EndsWith("/HEAD", StringComparison.Ordinal)
         );
-        Add(
-            "Merge into " + vm.CurrentBranch + "…",
-            () =>
-                PromptAction(
-                    "Merge " + branch,
-                    "Merge into " + vm.CurrentBranch + ". Conflicts can be resolved in the merge workspace.",
-                    "Merge",
-                    "MERGE",
-                    _ => { },
-                    vm.MergeSelectedBranchCommand
-                ),
-            branch != vm.CurrentBranch
-        );
+        Add("Merge into " + vm.CurrentBranch + "…", () => MergeBranchAsync(branch), branch != vm.CurrentBranch);
         Add("Create branch here…", () => CreateBranchAtAsync(branch));
         Add(
             "Create worktree here…",
