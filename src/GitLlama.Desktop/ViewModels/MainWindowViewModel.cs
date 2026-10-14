@@ -666,6 +666,14 @@ public partial class MainWindowViewModel : ObservableObject
             HistorySha = commit.Sha[..7];
             HistoryDate = commit.Date.ToString("yyyy-MM-dd HH:mm:ss zzz");
             HistoryMessage = CommitDescription(commit.Message);
+            if (Stashes.FirstOrDefault(stash => stash.Sha == commit.Sha) is { } stash)
+            {
+                var (branch, description) = DescribeStash(stash.Message);
+                HistorySubject = description;
+                HistoryAvatar = AvatarCache.ForAuthor(commit.Author, stash.AuthorEmail, commit.Sha);
+                HistoryMessage = $"Stashed on {branch} as stash@{{{stash.Index}}}.";
+            }
+
             HistoryCommitDetails =
                 $"Commit: {commit.Sha}{Environment.NewLine}Author: {commit.Author}{Environment.NewLine}"
                 + $"Date: {commit.Date:yyyy-MM-dd HH:mm:ss zzz}{Environment.NewLine}"
@@ -1236,6 +1244,8 @@ public partial class MainWindowViewModel : ObservableObject
         Stashes.Clear();
         SelectedStash = null;
         StashDropConfirmation = "";
+        _inspectedStashSha = null;
+        UpdateStashTree();
         SelectedTag = null;
         TagDeletionConfirmation = "";
         RemoteTagDeletionConfirmation = "";
@@ -1521,8 +1531,9 @@ public partial class MainWindowViewModel : ObservableObject
                 : stagedCount == 1 ? "1 staged file"
                 : $"{stagedCount} staged files";
             CollectionUpdates.Sync(BranchLines, overview.Branches, branch => branch);
-            SelectedHistoryRow =
-                HistoryRows.FirstOrDefault(r => r.Sha == previousHistorySha) ?? HistoryRows.FirstOrDefault();
+            SelectedHistoryRow = _inspectedStashSha is not null
+                ? null
+                : HistoryRows.FirstOrDefault(r => r.Sha == previousHistorySha) ?? HistoryRows.FirstOrDefault();
             SelectedWorkingFile = WorkingFiles.FirstOrDefault(file => file.Path == previousWorkingPath);
             if (SelectedWorkingFile is { } selectedWorking)
             {
@@ -1565,6 +1576,21 @@ public partial class MainWindowViewModel : ObservableObject
             }
 
             SelectedStash = Stashes.FirstOrDefault(stash => stash.Message == previousStash);
+            UpdateStashTree();
+            if (_inspectedStashSha is { } inspectedStash)
+            {
+                if (Stashes.Any(stash => stash.Sha == inspectedStash))
+                {
+                    // Indexes shift when stashes are added or removed, so refresh the header.
+                    await LoadHistoryCommitAsync(inspectedStash);
+                }
+                else
+                {
+                    _inspectedStashSha = null;
+                    SelectedHistoryRow = HistoryRows.FirstOrDefault();
+                }
+            }
+
             string upstream;
             try
             {
@@ -1597,10 +1623,10 @@ public partial class MainWindowViewModel : ObservableObject
                 wasFileReview
                 && previousReviewSource == "Commit"
                 && previousHistoricalPath is not null
-                && SelectedHistoryRow is { } selected
+                && (_inspectedStashSha ?? SelectedHistoryRow?.Sha) is { } reviewedSha
             )
             {
-                await LoadHistoryCommitAsync(selected.Sha);
+                await LoadHistoryCommitAsync(reviewedSha);
                 if (
                     version != Interlocked.Read(ref _repositorySelectionVersion)
                     || refreshVersion != Interlocked.Read(ref _refreshRevision)
@@ -2340,7 +2366,7 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task PopSelectedStashAsync()
+    private async Task PopSelectedStashAsync(bool? allowLocalChanges)
     {
         if (SelectedRepository is not { } repo || SelectedStash is not { } stash)
         {
@@ -2362,7 +2388,7 @@ public partial class MainWindowViewModel : ObservableObject
                 throw new InvalidOperationException("The selected stash changed. Refresh and select it again.");
             }
 
-            await _stashes.PopAsync(repo.Path, stash.Index);
+            await _stashes.PopAsync(repo.Path, stash.Index, allowLocalChanges == true);
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path)
             {
                 return;
@@ -2387,7 +2413,7 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task ApplySelectedStashAsync()
+    private async Task ApplySelectedStashAsync(bool? allowLocalChanges)
     {
         if (SelectedRepository is not { } repo || SelectedStash is not { } stash)
         {
@@ -2409,7 +2435,7 @@ public partial class MainWindowViewModel : ObservableObject
                 throw new InvalidOperationException("The selected stash changed. Refresh and select it again.");
             }
 
-            await _stashes.ApplyAsync(repo.Path, stash.Index);
+            await _stashes.ApplyAsync(repo.Path, stash.Index, allowLocalChanges == true);
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path)
             {
                 return;
@@ -2487,11 +2513,17 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanStash))]
     private async Task SaveTrackedStashAsync()
     {
         if (SelectedRepository is not { } repo)
         {
+            return;
+        }
+
+        if (StashBlockedReason is { } blocked)
+        {
+            Status = blocked;
             return;
         }
 
@@ -2505,7 +2537,8 @@ public partial class MainWindowViewModel : ObservableObject
                 return;
             }
 
-            await _stashes.SaveAsync(repo.Path, message);
+            var includeUntracked = StashIncludeUntracked;
+            var result = await _stashes.SaveAsync(repo.Path, message, AuthorName, AuthorEmail, includeUntracked);
             if (version != Interlocked.Read(ref _repositorySelectionVersion) || SelectedRepository?.Path != repo.Path)
             {
                 return;
@@ -2513,7 +2546,9 @@ public partial class MainWindowViewModel : ObservableObject
 
             StashMessage = "";
             await RefreshAsync();
-            Status = "Saved tracked changes to stash (untracked files excluded).";
+            Status =
+                $"Stashed {(result.StashedFiles == 1 ? "1 file" : $"{result.StashedFiles} files")}. "
+                + GitStashService.Describe(result);
         }
         catch (Exception e)
         {

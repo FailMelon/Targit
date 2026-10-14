@@ -282,36 +282,93 @@
                         BorderThickness="0,1,0,0"
                         Padding="14">
                     <StackPanel Spacing="9">
-                        <TextBlock Text="Create a commit"
-                                   FontSize="15"
-                                   FontWeight="SemiBold" />
+                        <StackPanel.Styles>
+                            <Style Selector="RadioButton.mode-tab">
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="Foreground" Value="#B5BAC1" />
+                                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                <Setter Property="Cursor" Value="Hand" />
+                                <Setter Property="Template">
+                                    <ControlTemplate>
+                                        <Border Background="{TemplateBinding Background}"
+                                                CornerRadius="4"
+                                                Padding="12,5">
+                                            <ContentPresenter Content="{TemplateBinding Content}"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center" />
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter>
+                            </Style>
 
-                        <TextBox Text="{Binding CommitSummaryText}" Watermark="Commit summary" />
+                            <Style Selector="RadioButton.mode-tab:pointerover">
+                                <Setter Property="Background" Value="#383A40" />
+                                <Setter Property="Foreground" Value="#DBDEE1" />
+                            </Style>
 
-                        <TextBox Text="{Binding CommitDescriptionText}"
-                                 Watermark="Description (optional)"
-                                 AcceptsReturn="True"
-                                 TextWrapping="Wrap"
-                                 Height="76" />
+                            <Style Selector="RadioButton.mode-tab:checked">
+                                <Setter Property="Background" Value="#4E5058" />
+                                <Setter Property="Foreground" Value="#F2F3F5" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Style>
+                        </StackPanel.Styles>
 
-                        <CheckBox Content="Amend latest unpublished commit" IsChecked="{Binding AmendStagedCommit}" />
+                        <Border Background="#1E1F22"
+                                CornerRadius="6"
+                                Padding="3">
+                            <UniformGrid Columns="2">
+                                <RadioButton x:Name="CommitModeTab"
+                                             Classes="mode-tab"
+                                             Content="Commit"
+                                             IsChecked="{Binding !IsStashMode, Mode=OneWay}" />
 
-                        <Expander Classes="navigation" Header="Author identity">
-                            <StackPanel Spacing="6" Margin="0,6">
-                                <TextBox Watermark="Author name" Text="{Binding AuthorName}" />
-                                <TextBox Watermark="Author email" Text="{Binding AuthorEmail}" />
+                                <RadioButton x:Name="StashModeTab"
+                                             Classes="mode-tab"
+                                             Content="Stash"
+                                             IsChecked="{Binding IsStashMode}" />
+                            </UniformGrid>
+                        </Border>
 
-                                <TextBlock Text="{Binding ConfiguredIdentity}"
-                                           Classes="muted"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Expander>
+                        <StackPanel Spacing="9" IsVisible="{Binding !IsStashMode}">
+                            <TextBox Text="{Binding CommitSummaryText}" Watermark="Commit summary" />
+
+                            <TextBox Text="{Binding CommitDescriptionText}"
+                                     Watermark="Description (optional)"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     Height="76" />
+
+                            <CheckBox Content="Amend latest unpublished commit" IsChecked="{Binding AmendStagedCommit}" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="9" IsVisible="{Binding IsStashMode}">
+                            <TextBox Text="{Binding StashMessage}" Watermark="Stash message (optional)" />
+
+                            <CheckBox Content="Include untracked files" IsChecked="{Binding StashIncludeUntracked}" />
+
+                            <TextBlock Text="Sets aside all changes to tracked files, staged or not, and leaves a clean working tree. Ignored files are never stashed."
+                                       Classes="muted"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
 
                         <Button Content="{Binding CommitButtonText}"
                                 Command="{Binding CommitCommand}"
+                                IsVisible="{Binding !IsStashMode}"
                                 Classes="workspace primary"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                MinHeight="40" />
+
+                        <Button Content="Stash changes"
+                                Command="{Binding SaveTrackedStashCommand}"
+                                IsVisible="{Binding IsStashMode}"
+                                ToolTip.Tip="{Binding StashBlockedReason}"
+                                ToolTip.ShowOnDisabled="True"
+                                Classes="workspace primary"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center"
                                 MinHeight="40" />
                     </StackPanel>
                 </Border>

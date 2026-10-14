@@ -213,6 +213,29 @@ public sealed class WorkspaceTests
     }
 
     [AvaloniaFact]
+    public async Task StashIsOnlyAvailableWhenThereIsSomethingToStash()
+    {
+        using var fixture = new WorkspaceFixture();
+        var vm = await fixture.OpenAsync();
+        Assert.True(vm.SaveTrackedStashCommand.CanExecute(null));
+
+        using (var repository = new Repository(fixture.RepositoryPath))
+        {
+            repository.Reset(ResetMode.Hard);
+        }
+
+        await vm.RefreshCommand.ExecuteAsync(null);
+        Assert.False(vm.SaveTrackedStashCommand.CanExecute(null));
+        Assert.Equal("There are no changes to stash.", vm.StashBlockedReason);
+
+        File.WriteAllText(Path.Combine(fixture.RepositoryPath, "notes.txt"), "new");
+        await vm.RefreshCommand.ExecuteAsync(null);
+        Assert.False(vm.SaveTrackedStashCommand.CanExecute(null));
+        vm.StashIncludeUntracked = true;
+        Assert.True(vm.SaveTrackedStashCommand.CanExecute(null));
+    }
+
+    [AvaloniaFact]
     public async Task DeletedFilesCountAsStagedAndCanBeCommitted()
     {
         using var fixture = new WorkspaceFixture();

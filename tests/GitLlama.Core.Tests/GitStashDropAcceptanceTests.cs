@@ -24,9 +24,9 @@ public sealed class GitStashDropAcceptanceTests
 
             var service = new GitStashService();
             File.WriteAllText(Path.Combine(path, "tracked.txt"), "first");
-            await service.SaveAsync(path, "first stash");
+            await service.SaveAsync(path, "first stash", "Test", "test@example.invalid");
             File.WriteAllText(Path.Combine(path, "tracked.txt"), "second");
-            await service.SaveAsync(path, "second stash");
+            await service.SaveAsync(path, "second stash", "Test", "test@example.invalid");
             Assert.Equal(2, (await service.ListAsync(path)).Count);
             await service.DropAsync(path, 0);
             var remaining = Assert.Single(await service.ListAsync(path));

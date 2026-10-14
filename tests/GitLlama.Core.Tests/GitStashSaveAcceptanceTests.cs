@@ -25,7 +25,7 @@ public sealed class GitStashSaveAcceptanceTests
             File.WriteAllText(Path.Combine(path, "tracked.txt"), "modified");
             File.WriteAllText(Path.Combine(path, "untracked.txt"), "leave me");
             var service = new GitStashService();
-            await service.SaveAsync(path, "phase 19");
+            await service.SaveAsync(path, "phase 19", "Test", "test@example.invalid");
             var stash = Assert.Single(await service.ListAsync(path));
             Assert.Equal(0, stash.Index);
             Assert.Contains("phase 19", stash.Message);

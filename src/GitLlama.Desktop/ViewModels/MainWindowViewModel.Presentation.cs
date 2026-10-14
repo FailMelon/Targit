@@ -132,6 +132,7 @@ public partial class MainWindowViewModel
             CollectionUpdates.Sync(UnstagedFiles, WorkingFiles.Where(file => file.IsUnstaged), file => file.Path);
             OnPropertyChanged(nameof(StagedFilesCaption));
             OnPropertyChanged(nameof(UnstagedFilesCaption));
+            NotifyStashAvailability();
         };
         Repositories.CollectionChanged += (_, _) => FilterRepositories();
         BranchLines.CollectionChanged += (_, _) => FilterBranches();
@@ -308,6 +309,7 @@ public partial class MainWindowViewModel
 
         if (!IsUpdatingContextSnapshot)
         {
+            _inspectedStashSha = null;
             IsWorkingTreeInspector = false;
             IsFileReview = false;
             CenterSection = "History";
