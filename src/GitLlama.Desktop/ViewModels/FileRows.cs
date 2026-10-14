@@ -40,6 +40,10 @@ public sealed record WorkingFileRow(string Line, string Path, string State)
         : Status == "Conflict" ? "!"
         : "M";
     public string StageIndicator => IsStaged ? "✓" : "○";
+
+    /// <summary>The folder part of the path with a trailing slash, or empty for files at the root.</summary>
+    public string Folder => Path.Contains('/') ? Path[..(Path.LastIndexOf('/') + 1)] : "";
+    public string FileName => Path[(Path.LastIndexOf('/') + 1)..];
     public string Status =>
         State.Contains("Conflicted", StringComparison.Ordinal) ? "Conflict"
         : State.Contains("Deleted", StringComparison.Ordinal) ? "Deleted"

@@ -316,6 +316,7 @@ public partial class MainWindowViewModel
             _inspectedStashSha = null;
             IsWorkingTreeInspector = false;
             IsFileReview = false;
+            IsConflictResolver = false;
             CenterSection = "History";
         }
 
@@ -342,6 +343,7 @@ public partial class MainWindowViewModel
     private void ResetPresentation()
     {
         IsFileReview = false;
+        IsConflictResolver = false;
         CenterSection = "History";
         Interlocked.Increment(ref _centerContentRevision);
         _allHistoryRows = [];

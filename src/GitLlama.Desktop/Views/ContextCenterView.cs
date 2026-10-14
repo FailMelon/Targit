@@ -54,6 +54,7 @@ public sealed class ContextCenterView : ContentControl
             args.PropertyName
             is nameof(MainWindowViewModel.CenterSection)
                 or nameof(MainWindowViewModel.IsFileReview)
+                or nameof(MainWindowViewModel.IsConflictResolver)
                 or nameof(MainWindowViewModel.IsUpdatingContextSnapshot)
         )
         {
@@ -78,7 +79,10 @@ public sealed class ContextCenterView : ContentControl
             return;
         }
 
-        var context = _workspace.IsFileReview ? "FileReview" : _workspace.CenterSection;
+        var context =
+            _workspace.IsConflictResolver ? "Conflict"
+            : _workspace.IsFileReview ? "FileReview"
+            : _workspace.CenterSection;
         if (_visibleContext == context)
         {
             return;
@@ -87,7 +91,8 @@ public sealed class ContextCenterView : ContentControl
         if (!_views.TryGetValue(context, out var view))
         {
             view =
-                context == "FileReview" ? new FileReviewView()
+                context == "Conflict" ? new ConflictResolverView()
+                : context == "FileReview" ? new FileReviewView()
                 : context == "History" ? new HistoryView()
                 : new DockContentTemplate(_workspace).Build(
                     new Dock.Model.Mvvm.Controls.Document { Id = context.ToLowerInvariant(), Title = context }

@@ -1,0 +1,231 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:GitLlama.Desktop.Controls"
+             x:Class="GitLlama.Desktop.Views.ConflictResolverView">
+    <UserControl.Styles>
+        <Style Selector="Border.side-badge">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+
+        <Style Selector="Border.side-badge > TextBlock">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <Style Selector="CheckBox.side-all">
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,Auto,*,5,Auto,*"
+          Background="#1E1F22"
+          DataContext="{Binding ConflictResolver}">
+        <!-- File, conflict count and file-wide actions. -->
+        <Border Background="#25282E"
+                BorderBrush="#393E47"
+                BorderThickness="0,0,0,1"
+                Padding="12,6">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right"
+                            Orientation="Horizontal"
+                            Spacing="6">
+                    <Button Classes="workspace toolbar"
+                            Content="Use all of A"
+                            Command="{Binding $parent[UserControl].DataContext.UseOursForConflictCommand}"
+                            ToolTip.Tip="Resolve the whole file with A (ours)" />
+
+                    <Button Classes="workspace toolbar"
+                            Content="Use all of B"
+                            Command="{Binding $parent[UserControl].DataContext.UseTheirsForConflictCommand}"
+                            ToolTip.Tip="Resolve the whole file with B (theirs)" />
+
+                    <Button x:Name="SaveConflictButton"
+                            Classes="workspace primary"
+                            Content="Save"
+                            Command="{Binding $parent[UserControl].DataContext.SaveConflictResolutionCommand}"
+                            IsEnabled="{Binding CanSave}"
+                            ToolTip.Tip="Write the output and mark this file resolved"
+                            ToolTip.ShowOnDisabled="True"
+                            MinWidth="72" />
+
+                    <Button Classes="workspace toolbar"
+                            Content="✕"
+                            Command="{Binding $parent[UserControl].DataContext.CloseConflictResolverCommand}"
+                            ToolTip.Tip="Close without saving" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="⚠"
+                               Foreground="#E5C07B"
+                               VerticalAlignment="Center" />
+
+                    <TextBlock Text="{Binding Path}"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+
+                    <TextBlock Text="{Binding ConflictSummary, StringFormat='({0})'}"
+                               Classes="muted"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- A and B headers. -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,1,*"
+              Background="#25282E">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8"
+                        Margin="10,6">
+                <CheckBox x:Name="AllOursCheck"
+                          Classes="side-all"
+                          IsThreeState="True"
+                          IsChecked="{Binding AllOurs}"
+                          ToolTip.Tip="Keep every conflict's lines from A" />
+
+                <Border Classes="side-badge"
+                        BorderBrush="#7F9FC9"
+                        Background="#22344A">
+                    <TextBlock Text="A" Foreground="#A9C3E6" />
+                </Border>
+
+                <TextBlock VerticalAlignment="Center">
+                    <Run Text="{Binding OursSha, StringFormat='Commit {0} on '}" />
+                    <Run Text="{Binding OursName}"
+                         Foreground="#A9C3E6"
+                         FontWeight="SemiBold"
+                         FontStyle="Italic" />
+                </TextBlock>
+            </StackPanel>
+
+            <Border Grid.Column="1" Background="#393E47" />
+
+            <StackPanel Grid.Column="2"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        Margin="10,6">
+                <CheckBox x:Name="AllTheirsCheck"
+                          Classes="side-all"
+                          IsThreeState="True"
+                          IsChecked="{Binding AllTheirs}"
+                          ToolTip.Tip="Keep every conflict's lines from B" />
+
+                <Border Classes="side-badge"
+                        BorderBrush="#B48EDB"
+                        Background="#33284A">
+                    <TextBlock Text="B" Foreground="#CDB3EA" />
+                </Border>
+
+                <TextBlock VerticalAlignment="Center">
+                    <Run Text="{Binding TheirsSha, StringFormat='Commit {0} on '}" />
+                    <Run Text="{Binding TheirsName}"
+                         Foreground="#CDB3EA"
+                         FontWeight="SemiBold"
+                         FontStyle="Italic" />
+                </TextBlock>
+            </StackPanel>
+        </Grid>
+
+        <!-- A and B contents. -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,1,*">
+            <controls:ConflictPaneView x:Name="OursPane"
+                                       Pane="Ours"
+                                       Lines="{Binding OursLines}"
+                                       FilePath="{Binding Path}" />
+
+            <Border Grid.Column="1" Background="#393E47" />
+
+            <controls:ConflictPaneView x:Name="TheirsPane"
+                                       Grid.Column="2"
+                                       Pane="Theirs"
+                                       Lines="{Binding TheirsLines}"
+                                       FilePath="{Binding Path}" />
+        </Grid>
+
+        <GridSplitter Grid.Row="3"
+                      Background="#393E47"
+                      ResizeDirection="Rows" />
+
+        <!-- Output header with conflict navigation. -->
+        <Border Grid.Row="4"
+                Background="#25282E"
+                BorderBrush="#393E47"
+                BorderThickness="0,0,0,1"
+                Padding="10,6">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                <TextBlock Text="Output"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+
+                <TextBlock Grid.Column="1"
+                           Text="{Binding Summary}"
+                           Classes="muted"
+                           Margin="14,0"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Spacing="6"
+                            Margin="0,0,12,0"
+                            IsVisible="{Binding HasConflicts}">
+                    <TextBlock Text="{Binding ConflictPosition}"
+                               Foreground="#7F9FC9"
+                               VerticalAlignment="Center" />
+
+                    <Button Classes="workspace toolbar"
+                            Content="▲"
+                            Command="{Binding PreviousConflictCommand}"
+                            ToolTip.Tip="Previous conflict"
+                            Padding="6,0"
+                            MinHeight="24" />
+
+                    <Button Classes="workspace toolbar"
+                            Content="▼"
+                            Command="{Binding NextConflictCommand}"
+                            ToolTip.Tip="Next conflict"
+                            Padding="6,0"
+                            MinHeight="24" />
+                </StackPanel>
+
+                <ToggleButton Grid.Column="3"
+                              Classes="workspace"
+                              Content="Edit output"
+                              IsChecked="{Binding IsEditingOutput}"
+                              ToolTip.Tip="Edit the output by hand" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="5">
+            <controls:ConflictPaneView x:Name="OutputPane"
+                                       Pane="Output"
+                                       Lines="{Binding OutputLines}"
+                                       FilePath="{Binding Path}"
+                                       IsVisible="{Binding !IsEditingOutput}" />
+
+            <TextBox x:Name="OutputEditor"
+                     Text="{Binding OutputText}"
+                     IsVisible="{Binding IsEditingOutput}"
+                     AcceptsReturn="True"
+                     AcceptsTab="True"
+                     TextWrapping="NoWrap"
+                     FontFamily="Consolas, Menlo, monospace"
+                     FontSize="13"
+                     Background="#1E1F22"
+                     BorderThickness="0"
+                     CornerRadius="0"
+                     Padding="12,6"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto" />
+        </Grid>
+    </Grid>
+</UserControl>

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Resolve merge conflicts in a dedicated resolver. While a merge is in progress the working changes inspector lists Conflicted files and Resolved files, with Mark all resolved for files fixed by hand (files that still contain conflict markers stay conflicted). Clicking a conflicted file shows A (ours) and B (theirs) side by side with syntax highlighting and the Output below: tick a conflict's lines from A, B or both, or hover a line and use + to keep just that line, with lines going into the output in the order you add them, step between conflicts, edit the output by hand, or use all of one side. Saving marks the file resolved and opens the next one.
 - Show when a merge stops on conflicts: the working changes button reads "Merge conflicts (N) · Resolve", and the working changes inspector shows the merge with Resolve conflicts, Finish merge and Abort merge (after confirming). Resolve conflicts opens the Conflicts tab with the first conflicted file selected. Finishing a merge uses your profile or Git identity and Git's prepared merge message when none is entered. Fix a branch list drawn over the Merge, Conflicts and Rebase tabs.
 
 ## 0.2.0 - 2026-10-14

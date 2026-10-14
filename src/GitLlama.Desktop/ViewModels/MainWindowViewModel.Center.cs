@@ -234,7 +234,15 @@ public partial class MainWindowViewModel
         ApplySelectedHunkCommand.NotifyCanExecuteChanged();
     }
 
-    partial void OnIsFileReviewChanged(bool value) => NotifyCenterReview();
+    partial void OnIsFileReviewChanged(bool value)
+    {
+        if (value)
+        {
+            IsConflictResolver = false;
+        }
+
+        NotifyCenterReview();
+    }
 
     partial void OnSelectedPatchLineChanged(GitLlama.Git.GitPatchLine? value) => NotifyCenterReview();
 

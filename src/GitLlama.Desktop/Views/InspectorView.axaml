@@ -79,7 +79,7 @@
                                 <TextBlock Text="{Binding ChangeCount}" Foreground="#DBDEE1" />
                             </Border>
 
-                            <TextBlock Text="Commit changes"
+                            <TextBlock Text="{Binding WorkingInspectorTitle}"
                                        FontSize="20"
                                        FontWeight="SemiBold" />
                         </DockPanel>
@@ -114,7 +114,7 @@
                             </StackPanel>
                         </Border>
 
-                        <WrapPanel ItemSpacing="8">
+                        <WrapPanel ItemSpacing="8" IsVisible="{Binding IsCommitInspector}">
                             <Button Classes="workspace toolbar"
                                     Content="✓ Stage all"
                                     Command="{Binding StageAllCommand}" />
@@ -136,8 +136,99 @@
                                    Margin="8,10" />
 
                         <Expander Classes="navigation"
+                                  IsExpanded="True"
+                                  IsVisible="{Binding IsConflictInspector}">
+                            <Expander.Header>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="{Binding ConflictedFilesCaption}" VerticalAlignment="Center" />
+
+                                    <Button x:Name="MarkAllResolvedButton"
+                                            Grid.Column="1"
+                                            Classes="workspace toolbar"
+                                            Content="Mark all resolved"
+                                            Command="{Binding MarkAllConflictsResolvedCommand}"
+                                            IsVisible="{Binding HasMergeConflicts}"
+                                            ToolTip.Tip="Mark files you've fixed yourself as resolved. Files that still contain conflict markers stay conflicted."
+                                            Padding="8,2"
+                                            MinHeight="0" />
+                                </Grid>
+                            </Expander.Header>
+
+                            <StackPanel>
+                                <ListBox x:Name="ConflictedFileList"
+                                         Classes="file-list"
+                                         ItemsSource="{Binding ConflictedFiles}"
+                                         SelectedItem="{Binding SelectedConflictFile, Mode=OneWay}"
+                                         SelectionChanged="ConflictedFile_SelectionChanged"
+                                         Tapped="ConflictedFile_Tapped"
+                                         ContextRequested="ConflictedFileContextRequested"
+                                         MaxHeight="300">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid ColumnDefinitions="22,*"
+                                                  ColumnSpacing="4"
+                                                  ToolTip.Tip="{Binding Path}">
+                                                <TextBlock Text="⚠"
+                                                           Foreground="#E5C07B"
+                                                           VerticalAlignment="Center" />
+
+                                                <TextBlock Grid.Column="1"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis">
+                                                    <Run Text="{Binding Folder}" Foreground="#80848E" />
+                                                    <Run Text="{Binding FileName}" />
+                                                </TextBlock>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <TextBlock Text="No conflicts left. Finish the merge to commit it."
+                                           Classes="muted"
+                                           Margin="8,4"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding !HasMergeConflicts}" />
+                            </StackPanel>
+                        </Expander>
+
+                        <Border BorderBrush="#393E47"
+                                BorderThickness="0,1,0,0"
+                                IsVisible="{Binding IsConflictInspector}" />
+
+                        <Expander Classes="navigation"
+                                  Header="{Binding ResolvedFilesCaption}"
+                                  IsExpanded="True"
+                                  IsVisible="{Binding IsConflictInspector}">
+                            <ListBox x:Name="ResolvedFileList"
+                                     Classes="file-list"
+                                     ItemsSource="{Binding ResolvedFiles}"
+                                     SelectionChanged="ResolvedFile_SelectionChanged"
+                                     MaxHeight="300">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="22,*"
+                                              ColumnSpacing="4"
+                                              ToolTip.Tip="{Binding Path}">
+                                            <TextBlock Text="✓"
+                                                       Foreground="#7F9FC9"
+                                                       VerticalAlignment="Center" />
+
+                                            <TextBlock Grid.Column="1"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis">
+                                                <Run Text="{Binding Folder}" Foreground="#80848E" />
+                                                <Run Text="{Binding FileName}" />
+                                            </TextBlock>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Expander>
+
+                        <Expander Classes="navigation"
                                   Header="{Binding StagedFilesCaption}"
-                                  IsExpanded="True">
+                                  IsExpanded="True"
+                                  IsVisible="{Binding IsCommitInspector}">
                             <ListBox Classes="file-list"
                                      ItemsSource="{Binding StagedFiles}"
                                      SelectedItem="{Binding SelectedStagedFile, Mode=OneWay}"
@@ -207,11 +298,14 @@
                             </ListBox>
                         </Expander>
 
-                        <Border BorderBrush="#393E47" BorderThickness="0,1,0,0" />
+                        <Border BorderBrush="#393E47"
+                                BorderThickness="0,1,0,0"
+                                IsVisible="{Binding IsCommitInspector}" />
 
                         <Expander Classes="navigation"
                                   Header="{Binding UnstagedFilesCaption}"
-                                  IsExpanded="True">
+                                  IsExpanded="True"
+                                  IsVisible="{Binding IsCommitInspector}">
                             <ListBox Classes="file-list"
                                      ItemsSource="{Binding UnstagedFiles}"
                                      SelectedItem="{Binding SelectedUnstagedFile, Mode=OneWay}"

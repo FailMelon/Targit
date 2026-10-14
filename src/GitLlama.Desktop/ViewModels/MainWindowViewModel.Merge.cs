@@ -1,5 +1,8 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GitLlama.Git;
+using GitLlama.Infrastructure;
 
 namespace GitLlama.Desktop.ViewModels;
 
@@ -27,10 +30,59 @@ public partial class MainWindowViewModel
             )
             : "All conflicts are resolved. Finish the merge to commit it.";
 
+    private readonly GitConflictDocumentService _conflictDocuments = new();
+
+    /// <summary>The conflicted file open in the resolver, if any.</summary>
+    [ObservableProperty]
+    private ConflictResolverViewModel? conflictResolver;
+
+    /// <summary>Whether the centre shows the conflict resolver.</summary>
+    [ObservableProperty]
+    private bool isConflictResolver;
+
+    public ObservableCollection<WorkingFileRow> ConflictedFiles { get; } = [];
+    public ObservableCollection<WorkingFileRow> ResolvedFiles { get; } = [];
+    public string ConflictedFilesCaption => $"Conflicted files ({ConflictedFiles.Count})";
+    public string ResolvedFilesCaption => $"Resolved files ({ResolvedFiles.Count})";
+    public bool HasResolvedFiles => ResolvedFiles.Count > 0;
+
+    /// <summary>The working changes inspector lists conflicted and resolved files while a merge is in progress.</summary>
+    public bool IsConflictInspector => ShowMergeBanner;
+    public bool IsCommitInspector => !ShowMergeBanner;
+    public string WorkingInspectorTitle => ShowMergeBanner ? "Merge in progress" : "Commit changes";
+
     partial void OnRepositoryOperationChanged(string value) => NotifyMergeState();
+
+    /// <summary>The conflicted file open in the resolver, highlighted in the inspector.</summary>
+    public WorkingFileRow? SelectedConflictFile =>
+        ConflictedFiles.FirstOrDefault(file => file.Path == ConflictResolver?.Path);
+
+    partial void OnConflictResolverChanged(ConflictResolverViewModel? value) =>
+        OnPropertyChanged(nameof(SelectedConflictFile));
+
+    partial void OnIsConflictResolverChanged(bool value)
+    {
+        if (!value)
+        {
+            ConflictResolver = null;
+        }
+    }
 
     private void NotifyMergeState()
     {
+        CollectionUpdates.Sync(
+            ConflictedFiles,
+            WorkingFiles.Where(file => file.Status == "Conflict"),
+            file => file.Path
+        );
+        CollectionUpdates.Sync(ResolvedFiles, WorkingFiles.Where(file => file.Status != "Conflict"), file => file.Path);
+        OnPropertyChanged(nameof(ConflictedFilesCaption));
+        OnPropertyChanged(nameof(SelectedConflictFile));
+        OnPropertyChanged(nameof(ResolvedFilesCaption));
+        OnPropertyChanged(nameof(HasResolvedFiles));
+        OnPropertyChanged(nameof(IsConflictInspector));
+        OnPropertyChanged(nameof(IsCommitInspector));
+        OnPropertyChanged(nameof(WorkingInspectorTitle));
         OnPropertyChanged(nameof(ConflictedFileCount));
         OnPropertyChanged(nameof(HasMergeConflicts));
         OnPropertyChanged(nameof(IsMergeInProgress));
@@ -42,16 +94,132 @@ public partial class MainWindowViewModel
         AbortMergeCommand.NotifyCanExecuteChanged();
     }
 
-    /// <summary>Opens the Conflicts tab with the current conflicts loaded and the first one selected.</summary>
+    /// <summary>Opens the first conflicted file in the resolver.</summary>
     [RelayCommand]
-    private async Task OpenConflictResolutionAsync()
+    private Task OpenConflictResolutionAsync() => OpenConflictFileAsync(ConflictedFiles.FirstOrDefault()?.Path);
+
+    /// <summary>Opens a conflicted file in the resolver, with A (ours), B (theirs) and the output.</summary>
+    [RelayCommand]
+    private async Task OpenConflictFileAsync(string? path)
     {
-        MergeTabIndex = 1;
-        DockDocument?.Invoke("Branches");
-        await InspectMergeConflictsAsync();
-        if (!MergeConflicts.Contains(ConflictPath))
+        if (SelectedRepository is not { } repo || string.IsNullOrWhiteSpace(path))
         {
-            ConflictPath = MergeConflicts.FirstOrDefault() ?? "";
+            return;
+        }
+
+        var version = Interlocked.Read(ref _repositorySelectionVersion);
+        try
+        {
+            var document = await _conflictDocuments.ReadAsync(repo.Path, path);
+            if (version != Interlocked.Read(ref _repositorySelectionVersion))
+            {
+                return;
+            }
+
+            var resolver = new ConflictResolverViewModel(document);
+            IsFileReview = false;
+            IsWorkingTreeInspector = true;
+            ConflictResolver = resolver;
+            IsConflictResolver = true;
+            resolver.Navigate(1);
+        }
+        catch (Exception e)
+        {
+            FileLog.Error(e, "Open conflict resolver");
+            if (version == Interlocked.Read(ref _repositorySelectionVersion))
+            {
+                Status = SafeMessage(e);
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void CloseConflictResolver() => IsConflictResolver = false;
+
+    /// <summary>Writes the resolver's output, marks the file resolved and moves on to the next conflicted file.</summary>
+    [RelayCommand]
+    private async Task SaveConflictResolutionAsync()
+    {
+        if (ConflictResolver is not { CanSave: true } resolver)
+        {
+            return;
+        }
+
+        var path = resolver.Path;
+        var text = resolver.ResultText();
+        await RunFeatureMutationAsync(
+            repo => _conflictResolution.WriteAndResolveAsync(repo, path, text),
+            $"Resolved {path}."
+        );
+        await ContinueAfterResolvingAsync(path);
+    }
+
+    /// <summary>Resolves a conflicted file by taking one whole side.</summary>
+    public async Task UseConflictSideAsync(string path, GitConflictChoice choice)
+    {
+        await RunFeatureMutationAsync(
+            repo => _conflictChoices.ResolveAsync(repo, path, choice),
+            $"Resolved {path} using {(choice == GitConflictChoice.Ours ? "A (ours)" : "B (theirs)")}."
+        );
+        if (ConflictResolver?.Path == path)
+        {
+            await ContinueAfterResolvingAsync(path);
+        }
+    }
+
+    [RelayCommand]
+    private Task UseOursForConflictAsync() =>
+        ConflictResolver is { } resolver
+            ? UseConflictSideAsync(resolver.Path, GitConflictChoice.Ours)
+            : Task.CompletedTask;
+
+    [RelayCommand]
+    private Task UseTheirsForConflictAsync() =>
+        ConflictResolver is { } resolver
+            ? UseConflictSideAsync(resolver.Path, GitConflictChoice.Theirs)
+            : Task.CompletedTask;
+
+    /// <summary>Marks conflicted files resolved as they are, except files that still contain conflict markers.</summary>
+    [RelayCommand]
+    private async Task MarkAllConflictsResolvedAsync()
+    {
+        IReadOnlyList<string> stillMarked = [];
+        await RunFeatureMutationAsync(
+            async repo => stillMarked = await _conflictResolution.MarkAllResolvedAsync(repo),
+            "Marked all conflicted files resolved."
+        );
+        if (stillMarked.Count > 0)
+        {
+            Status =
+                (
+                    stillMarked.Count == 1
+                        ? $"{stillMarked[0]} still has conflict markers, so it was left conflicted."
+                        : $"{stillMarked.Count} files still have conflict markers, so they were left conflicted."
+                ) + " Open them to choose lines.";
+        }
+
+        if (ConflictResolver is { } resolver && ConflictedFiles.All(file => file.Path != resolver.Path))
+        {
+            IsConflictResolver = false;
+        }
+    }
+
+    private async Task ContinueAfterResolvingAsync(string path)
+    {
+        if (ConflictedFiles.Any(file => file.Path == path))
+        {
+            // Still conflicted, so saving failed; the status bar explains why.
+            return;
+        }
+
+        if (ConflictedFiles.FirstOrDefault()?.Path is { } next)
+        {
+            await OpenConflictFileAsync(next);
+        }
+        else
+        {
+            IsConflictResolver = false;
+            Status = "All conflicts are resolved. Finish the merge to commit it.";
         }
     }
 }

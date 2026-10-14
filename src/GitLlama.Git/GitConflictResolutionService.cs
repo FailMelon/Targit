@@ -46,6 +46,57 @@ public sealed class GitConflictResolutionService
             ct
         );
 
+    /// <summary>
+    /// Marks every conflicted file resolved using its working copy, skipping files that still contain conflict
+    /// markers. Returns the paths that were left conflicted for that reason.
+    /// </summary>
+    public Task<IReadOnlyList<string>> MarkAllResolvedAsync(
+        string repositoryPath,
+        CancellationToken cancellationToken = default
+    ) =>
+        Task.Run<IReadOnlyList<string>>(
+            () =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                ArgumentException.ThrowIfNullOrWhiteSpace(repositoryPath);
+                using var repository = new Repository(repositoryPath);
+                if (repository.Info.IsBare)
+                {
+                    throw new InvalidOperationException("Conflict resolution requires a working tree.");
+                }
+
+                var stillMarked = new List<string>();
+                var paths = repository
+                    .Index.Conflicts.Select(conflict =>
+                        conflict.Ours?.Path ?? conflict.Theirs?.Path ?? conflict.Ancestor?.Path ?? ""
+                    )
+                    .Where(path => path.Length > 0)
+                    .ToArray();
+                foreach (var path in paths)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var absolute = GitPathGuard.RegularWorkingFile(repository, path);
+                    if (File.Exists(absolute) && GitConflictDocumentService.HasMarkers(File.ReadAllText(absolute)))
+                    {
+                        stillMarked.Add(path);
+                        continue;
+                    }
+
+                    if (File.Exists(absolute))
+                    {
+                        Commands.Stage(repository, path);
+                    }
+                    else
+                    {
+                        Commands.Remove(repository, path, removeFromWorkingDirectory: false);
+                    }
+                }
+
+                return stillMarked;
+            },
+            cancellationToken
+        );
+
     public Task ResolveUsingWorkingTreeAsync(
         string repositoryPath,
         string relativePath,

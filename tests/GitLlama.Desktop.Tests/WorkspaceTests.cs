@@ -244,25 +244,28 @@ public sealed class WorkspaceTests
         Assert.Equal("Merge conflicts (1) · Resolve", vm.WorkingChangesCaption);
         Assert.False(vm.ContinueMergeCommand.CanExecute(null));
 
+        // The older Conflicts tab still lays out without a stray branch list over it.
         var view = new BranchesView { DataContext = vm };
         var window = new Window { Content = view };
         try
         {
             window.Show();
-            await vm.OpenConflictResolutionCommand.ExecuteAsync(null);
+            vm.MergeTabIndex = 1;
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(1, vm.MergeTabIndex);
             Assert.Equal(1, view.GetVisualDescendants().OfType<TabControl>().Single().SelectedIndex);
             Assert.Empty(view.GetVisualDescendants().OfType<ListBox>());
-            Assert.Equal("conflict.txt", vm.ConflictPath);
         }
         finally
         {
             window.Close();
         }
 
-        await vm.AcceptTheirsCommand.ExecuteAsync(null);
-        await vm.RefreshCommand.ExecuteAsync(null);
+        // Resolve conflicts opens the first conflicted file in the resolver.
+        await vm.OpenConflictResolutionCommand.ExecuteAsync(null);
+        Assert.True(vm.IsConflictResolver);
+        Assert.Equal("conflict.txt", vm.ConflictResolver?.Path);
+        await vm.UseTheirsForConflictCommand.ExecuteAsync(null);
+        Assert.False(vm.IsConflictResolver);
         Assert.False(vm.HasMergeConflicts);
         Assert.True(vm.CanFinishMerge);
         Assert.Equal("Merge ready to finish · View changes", vm.WorkingChangesCaption);
@@ -301,6 +304,65 @@ public sealed class WorkspaceTests
         Commands.Stage(repository, "notes.txt");
         await vm.RefreshCommand.ExecuteAsync(null);
         Assert.True(vm.SaveStagedStashCommand.CanExecute(null));
+    }
+
+    [AvaloniaFact]
+    public async Task ConflictResolverResolvesFilesOneAfterAnother()
+    {
+        using var fixture = new WorkspaceFixture();
+        using (var repo = new Repository(fixture.RepositoryPath))
+        {
+            repo.Reset(ResetMode.Hard);
+            var sig = new Signature("Robert Fryer", "robert@example.com", DateTimeOffset.UtcNow);
+            void Write(string a, string b)
+            {
+                File.WriteAllText(Path.Combine(fixture.RepositoryPath, "a.txt"), a);
+                File.WriteAllText(Path.Combine(fixture.RepositoryPath, "b.txt"), b);
+            }
+            Write("top\nbase\nend\n", "base\n");
+            Commands.Stage(repo, "*");
+            repo.Commit("base", sig, sig);
+            var source = repo.Head.FriendlyName;
+            repo.CreateBranch("incoming");
+            Write("top\nours\nend\n", "ours\n");
+            Commands.Stage(repo, "*");
+            repo.Commit("ours", sig, sig);
+            Commands.Checkout(repo, repo.Branches["incoming"]);
+            Write("top\ntheirs\nend\n", "theirs\n");
+            Commands.Stage(repo, "*");
+            repo.Commit("theirs", sig, sig);
+            Commands.Checkout(repo, repo.Branches[source]);
+        }
+
+        await new GitMergeService().MergeAsync(fixture.RepositoryPath, "incoming");
+        var vm = await fixture.OpenAsync();
+        await vm.RefreshCommand.ExecuteAsync(null);
+        Assert.True(vm.IsConflictInspector);
+        Assert.Equal(["a.txt", "b.txt"], vm.ConflictedFiles.Select(file => file.Path));
+
+        await vm.OpenConflictResolutionCommand.ExecuteAsync(null);
+        Assert.True(vm.IsConflictResolver);
+        var resolver = vm.ConflictResolver!;
+        Assert.Equal("a.txt", resolver.Path);
+        Assert.Equal("incoming", resolver.TheirsName);
+        // Lines go into the output in the order they were ticked: B first, then A.
+        resolver.Chunks[0].TakeTheirs = true;
+        resolver.Chunks[0].TakeOurs = true;
+        await vm.SaveConflictResolutionCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            "top\ntheirs\nours\nend\n",
+            File.ReadAllText(Path.Combine(fixture.RepositoryPath, "a.txt")).Replace("\r\n", "\n")
+        );
+        Assert.Equal("b.txt", vm.ConflictResolver?.Path);
+        Assert.Equal(["b.txt"], vm.ConflictedFiles.Select(file => file.Path));
+        Assert.Contains(vm.ResolvedFiles, file => file.Path == "a.txt");
+
+        await vm.UseTheirsForConflictCommand.ExecuteAsync(null);
+        Assert.False(vm.IsConflictResolver);
+        Assert.Empty(vm.ConflictedFiles);
+        Assert.True(vm.CanFinishMerge);
+        Assert.Equal("theirs\n", File.ReadAllText(Path.Combine(fixture.RepositoryPath, "b.txt")).Replace("\r\n", "\n"));
     }
 
     [AvaloniaFact]
