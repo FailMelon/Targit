@@ -9,7 +9,7 @@ namespace GitLlama.Desktop.Views;
 
 public static class RemoteEditDialog
 {
-    private static Window Create(string title, out StackPanel fields)
+    internal static Window Create(string title, out StackPanel fields)
     {
         fields = new StackPanel { Margin = new Avalonia.Thickness(24), Spacing = 12 };
         fields.Children.Add(
@@ -189,7 +189,7 @@ public static class RemoteEditDialog
         );
     }
 
-    private static async Task SubmitAsync(
+    internal static async Task SubmitAsync(
         Window dialog,
         Window owner,
         StackPanel fields,

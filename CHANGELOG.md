@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- List submodules in the sidebar with their status; double-click one (or right-click → Open) to work inside it in the same tab. The toolbar shows the path from the parent repository, with × to return. Uninitialized submodules are initialized first.
+- Add submodules with the + on the Submodules category, and remove them from the right-click menu. Removal is staged for you to commit and keeps the submodule's cloned history in .git/modules. Uses system Git.
+
 ## 0.1.0 - 2026-10-14
 
 - Show commit author pictures in History and the inspector, and owner pictures or host icons for remotes. Authors resolve through GitHub private addresses, Gravatar, then the commit's GitHub account across each GitHub remote, with initials as the fallback. Pictures are cached for 7 days and can be turned off in General settings.

@@ -66,10 +66,11 @@ public partial class MainWindowViewModel
 
     public void OpenRepositoryTab(GitLlama.Core.RepositoryInfo repository)
     {
+        // A submodule opens in the tab of the repository it belongs to.
         var existing = RepositoryWorkspaceTabs.FirstOrDefault(tab =>
             string.Equals(
-                tab.Repository?.Path,
-                repository.Path,
+                tab.Repository?.Root.Path,
+                repository.Root.Path,
                 OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal
             )
         );

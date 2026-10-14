@@ -99,9 +99,6 @@ public partial class NavigationView : UserControl
     private void Tags_Click(object? sender, RoutedEventArgs e) =>
         (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Tags");
 
-    private void Submodules_Click(object? sender, RoutedEventArgs e) =>
-        (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Submodules");
-
     private void Branches_Click(object? sender, RoutedEventArgs e) =>
         (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Branches");
 

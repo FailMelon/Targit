@@ -320,34 +320,83 @@
                             BorderBrush="{StaticResource BorderBrush}"
                             BorderThickness="0,0,0,1"
                             Padding="10,7">
-                        <Grid ColumnDefinitions="200,160,Auto,*" ColumnSpacing="8">
-                            <StackPanel VerticalAlignment="Center" Spacing="3">
-                                <TextBlock Text="{Binding SelectedRepository.Name}" FontWeight="SemiBold" />
+                        <Grid ColumnDefinitions="Auto,Auto,Auto,*" ColumnSpacing="8">
+                            <ItemsControl x:Name="RepositoryBreadcrumbBar"
+                                          ItemsSource="{Binding RepositoryBreadcrumbs}"
+                                          VerticalAlignment="Center">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="4" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
 
-                                <TextBlock Text="{Binding SelectedRepository.Path}"
-                                           Classes="muted"
-                                           FontSize="10"
-                                           TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Text="›"
+                                                       Classes="muted"
+                                                       FontSize="18"
+                                                       VerticalAlignment="Center"
+                                                       Margin="2,8,2,0"
+                                                       IsVisible="{Binding HasSeparator}" />
+
+                                            <Button Classes="workspace toolbar"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.NavigateToRepositoryCommand}"
+                                                    CommandParameter="{Binding Repository}"
+                                                    ToolTip.Tip="{Binding Repository.Path}"
+                                                    Padding="6,2">
+                                                <StackPanel Spacing="1">
+                                                    <TextBlock Text="{Binding Caption}"
+                                                               Classes="muted"
+                                                               FontSize="10" />
+
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Button Classes="workspace toolbar"
+                                                                Content="×"
+                                                                Command="{Binding $parent[ItemsControl].DataContext.ExitSubmoduleCommand}"
+                                                                IsVisible="{Binding IsSubmodule}"
+                                                                ToolTip.Tip="Close submodule and return to its parent"
+                                                                Padding="3,0"
+                                                                MinHeight="0"
+                                                                VerticalAlignment="Center" />
+
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   FontWeight="SemiBold"
+                                                                   MaxWidth="220"
+                                                                   TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
                             <Button Classes="workspace branch-picker"
                                     Grid.Column="1"
+                                    Width="170"
                                     Click="BranchPicker_Click"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Stretch"
                                     IsEnabled="{Binding HasRepository}"
                                     ToolTip.Tip="Switch local branch">
-                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                                    <TextBlock Text="⑂" />
+                                <StackPanel Spacing="1">
+                                    <TextBlock Text="branch"
+                                               Classes="muted"
+                                               FontSize="10" />
 
-                                    <TextBlock Grid.Column="1"
-                                               Text="{Binding CurrentBranch}"
-                                               TextTrimming="CharacterEllipsis" />
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                        <TextBlock Text="⑂" />
 
-                                    <TextBlock Grid.Column="2"
-                                               Text="⌄"
-                                               Classes="muted" />
-                                </Grid>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding CurrentBranch}"
+                                                   TextTrimming="CharacterEllipsis" />
+
+                                        <TextBlock Grid.Column="2"
+                                                   Text="⌄"
+                                                   Classes="muted" />
+                                    </Grid>
+                                </StackPanel>
                             </Button>
 
                             <StackPanel Grid.Column="2"

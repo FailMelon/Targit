@@ -1210,6 +1210,7 @@ public partial class MainWindowViewModel : ObservableObject
 
         RemoteOperationFeedback = "";
         ClearGithubPushAccessFeedback();
+        UpdateRepositoryBreadcrumbs();
         if (value is not null)
         {
             OpenRepositoryTab(value);
@@ -1404,12 +1405,12 @@ public partial class MainWindowViewModel : ObservableObject
             CaptureActiveProfile();
             var snapshot = new GitLlamaSettings(
                 Repositories.ToList(),
-                SelectedRepository?.Path,
+                SelectedRepository?.Root.Path,
                 Tabs.ToList(),
                 SelectedTab,
                 LayoutName: SelectedLayout,
                 AutoRefresh: AutoRefresh,
-                OpenRepositoryPaths: RepositoryWorkspaceTabs.Select(tab => tab.Repository?.Path).ToList(),
+                OpenRepositoryPaths: RepositoryWorkspaceTabs.Select(tab => tab.Repository?.Root.Path).ToList(),
                 ActiveRepositoryTab: RepositoryWorkspaceTabs.IndexOf(SelectedRepositoryWorkspaceTab!),
                 UseCredentialManager: UseCredentialManager,
                 UseSshAgent: UseSshAgent,

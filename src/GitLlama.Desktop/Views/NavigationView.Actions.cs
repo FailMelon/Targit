@@ -79,6 +79,81 @@ public partial class NavigationView
         }
     }
 
+    private async void Submodule_DoubleTapped(object? sender, TappedEventArgs e)
+    {
+        var item = (e.Source as Control)?.GetSelfAndVisualAncestors().OfType<ListBoxItem>().FirstOrDefault();
+        if (item?.DataContext is not GitSubmoduleInfo module || DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        await vm.OpenSubmoduleCommand.ExecuteAsync(module);
+    }
+
+    private async void AddSubmodule_Click(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (DataContext is MainWindowViewModel vm && TopLevel.GetTopLevel(this) is Window owner)
+        {
+            await SubmoduleDialog.AddAsync(owner, vm);
+        }
+    }
+
+    private void SubmoduleContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is not ListBox list || DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        var module =
+            (e.Source as Control)?.GetSelfAndVisualAncestors().OfType<ListBoxItem>().FirstOrDefault()?.DataContext
+                as GitSubmoduleInfo
+            ?? list.SelectedItem as GitSubmoduleInfo;
+        if (module is null)
+        {
+            return;
+        }
+
+        vm.SelectedSubmodule = module;
+        var open = new MenuItem { Header = module.IsCheckedOut ? "Open submodule" : "Initialize and open submodule" };
+        open.Click += async (_, _) => await vm.OpenSubmoduleCommand.ExecuteAsync(module);
+        var update = new MenuItem
+        {
+            Header = module.IsCheckedOut ? "Update to recorded commit" : "Initialize submodule",
+        };
+        update.Click += async (_, _) =>
+        {
+            vm.SelectedSubmodule = module;
+            await vm.UpdateSubmoduleCommand.ExecuteAsync(null);
+        };
+        var copy = new MenuItem { Header = "Copy path" };
+        copy.Click += async (_, _) =>
+        {
+            if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+            {
+                await clipboard.SetTextAsync(module.Path);
+            }
+        };
+        var remove = new MenuItem { Header = "Remove submodule…" };
+        remove.Click += async (_, _) =>
+        {
+            if (TopLevel.GetTopLevel(this) is Window owner)
+            {
+                await SubmoduleDialog.RemoveAsync(owner, vm, module);
+            }
+        };
+        var details = new MenuItem { Header = "Submodule details…" };
+        details.Click += (_, _) => (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Submodules");
+        list.ContextMenu = new ContextMenu
+        {
+            ItemsSource = new object[] { open, update, copy, details, new Separator(), remove },
+        };
+        list.ContextMenu.Open(list);
+        e.Handled = true;
+    }
+
     internal ContextMenu BuildBranchMenu(string branch)
     {
         if (DataContext is not MainWindowViewModel vm)

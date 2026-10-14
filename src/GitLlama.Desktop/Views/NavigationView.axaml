@@ -123,13 +123,65 @@
                 </Border>
 
                 <Border Classes="category">
-                    <Expander Classes="navigation"
-                              Header="Submodules"
-                              IsExpanded="False">
-                        <Button Classes="workspace toolbar"
-                                Content="View submodules…"
-                                Click="Submodules_Click"
-                                HorizontalContentAlignment="Left" />
+                    <Expander Classes="navigation" IsExpanded="True">
+                        <Expander.Header>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Submodules" VerticalAlignment="Center" />
+
+                                <Button x:Name="AddSubmoduleButton"
+                                        Grid.Column="1"
+                                        Classes="workspace toolbar"
+                                        Content="＋"
+                                        Click="AddSubmodule_Click"
+                                        IsEnabled="{Binding HasRepository}"
+                                        ToolTip.Tip="Add submodule"
+                                        Padding="6,0"
+                                        MinHeight="0" />
+                            </Grid>
+                        </Expander.Header>
+
+                        <StackPanel>
+                            <ListBox x:Name="SubmoduleList"
+                                     ItemsSource="{Binding Submodules}"
+                                     SelectedItem="{Binding SelectedSubmodule}"
+                                     DoubleTapped="Submodule_DoubleTapped"
+                                     ContextRequested="SubmoduleContextRequested"
+                                     MaxHeight="220">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="20,*,Auto"
+                                              ColumnSpacing="4"
+                                              ToolTip.Tip="{Binding Path}">
+                                            <Path Data="M 1,4 L 7,4 L 9,6 L 17,6 L 17,15 L 1,15 Z M 6,9 L 12,9 M 9,6.5 L 12,9 L 9,11.5"
+                                                  Width="14"
+                                                  Height="14"
+                                                  Stretch="Uniform"
+                                                  Stroke="#AAB2BF"
+                                                  StrokeThickness="1.4"
+                                                  VerticalAlignment="Center" />
+
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding DisplayName}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding Summary}"
+                                                       Classes="muted"
+                                                       FontSize="11"
+                                                       Margin="8,0,4,0"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Text="No submodules in this repository."
+                                       Classes="muted"
+                                       FontSize="11"
+                                       Margin="8,4"
+                                       IsVisible="{Binding !HasSubmodules}" />
+                        </StackPanel>
                     </Expander>
                 </Border>
             </StackPanel>

@@ -191,6 +191,7 @@ public partial class MainWindowViewModel
         PatchLines.Clear();
         Submodules.Clear();
         SelectedSubmodule = null;
+        OnPropertyChanged(nameof(HasSubmodules));
         SelectedWorktree = null;
         SelectedReflog = null;
         SelectedRepositoryFile = null;
@@ -316,6 +317,7 @@ public partial class MainWindowViewModel
         PushSelectedTagCommand.Cancel();
         DeleteSelectedRemoteTagCommand.Cancel();
         UpdateSubmoduleCommand.Cancel();
+        AddSubmoduleCommand.Cancel();
         ChangeRemoteBranchCommand.Cancel();
     }
 
@@ -832,11 +834,15 @@ public partial class MainWindowViewModel
         }
 
         ConflictSummary = $"{MergeConflicts.Count} unresolved conflicts.";
+        var selectedSubmoduleName = SelectedSubmodule?.Name;
         Submodules.Clear();
         foreach (var module in submodules)
         {
             Submodules.Add(module);
         }
+
+        SelectedSubmodule = Submodules.FirstOrDefault(m => m.Name == selectedSubmoduleName);
+        OnPropertyChanged(nameof(HasSubmodules));
 
         if (
             SelectedHistoryScope is not ("All branches" or "Current branch")

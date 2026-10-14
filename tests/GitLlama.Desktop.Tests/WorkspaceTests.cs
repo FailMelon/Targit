@@ -2337,6 +2337,101 @@ public sealed class WorkspaceTests
         frame.Save(Path.Combine(directory, name));
     }
 
+    [AvaloniaFact]
+    public async Task SubmodulesAreListedAndCanBeEnteredAndLeftInTheSameTab()
+    {
+        using var fixture = new WorkspaceFixture();
+        // Build a submodule by hand: a nested repository, its .gitmodules entry and a gitlink in the parent.
+        var childPath = Path.Combine(fixture.RepositoryPath, "libs", "UnrealSharp");
+        Directory.CreateDirectory(childPath);
+        Repository.Init(childPath);
+        using (var child = new Repository(childPath))
+        {
+            File.WriteAllText(Path.Combine(childPath, "Plugin.cs"), "// plugin\n");
+            Commands.Stage(child, "Plugin.cs");
+            var signature = new Signature("Robert Fryer", "robert@example.com", DateTimeOffset.UtcNow);
+            child.Commit("Initial plugin", signature, signature);
+        }
+
+        using (var parent = new Repository(fixture.RepositoryPath))
+        {
+            File.WriteAllText(
+                Path.Combine(fixture.RepositoryPath, ".gitmodules"),
+                "[submodule \"UnrealSharp\"]\n\tpath = libs/UnrealSharp\n\turl = https://example.com/UnrealSharp.git\n"
+            );
+            Commands.Stage(parent, ".gitmodules");
+            using var child = new Repository(childPath);
+            var definition = TreeDefinition
+                .From(parent.ObjectDatabase.CreateTree(parent.Index))
+                .AddGitLink("libs/UnrealSharp", child.Head.Tip.Id);
+            var tree = parent.ObjectDatabase.CreateTree(definition);
+            var signature = new Signature("Robert Fryer", "robert@example.com", DateTimeOffset.UtcNow);
+            var commit = parent.ObjectDatabase.CreateCommit(
+                signature,
+                signature,
+                "Add UnrealSharp submodule",
+                tree,
+                [parent.Head.Tip],
+                prettifyMessage: true
+            );
+            parent.Refs.UpdateTarget(parent.Head.Reference.ResolveToDirectReference(), commit.Id);
+            parent.Index.Replace(tree);
+            parent.Index.Write();
+        }
+
+        var vm = await fixture.OpenAsync();
+        var root = vm.SelectedRepository!;
+        await WaitUntilAsync(() => vm.Submodules.Count == 1);
+        var module = vm.Submodules[0];
+        Assert.Equal("UnrealSharp", module.DisplayName);
+        Assert.True(module.IsCheckedOut);
+        Assert.Equal("Up to date", module.Summary);
+        Assert.True(vm.HasSubmodules);
+        var tabs = vm.RepositoryWorkspaceTabs.Count;
+        var template = new DockContentTemplate(vm);
+        Avalonia.Application.Current!.DataTemplates.Add(template);
+        var window = new MainWindow(fixture.SettingsPath) { DataContext = vm };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            Assert.NotNull(
+                window.GetVisualDescendants().OfType<Button>().SingleOrDefault(b => b.Name == "AddSubmoduleButton")
+            );
+            SavePreview(window, "submodules-sidebar.png");
+
+            await vm.OpenSubmoduleCommand.ExecuteAsync(module);
+            await WaitUntilAsync(() => vm.HistoryRows.Any(row => row.Subject == "Initial plugin"));
+            Assert.Equal(Path.GetFullPath(childPath), vm.SelectedRepository!.Path);
+            Assert.Equal(root, vm.SelectedRepository.Parent);
+            Assert.True(vm.IsInSubmodule);
+            Assert.Equal(["repository", "submodule"], vm.RepositoryBreadcrumbs.Select(crumb => crumb.Caption));
+            Assert.Equal(["StoneForge", "UnrealSharp"], vm.RepositoryBreadcrumbs.Select(crumb => crumb.Name));
+            Assert.Equal(tabs, vm.RepositoryWorkspaceTabs.Count);
+            Assert.Equal("StoneForge", vm.SelectedRepositoryWorkspaceTab!.Title);
+            Assert.DoesNotContain(vm.Repositories, repository => repository.Path == vm.SelectedRepository.Path);
+            Dispatcher.UIThread.RunJobs();
+            var bar = window
+                .GetVisualDescendants()
+                .OfType<ItemsControl>()
+                .Single(c => c.Name == "RepositoryBreadcrumbBar");
+            Assert.Equal(2, bar.ItemCount);
+            SavePreview(window, "submodule-entered.png");
+
+            vm.ExitSubmoduleCommand.Execute(null);
+            await WaitUntilAsync(() => vm.HistoryRows.Any(row => row.Subject == "Add UnrealSharp submodule"));
+            Assert.Equal(root, vm.SelectedRepository);
+            Assert.False(vm.IsInSubmodule);
+            Assert.Single(vm.RepositoryBreadcrumbs);
+            Assert.Equal(tabs, vm.RepositoryWorkspaceTabs.Count);
+        }
+        finally
+        {
+            window.Close();
+            Avalonia.Application.Current.DataTemplates.Remove(template);
+        }
+    }
+
     private static async Task WaitUntilAsync(Func<bool> condition)
     {
         var deadline = DateTime.UtcNow.AddSeconds(15);
