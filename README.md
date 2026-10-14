@@ -1,79 +1,84 @@
 # GitLlama
 
-In **Remotes**, use **Add remote**, **Edit URL**, or **Remove remote** to configure connections through dialogs. Right-click a remote or remote branch to create, rename, or delete branches on the server. Deletion requires typing the branch name. Rename and delete check the previewed branch tip and use an atomic server transaction; rename updates local tracking while preserving local branch names. Servers without atomic-push support reject these edits without partial changes. HTTPS account tokens are supplied to system Git through host-scoped process configuration for these actions.
+GitLlama is a desktop Git client for Windows, Linux and macOS. It shows your repositories on the left, the full commit history in the middle, and details for whatever you select on the right.
 
-Authentication settings open in a centered overlay. HTTPS uses a host-scoped session token or your configured system Git credential helper, such as Git Credential Manager; helper storage follows your Git configuration. SSH uses system Git with OpenSSH for standard keys. PuTTY .ppk keys use GitLlama's in-memory SSH.NET transport when agent mode is off; optional agent mode uses Plink/Pageant. Direct connections ask you to verify new or changed server fingerprints and store only public fingerprints. Connect/check access verifies read access, while push permissions are checked during push. GitHub account verification supports pull requests and issues separately from Git transport credentials. Live browser sign-in, organization SSO and SSH access must be verified against the intended account/server.
+## Download
 
-GitLlama is a Git desktop client built with C#, Avalonia and LibGit2Sharp. Its compact charcoal workspace follows the supplied design: repository navigation on the left, full-height commit history in the center, and a contextual inspector on the right. Git operations use LibGit2Sharp; SSH and Azure PAT HTTPS transports use system Git.
+Get the latest version from the [Releases page](https://github.com/GitLlamaTeam/GitLlama/releases/latest). Each download is a single portable app with everything it needs, so there's nothing else to install.
 
-## Run the app
+| System | File |
+| --- | --- |
+| Windows (most PCs) | `GitLlama-<version>-win-x64.zip` |
+| Windows on ARM | `GitLlama-<version>-win-arm64.zip` |
+| Linux | `GitLlama-<version>-linux-x64.tar.gz` or `linux-arm64` |
+| macOS (Apple Silicon) | `GitLlama-<version>-osx-arm64.tar.gz` |
+| macOS (Intel) | `GitLlama-<version>-osx-x64.tar.gz` |
 
-Extract the Windows x64 portable package and open `GitLlama.exe`. The portable release bundles .NET and its libraries into one executable; no SDK installation is needed. License notices and documentation remain alongside it. Native libraries are automatically extracted to the .NET cache at startup. The + beside the repository tabs opens a repository manager listing saved repositories with Browse, Clone and Initialize actions. Initialize preserves existing project files; clone requires a new or empty destination. Source builds require the .NET 8 SDK:
+Extract it anywhere and run `GitLlama` (`GitLlama.exe` on Windows). The app isn't code-signed yet, so Windows may show a SmartScreen prompt (choose **More info → Run anyway**) and macOS may need you to right-click the app and choose **Open** the first time.
+
+Windows is the most tested platform. The Linux and macOS builds are newer, so please [report anything that doesn't work](https://github.com/GitLlamaTeam/GitLlama/issues).
+
+## What you can do
+
+- **Repositories:** open, clone or create repositories in tabs, with recent repositories and favorites.
+- **History:** a colored commit graph with author pictures, filters by branch, author and date, and search by message, author, SHA or ref.
+- **Inspect:** commit details, changed files, colored diffs, file contents, file history and blame.
+- **Commit:** stage whole files, hunks or individual lines, then commit or amend with a separate summary and description.
+- **Branches and more:** branches, tags, stashes, merges with conflict resolution, cherry-pick, revert, reset and worktrees.
+- **Remotes:** fetch, pull, push, add or edit remotes, and create, rename or delete branches on the server.
+- **GitHub:** browse, create, review, comment on and merge pull requests, and manage issues.
+- **Workspace:** dockable, rearrangeable panels with saved layouts, and automatic refresh when files change.
+
+## Getting started
+
+Click **+** beside the repository tabs to open, clone or create a repository. Pick a commit to see its details, or click the **working changes** button in the toolbar to stage files and commit. Right-click branches, tags, remotes and commits for more actions.
+
+| Shortcut | Action |
+| --- | --- |
+| **Ctrl+O** | Open a repository |
+| **Ctrl+F** | Search history |
+| **Ctrl+Q** | Command palette |
+| **F5** | Refresh |
+| **Ctrl+Enter** | Commit staged changes |
+
+To commit you need staged changes, a message and an author name and email. GitLlama uses your Git configuration for the author when it's set.
+
+## Signing in
+
+Open **Settings** from the cog in the title bar.
+
+- **GitHub:** in **Integrations**, start GitHub sign-in and approve GitLlama in your browser with the code it shows. Access to private repositories is optional. On Windows you stay signed in between sessions. See [GitHub setup](docs/github-oauth.md).
+- **Azure DevOps:** in **Integrations**, enter your organization URL and a personal access token to browse and clone its repositories. Pull requests and Boards aren't supported yet. See [Azure DevOps setup](docs/azure-devops.md).
+- **Other HTTPS hosts:** GitLlama uses your Git credential helper, such as Git Credential Manager. You can also enter a token for the current session only.
+- **SSH:** in **SSH**, choose your private key. OpenSSH keys work through your SSH agent, and PuTTY `.ppk` keys are unlocked inside GitLlama for the session. Pageant and Plink are available as an option. GitLlama asks you to confirm each new server fingerprint.
+
+**Profiles** let you keep separate commit identities and SSH settings, for example for work and personal projects.
+
+## Privacy
+
+Passwords, tokens and SSH passphrases are never written to GitLlama's settings or logs. On Windows, saved GitHub and Azure DevOps sign-ins are encrypted for your user account.
+
+Author and remote pictures come from GitHub, Gravatar and your remote hosts. Gravatar receives a hash of each commit author's email address. Turn pictures off in **Settings → General → Show author and remote pictures**.
+
+Settings are stored in your system's application data folder under `GitLlama`.
+
+## Current limitations
+
+- Commit signing, Git LFS and Git hooks aren't run by GitLlama.
+- Full interactive rebase isn't available yet.
+- GitHub Enterprise and Azure DevOps pull requests aren't supported yet.
+- History search covers the commits loaded so far (200 at a time; use **Load more** for older ones).
+
+## Building from source
+
+You need the [.NET 8 SDK](https://dotnet.microsoft.com/download):
 
 ```sh
-dotnet restore GitLlama.sln
 dotnet run --project src/GitLlama.Desktop/GitLlama.Desktop.csproj
 ```
 
-Windows startup has been verified locally. The source and CI support Windows, Linux and macOS; native acceptance on Linux/macOS and ARM64 remains a release gate. See [release acceptance](docs/release-acceptance.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for tests, formatting and releases.
 
-## Included workflows
+## License
 
-- Open, initialize and clone repositories; recent repositories and favorites.
-- Colored commit graph, history paging, branch/author/date filters and message/author/SHA/ref search.
-- Historical commit details, changed files, colored patches, file content, file history and blame.
-- Whole-file, hunk and selected-line staging/unstaging, bulk staging, patch export and staged commits/amend.
-- Branches, tags, stashes, remotes, tracking, merges, conflict-result editing and guarded history operations.
-- Native worktree creation, opening, locking and removal with a preserved folder backup; reflog recovery to a new branch.
-- Submodule inspection, initialization and update.
-- HTTPS username/token credentials, network progress and cancellation.
-- GitHub pull requests and issues: lists, details, comments, creation, reviews, guarded merge and issue close/reopen.
-- Automatic repository refresh, command palette, named dock layouts, settings and redacted diagnostics.
-
-Open a repository with **Ctrl+O**, search history with **Ctrl+F**, open the command palette with **Ctrl+Q**, refresh with **F5**, and commit staged changes with **Ctrl+Enter**. The commit action requires staged changes, a message and an author identity. Git configuration fills the identity when available.
-
-Choose a commit or historical file to inspect it; choose **Changes** to compose a staged commit. The inspector changes with the selection and has no tabs. The center changes between history, selected-file diffs, highlighted file contents and other workflows without document tabs. Commit details and staging/commit controls stay in the inspector. Repository tabs across the top switch workspaces; sidebar categories collapse independently. Staged and unstaged files have separate collapsible groups and per-file staging checkboxes. A pinned commit composer provides separate summary and description fields. The theme uses Discord-inspired charcoal and gray surfaces with restrained selection accents. Background refresh preserves the current context and reuses the mounted viewer. Right-click sidebar branches and tags or history commits for contextual actions. Drag the empty area of the top bar to move the borderless window; double-click to maximize/restore. Diffs use compact source-code rows, line numbers, a separate +/− gutter, syntax coloring and red/green backgrounds. Raw patch metadata is hidden while original line indexes remain intact for partial staging. Partial staging changes the index and preserves working-file content. Stash saving currently includes tracked changes. Worktree removal preserves files in a sibling backup directory before pruning registration. Cancelled clones can leave a partial destination for inspection.
-
-## Credentials and hosting
-
-Open Settings with the title-bar cogwheel or **File → Settings**. Configure accounts in **Settings → Authentication / Integrations**, and SSH in **Settings → SSH**. Browse for an OpenSSH or PuTTY `.ppk` private key and an OpenSSH public `.pub` file; a neighboring public key is detected automatically. Public keys can be previewed and copied, with their SHA256 fingerprint shown. Private key contents are never previewed or copied. With agent mode off, encrypted PuTTY PPK v2/v3 keys use a masked in-app passphrase prompt and stay unlocked in memory for this session. Incorrect passphrases can be retried; canceled unlocks leave the key locked. Keys are cleared when you change the selected key, switch profiles, choose **Lock SSH keys**, or close GitLlama. Passphrases and unencrypted keys are never written to disk or settings. New or changed server fingerprints require explicit confirmation; only public fingerprints are saved to `ssh-known-hosts.json`. Enable agent mode to use Plink/Pageant instead; the optional Pageant and PuTTY buttons appear in that mode. Encrypted OpenSSH keys use your SSH agent. Manually entered tokens stay in memory for the current session and are excluded from saved settings and redacted from diagnostics; helper-managed credentials use the helper's storage. GitHub hosting supports `github.com` remotes; GitHub Enterprise API integration is not implemented. Use a dedicated test repository and permissions appropriate to the actions you intend to perform.
-
-SSH is routed through system Git with OpenSSH, built-in SSH.NET for PuTTY keys, or optional Plink/Pageant. Direct PuTTY connections use the username, host and port in the remote URL; SSH configuration aliases and proxies are not interpreted in this mode. Signing and Git LFS transfer are not release claims. Native library capabilities are shown in diagnostics. Full interactive rebase, arbitrary plugins, IDE features and AI features are outside the first-release scope.
-
-GitHub browser sign-in is available in **Settings → Integrations**. Approve GitLlama using the displayed verification code; private-repository permissions are optional. GitHub authorization renews automatically. On Windows, OAuth tokens are encrypted per profile and restored after restart or profile switching. Disconnect removes the saved connection; revoked or expired refresh authorization requires sign-in again. See [GitHub integration](docs/github-oauth.md).
-
-Azure DevOps Services is available in **Settings → Integrations** with organization-scoped personal access tokens, encrypted per-profile Windows storage, repository browsing/clone and HTTPS Git access. Enter the organization URL and its PAT; GitLlama verifies access before saving. Microsoft's newer Entra OAuth route does not currently support native personal-account access to Azure DevOps. Azure pull requests and Boards are not connected yet. See [Azure DevOps setup](docs/azure-devops.md).
-
-## Workspace and settings
-
-The sidebar and Remote screen group fetched branches beneath each named remote, with collapsible folders for branch prefixes. Right-click a remote to fetch it, open its settings, remove its configuration with confirmation, or copy its URL. Click branches to reveal their history; double-click to create and check out a local tracking branch. Collapsed folders remain collapsed during refresh. Right-click a remote to push the current local branch explicitly to that remote. The first push can publish to an empty remote and sets upstream only if none exists. Push feedback stays visible until dismissed, including rejected updates and authentication errors.
-
-Use **Settings → Profiles** or the current-profile card to create, rename, switch or remove profiles. Each profile saves its commit name/email, SSH key paths, agent mode and credential-helper preference. A complete profile identity supplies commit authorship in GitLlama without rewriting repository Git configuration; blank identity fields fall back to the repository identity. Existing preferences migrate into a Default profile. Repository tabs, layout and refresh preferences remain shared. Switching clears manually entered session tokens and restores the selected profile's saved OAuth connection; the system credential helper and SSH agent remain shared across profiles.
-
-Drag tabs to dock, split or float panes. Use **Window** to save/restore named layouts and select Review or Merge Resolution presets. Use **Window → Dock all documents**, or the History right-click docking action, to return floating documents. **View → History** also returns or recreates History. Layouts from the previous UI are backed up as `.previous` and migrated to the new arrangement.
-
-Settings, recent repositories and the workspace are stored in the operating-system application-data directory under `GitLlama`. The status bar and diagnostics retain operation feedback without an Output pane. History loads pages of 200 commits; search applies to the loaded pages. Filtered rows omit connecting edges to avoid implying ancestry between unrelated visible commits.
-
-## Development and verification
-
-```sh
-dotnet test tests/GitLlama.Core.Tests/GitLlama.Core.Tests.csproj -c Release
-dotnet test tests/GitLlama.Desktop.Tests/GitLlama.Desktop.Tests.csproj -c Release
-pwsh -File scripts/package-portable.ps1 -Runtime win-x64
-```
-
-Local verification passed 178 Git/service tests and 33 Avalonia desktop tests. These cover real disposable repositories, selective staging/commit/amend, recovery/worktrees, ignored and untracked files, watcher refresh, provider HTTP contracts, UI commands and rendering. The + opens an empty repository tab with the full-workspace manager. Opening, cloning or initializing fills that tab; clone/init collect details in dialogs. Open tabs and selection are restored on restart, and closing a tab preserves its recent-repository entry. Set `GITLLAMA_PREVIEW_DIR` to capture rendered workspace previews. Live authenticated GitHub/network actions and native cross-platform docking/dialog checks require separate acceptance.
-
-CI builds/tests on Windows, Linux and macOS. The manually dispatched package workflow produces six architecture artifacts. Publishing includes application and dependency licenses. Release optimization and single-file packaging are separate settings; the package script enables both. Use a fresh output folder when changing packaging formats.
-
-| Project | Purpose |
-| --- | --- |
-| GitLlama.Core | Domain records and contracts |
-| GitLlama.Application | Application workflows |
-| GitLlama.Git | LibGit2Sharp adapters |
-| GitLlama.Infrastructure | Persistence, logging and repository watcher |
-| GitLlama.Providers | GitHub HTTP adapter |
-| GitLlama.Desktop | Avalonia shell, views, docking and commands |
-| GitLlama.Core.Tests / GitLlama.Desktop.Tests | Integration, provider and UI verification |
-
-See [completion evidence](docs/completion-checklist.md), [contributing](CONTRIBUTING.md), [security](SECURITY.md) and [third-party notices](THIRD_PARTY_NOTICES.md).
+GitLlama is [MIT licensed](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) and [security](SECURITY.md).

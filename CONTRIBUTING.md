@@ -36,3 +36,17 @@ git push GitLlama v0.2.0
 ```
 
 The Release workflow builds Windows, Linux and macOS packages, publishes a GitHub release with generated notes, and commits the version to `Directory.Build.props` on the default branch. Tags with a suffix such as `v0.2.0-beta.1` are published as pre-releases. To build packages without releasing, run "Build portable packages" manually from the Actions tab.
+
+## Project layout
+
+| Project | Purpose |
+| --- | --- |
+| GitLlama.Core | Domain records and contracts |
+| GitLlama.Application | Application workflows |
+| GitLlama.Git | LibGit2Sharp adapters |
+| GitLlama.Infrastructure | Persistence, logging and repository watcher |
+| GitLlama.Providers | GitHub and Azure DevOps HTTP adapters |
+| GitLlama.Desktop | Avalonia shell, views, docking and commands |
+| GitLlama.Core.Tests / GitLlama.Desktop.Tests | Integration, provider and UI tests |
+
+Build a local portable package with `pwsh -File scripts/package-portable.ps1 -Runtime win-x64`. Set `GITLLAMA_PREVIEW_DIR` to capture rendered workspace previews from the desktop tests. Release acceptance and completion evidence are in [docs/release-acceptance.md](docs/release-acceptance.md) and [docs/completion-checklist.md](docs/completion-checklist.md).
