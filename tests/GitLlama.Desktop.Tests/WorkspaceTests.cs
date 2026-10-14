@@ -213,6 +213,28 @@ public sealed class WorkspaceTests
     }
 
     [AvaloniaFact]
+    public async Task StashIsOnlyAvailableWhenChangesAreStaged()
+    {
+        using var fixture = new WorkspaceFixture();
+        var vm = await fixture.OpenAsync();
+        using var repository = new Repository(fixture.RepositoryPath);
+        repository.Reset(ResetMode.Hard);
+        await vm.RefreshCommand.ExecuteAsync(null);
+        Assert.False(vm.SaveStagedStashCommand.CanExecute(null));
+        Assert.Equal("There are no changes to stash.", vm.StashBlockedReason);
+
+        File.WriteAllText(Path.Combine(fixture.RepositoryPath, "notes.txt"), "new");
+        File.AppendAllText(Path.Combine(fixture.RepositoryPath, "src", "Auth.cs"), "// unstaged edit");
+        await vm.RefreshCommand.ExecuteAsync(null);
+        Assert.False(vm.SaveStagedStashCommand.CanExecute(null));
+        Assert.Equal("Only staged changes are stashed. Stage the changes you want to stash.", vm.StashBlockedReason);
+
+        Commands.Stage(repository, "notes.txt");
+        await vm.RefreshCommand.ExecuteAsync(null);
+        Assert.True(vm.SaveStagedStashCommand.CanExecute(null));
+    }
+
+    [AvaloniaFact]
     public async Task DeletedFilesCountAsStagedAndCanBeCommitted()
     {
         using var fixture = new WorkspaceFixture();

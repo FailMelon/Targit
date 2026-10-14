@@ -27,7 +27,9 @@ public sealed class GitStashSaveAcceptanceTests
             File.WriteAllText(Path.Combine(path, "unstaged.txt"), "keep editing");
             File.WriteAllText(Path.Combine(path, "untracked.txt"), "leave me");
             var service = new GitStashService();
-            await Assert.ThrowsAsync<InvalidOperationException>(() => service.SaveStagedAsync(path, "nothing staged"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SaveAsync(path, "nothing staged", "Test", "test@example.invalid")
+            );
             Assert.Empty(await service.ListAsync(path));
 
             File.WriteAllText(Path.Combine(path, "staged.txt"), "ready");
@@ -36,7 +38,7 @@ public sealed class GitStashSaveAcceptanceTests
                 Commands.Stage(repo, "staged.txt");
             }
 
-            await service.SaveStagedAsync(path, "phase 19");
+            await service.SaveAsync(path, "phase 19", "Test", "test@example.invalid");
             var stash = Assert.Single(await service.ListAsync(path));
             Assert.Equal(0, stash.Index);
             Assert.Contains("phase 19", stash.Message);

@@ -29,7 +29,7 @@ public sealed class GitStashPopAcceptanceTests
                 Commands.Stage(repo, "tracked.txt");
             }
 
-            await service.SaveStagedAsync(path, "pop me");
+            await service.SaveAsync(path, "pop me", "Test", "test@example.invalid");
             File.WriteAllText(Path.Combine(path, "tracked.txt"), "dirty");
             await Assert.ThrowsAsync<InvalidOperationException>(() => service.PopAsync(path, 0));
             Assert.Single(await service.ListAsync(path));

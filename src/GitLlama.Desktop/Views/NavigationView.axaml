@@ -13,39 +13,75 @@
                          Margin="0,0,0,8" />
 
                 <Border Classes="category">
-                    <Expander Classes="navigation"
-                              Header="Local branches"
-                              IsExpanded="True">
-                        <StackPanel>
-                            <ListBox Classes="branch-list"
-                                     ItemsSource="{Binding LocalBranches}"
-                                     SelectedItem="{Binding SelectedBranchLine, Mode=OneWay}"
-                                     SelectionChanged="Branch_SelectionChanged"
-                                     ContextRequested="BranchContextRequested"
-                                     Tapped="Branch_Tapped"
-                                     DoubleTapped="Branch_DoubleTapped"
-                                     MaxHeight="230" />
+                    <Expander Classes="navigation" IsExpanded="True">
+                        <Expander.Header>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Local branches" VerticalAlignment="Center" />
 
-                            <Button Classes="workspace toolbar"
-                                    Content="＋ Create branch…"
-                                    Click="CreateBranch_Click"
-                                    HorizontalContentAlignment="Left" />
-                        </StackPanel>
+                                <Button x:Name="CreateBranchButton"
+                                        Grid.Column="1"
+                                        Classes="workspace toolbar"
+                                        Content="＋"
+                                        Click="CreateBranch_Click"
+                                        IsEnabled="{Binding HasRepository}"
+                                        ToolTip.Tip="Create a branch from the current commit"
+                                        Padding="6,0"
+                                        MinHeight="0" />
+                            </Grid>
+                        </Expander.Header>
+
+                        <ListBox Classes="branch-list"
+                                 ItemsSource="{Binding LocalBranches}"
+                                 SelectedItem="{Binding SelectedBranchLine, Mode=OneWay}"
+                                 SelectionChanged="Branch_SelectionChanged"
+                                 ContextRequested="BranchContextRequested"
+                                 Tapped="Branch_Tapped"
+                                 DoubleTapped="Branch_DoubleTapped"
+                                 MaxHeight="230">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="20,*"
+                                          ColumnSpacing="4"
+                                          Margin="12,0,0,0"
+                                          ToolTip.Tip="{Binding}">
+                                        <Path Data="M 5,4 L 5,14 M 5,10 C 5,6 14,10 14,4 M 5,1 A 2,2 0 1 0 5,5 A 2,2 0 1 0 5,1 M 14,1 A 2,2 0 1 0 14,5 A 2,2 0 1 0 14,1 M 5,13 A 2,2 0 1 0 5,17 A 2,2 0 1 0 5,13"
+                                              Width="14"
+                                              Height="14"
+                                              Stretch="Uniform"
+                                              Stroke="#AAB2BF"
+                                              StrokeThickness="1.4"
+                                              VerticalAlignment="Center" />
+
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </Expander>
                 </Border>
 
                 <Border Classes="category">
-                    <Expander Classes="navigation"
-                              Header="Remotes"
-                              IsExpanded="True">
-                        <StackPanel>
-                            <views:RemoteTreeView MaxHeight="300" />
+                    <Expander Classes="navigation" IsExpanded="True">
+                        <Expander.Header>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Remotes" VerticalAlignment="Center" />
 
-                            <Button Classes="workspace toolbar"
-                                    Content="Remote settings…"
-                                    Click="Remotes_Click"
-                                    HorizontalContentAlignment="Left" />
-                        </StackPanel>
+                                <Button x:Name="AddRemoteButton"
+                                        Grid.Column="1"
+                                        Classes="workspace toolbar"
+                                        Content="＋"
+                                        Click="AddRemote_Click"
+                                        IsEnabled="{Binding HasRepository}"
+                                        ToolTip.Tip="Add a remote"
+                                        Padding="6,0"
+                                        MinHeight="0" />
+                            </Grid>
+                        </Expander.Header>
+
+                        <views:RemoteTreeView MaxHeight="300" />
                     </Expander>
                 </Border>
 
@@ -79,13 +115,74 @@
                 </Border>
 
                 <Border Classes="category">
-                    <Expander Classes="navigation"
-                              Header="Stashes"
-                              IsExpanded="False">
-                        <Button Classes="workspace toolbar"
-                                Content="View stashes…"
-                                Click="Stashes_Click"
-                                HorizontalContentAlignment="Left" />
+                    <Expander Classes="navigation" IsExpanded="True">
+                        <Expander.Header>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Stashes" VerticalAlignment="Center" />
+
+                                <Button x:Name="SaveStashButton"
+                                        Grid.Column="1"
+                                        Classes="workspace toolbar"
+                                        Content="＋"
+                                        Click="SaveStash_Click"
+                                        IsEnabled="{Binding !HasNoChanges}"
+                                        ToolTip.Tip="Stash working changes"
+                                        Padding="6,0"
+                                        MinHeight="0" />
+                            </Grid>
+                        </Expander.Header>
+
+                        <StackPanel>
+                            <TreeView x:Name="StashTreeControl"
+                                      ItemsSource="{Binding StashTree}"
+                                      SelectionChanged="Stash_SelectionChanged"
+                                      Tapped="Stash_Tapped"
+                                      ContextRequested="StashContextRequested"
+                                      IsVisible="{Binding HasStashes}"
+                                      MaxHeight="260">
+                                <TreeView.Styles>
+                                    <Style Selector="TreeViewItem">
+                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                        <Setter Property="Padding" Value="2,4" />
+                                    </Style>
+                                </TreeView.Styles>
+
+                                <TreeView.ItemTemplate>
+                                    <TreeDataTemplate ItemsSource="{Binding Children}">
+                                        <Grid ColumnDefinitions="20,*,Auto"
+                                              ColumnSpacing="4"
+                                              ToolTip.Tip="{Binding Tooltip}">
+                                            <Path Data="{Binding IconPath}"
+                                                  Width="14"
+                                                  Height="14"
+                                                  Stretch="Uniform"
+                                                  Stroke="#AAB2BF"
+                                                  StrokeThickness="1.4"
+                                                  VerticalAlignment="Center" />
+
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Name}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding Count}"
+                                                       Classes="muted"
+                                                       FontSize="11"
+                                                       Margin="8,0,4,0"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
+                                    </TreeDataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+
+                            <TextBlock Text="No stashes. Use ＋ to set your working changes aside."
+                                       Classes="muted"
+                                       FontSize="11"
+                                       Margin="8,4"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding !HasStashes}" />
+                        </StackPanel>
                     </Expander>
                 </Border>
 

@@ -28,6 +28,164 @@ public sealed class GitStashServiceTests
     }
 
     [Fact]
+    public async Task AppliesAndPopsOverLocalChangesOnlyWhenAllowedAndNotOverlapping()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "gitllama-dirty-stash-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            using (var repository = new Repository(path))
+            {
+                File.WriteAllText(Path.Combine(path, "stashed.txt"), "initial");
+                File.WriteAllText(Path.Combine(path, "local.txt"), "initial");
+                Commands.Stage(repository, "*");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                repository.Commit("Initial", signature, signature);
+            }
+
+            var service = new GitStashService();
+            File.WriteAllText(Path.Combine(path, "stashed.txt"), "from stash");
+            using (var repository = new Repository(path))
+            {
+                Commands.Stage(repository, "stashed.txt");
+            }
+
+            await service.SaveAsync(path, "work", "Test", "test@example.invalid");
+
+            // A stash that touches the same file as local changes is refused and nothing is lost.
+            File.WriteAllText(Path.Combine(path, "stashed.txt"), "local edit");
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.PopAsync(path, 0, allowLocalChanges: true)
+            );
+            Assert.Equal("local edit", File.ReadAllText(Path.Combine(path, "stashed.txt")));
+            Assert.Single(await service.ListAsync(path));
+
+            // Changes to other files are kept alongside the stash.
+            File.WriteAllText(Path.Combine(path, "stashed.txt"), "initial");
+            File.WriteAllText(Path.Combine(path, "local.txt"), "local edit");
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApplyAsync(path, 0));
+            await service.ApplyAsync(path, 0, allowLocalChanges: true);
+            Assert.Equal("from stash", File.ReadAllText(Path.Combine(path, "stashed.txt")));
+            Assert.Equal("local edit", File.ReadAllText(Path.Combine(path, "local.txt")));
+            Assert.Single(await service.ListAsync(path));
+
+            File.WriteAllText(Path.Combine(path, "stashed.txt"), "initial");
+            await service.PopAsync(path, 0, allowLocalChanges: true);
+            Assert.Equal("from stash", File.ReadAllText(Path.Combine(path, "stashed.txt")));
+            Assert.Equal("local edit", File.ReadAllText(Path.Combine(path, "local.txt")));
+            Assert.Empty(await service.ListAsync(path));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
+    public async Task ReportsChangesTheStashLeavesBehind()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "gitllama-leftover-stash-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            using (var repository = new Repository(path))
+            {
+                repository.Config.Set("core.autocrlf", true);
+                File.WriteAllText(Path.Combine(path, "real.txt"), "one\n");
+                File.WriteAllText(Path.Combine(path, "endings.txt"), "one\ntwo\n");
+                Commands.Stage(repository, "*");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                repository.Commit("Initial", signature, signature);
+            }
+
+            var service = new GitStashService();
+            File.WriteAllText(Path.Combine(path, "endings.txt"), "one\ntwo\nthree\n");
+            File.WriteAllText(Path.Combine(path, "new.txt"), "untracked");
+            var nothing = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SaveAsync(path, "nothing staged", "Test", "test@example.invalid")
+            );
+            Assert.Contains("no staged changes", nothing.Message);
+            Assert.Empty(await service.ListAsync(path));
+
+            File.WriteAllText(Path.Combine(path, "real.txt"), "two\n");
+            using (var repository = new Repository(path))
+            {
+                Commands.Stage(repository, "real.txt");
+            }
+
+            var result = await service.SaveAsync(path, "work", "Test", "test@example.invalid");
+            Assert.Equal(1, result.StashedFiles);
+            Assert.Equal(["endings.txt"], result.Unstaged);
+            Assert.Equal(["new.txt"], result.Untracked);
+            Assert.Contains("1 unstaged file", GitStashService.Describe(result));
+            Assert.Contains("1 untracked file", GitStashService.Describe(result));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
+    public async Task StashesNewFilesOnlyOnceStaged()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "gitllama-untracked-stash-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            Repository.Init(path);
+            using (var repository = new Repository(path))
+            {
+                File.WriteAllText(Path.Combine(path, "readme.txt"), "initial");
+                Commands.Stage(repository, "readme.txt");
+                var signature = new Signature("Test", "test@example.invalid", DateTimeOffset.UtcNow);
+                repository.Commit("Initial", signature, signature);
+            }
+
+            var service = new GitStashService();
+            var added = Path.Combine(path, "new.txt");
+            File.WriteAllText(added, "untracked");
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SaveAsync(path, "untracked only", "Test", "test@example.invalid")
+            );
+            Assert.Empty(await service.ListAsync(path));
+
+            using (var repository = new Repository(path))
+            {
+                Commands.Stage(repository, "new.txt");
+            }
+
+            await service.SaveAsync(path, "new file", "Test", "test@example.invalid");
+            Assert.Single(await service.ListAsync(path));
+            Assert.False(File.Exists(added));
+
+            await service.ApplyAsync(path, 0);
+            Assert.Equal("untracked", File.ReadAllText(added));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
+                File.SetAttributes(file, File.GetAttributes(file) & ~FileAttributes.ReadOnly);
+            }
+
+            Directory.Delete(path, true);
+        }
+    }
+
+    [Fact]
     public async Task SavesTrackedChangesAndRejectsCleanRepository()
     {
         var path = Path.Combine(Path.GetTempPath(), "gitllama-save-stash-" + Guid.NewGuid().ToString("N"));
@@ -44,15 +202,23 @@ public sealed class GitStashServiceTests
             }
 
             var service = new GitStashService();
-            await Assert.ThrowsAsync<InvalidOperationException>(() => service.SaveStagedAsync(path, "empty"));
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.SaveAsync(path, "empty", "Test", "test@example.invalid")
+            );
             File.WriteAllText(Path.Combine(path, "readme.txt"), "modified");
             using (var repo = new Repository(path))
             {
                 Commands.Stage(repo, "readme.txt");
             }
 
-            await service.SaveStagedAsync(path, "work in progress");
-            Assert.Single(await service.ListAsync(path));
+            await service.SaveAsync(path, "work in progress", "Test", "test@example.invalid");
+            var stash = Assert.Single(await service.ListAsync(path));
+            using (var repository = new Repository(path))
+            {
+                Assert.Equal(repository.Stashes.Single().WorkTree.Sha, stash.Sha);
+                Assert.Equal("test@example.invalid", repository.Stashes.Single().WorkTree.Author.Email);
+            }
+
             Assert.Equal("initial", File.ReadAllText(Path.Combine(path, "readme.txt")));
         }
         finally

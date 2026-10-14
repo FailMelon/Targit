@@ -29,14 +29,14 @@ public sealed class GitStashDropAcceptanceTests
                 Commands.Stage(repo, "tracked.txt");
             }
 
-            await service.SaveStagedAsync(path, "first stash");
+            await service.SaveAsync(path, "first stash", "Test", "test@example.invalid");
             File.WriteAllText(Path.Combine(path, "tracked.txt"), "second");
             using (var repo = new Repository(path))
             {
                 Commands.Stage(repo, "tracked.txt");
             }
 
-            await service.SaveStagedAsync(path, "second stash");
+            await service.SaveAsync(path, "second stash", "Test", "test@example.invalid");
             Assert.Equal(2, (await service.ListAsync(path)).Count);
             await service.DropAsync(path, 0);
             var remaining = Assert.Single(await service.ListAsync(path));

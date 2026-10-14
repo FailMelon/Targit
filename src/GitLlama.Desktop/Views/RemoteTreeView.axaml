@@ -16,7 +16,7 @@
 
         <TreeView.ItemTemplate>
             <TreeDataTemplate ItemsSource="{Binding Children}">
-                <Grid ColumnDefinitions="20,*,Auto"
+                <Grid ColumnDefinitions="20,*,Auto,Auto"
                       ColumnSpacing="4"
                       ToolTip.Tip="{Binding Tooltip}">
                     <Panel>
@@ -58,6 +58,15 @@
                                FontSize="11"
                                Margin="8,0,4,0"
                                VerticalAlignment="Center" />
+
+                    <Button Grid.Column="3"
+                            Classes="workspace toolbar"
+                            Content="＋"
+                            Click="CreateRemoteBranch_Click"
+                            IsVisible="{Binding IsRemote}"
+                            ToolTip.Tip="Create a branch on this remote"
+                            Padding="6,0"
+                            MinHeight="0" />
                 </Grid>
             </TreeDataTemplate>
         </TreeView.ItemTemplate>

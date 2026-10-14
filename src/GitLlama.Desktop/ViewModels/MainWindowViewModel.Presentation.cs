@@ -105,7 +105,6 @@ public partial class MainWindowViewModel
         && !string.IsNullOrWhiteSpace(CommitSummaryText)
         && !string.IsNullOrWhiteSpace(AuthorName)
         && !string.IsNullOrWhiteSpace(AuthorEmail);
-    public bool CanStashStaged => HasRepository && StagedFileCount > 0;
     public string CommitSummaryText
     {
         get => CommitMessage.Split('\n')[0].TrimEnd('\r');
@@ -133,6 +132,7 @@ public partial class MainWindowViewModel
             CollectionUpdates.Sync(UnstagedFiles, WorkingFiles.Where(file => file.IsUnstaged), file => file.Path);
             OnPropertyChanged(nameof(StagedFilesCaption));
             OnPropertyChanged(nameof(UnstagedFilesCaption));
+            NotifyStashAvailability();
         };
         Repositories.CollectionChanged += (_, _) => FilterRepositories();
         BranchLines.CollectionChanged += (_, _) => FilterBranches();
@@ -309,6 +309,7 @@ public partial class MainWindowViewModel
 
         if (!IsUpdatingContextSnapshot)
         {
+            _inspectedStashSha = null;
             IsWorkingTreeInspector = false;
             IsFileReview = false;
             CenterSection = "History";
@@ -367,16 +368,13 @@ public partial class MainWindowViewModel
         OnPropertyChanged(nameof(HasNoRepository));
         OnPropertyChanged(nameof(HistoryEmptyMessage));
         CommitCommand.NotifyCanExecuteChanged();
-        SaveStagedStashCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnStagedFileCountChanged(int value)
     {
         OnPropertyChanged(nameof(CommitButtonText));
         OnPropertyChanged(nameof(CanCommit));
-        OnPropertyChanged(nameof(CanStashStaged));
         CommitCommand.NotifyCanExecuteChanged();
-        SaveStagedStashCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnCommitMessageChanged(string value)

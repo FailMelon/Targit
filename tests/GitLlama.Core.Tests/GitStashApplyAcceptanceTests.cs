@@ -29,7 +29,7 @@ public sealed class GitStashApplyAcceptanceTests
                 Commands.Stage(repo, "tracked.txt");
             }
 
-            await service.SaveStagedAsync(path, "keep this stash");
+            await service.SaveAsync(path, "keep this stash", "Test", "test@example.invalid");
             Assert.Equal("original", File.ReadAllText(Path.Combine(path, "tracked.txt")));
             await service.ApplyAsync(path, 0);
             Assert.Equal("stashed", File.ReadAllText(Path.Combine(path, "tracked.txt")));

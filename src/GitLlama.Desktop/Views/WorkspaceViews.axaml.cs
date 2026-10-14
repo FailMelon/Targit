@@ -83,17 +83,11 @@ public partial class NavigationView : UserControl
     private void OpenFolder_Click(object? sender, RoutedEventArgs e) =>
         (TopLevel.GetTopLevel(this) as MainWindow)?.OpenRepositoryFolder();
 
-    private void Remotes_Click(object? sender, RoutedEventArgs e) =>
-        (DataContext as MainWindowViewModel)?.DockDocument?.Invoke("Remotes");
-
     private void PullRequests_Click(object? sender, RoutedEventArgs e) =>
         (DataContext as MainWindowViewModel)?.DockDocument?.Invoke("Pull Requests");
 
     private void Issues_Click(object? sender, RoutedEventArgs e) =>
         (DataContext as MainWindowViewModel)?.DockDocument?.Invoke("Issues");
-
-    private void Stashes_Click(object? sender, RoutedEventArgs e) =>
-        (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Stashes");
 
     private void Worktrees_Click(object? sender, RoutedEventArgs e) =>
         (TopLevel.GetTopLevel(this) as MainWindow)?.ShowDocument("Worktrees");

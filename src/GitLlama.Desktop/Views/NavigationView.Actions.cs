@@ -325,6 +325,228 @@ public partial class NavigationView
         e.Handled = true;
     }
 
+    private async void SaveStash_Click(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        await SaveStashAsync();
+    }
+
+    private async Task SaveStashAsync()
+    {
+        if (DataContext is not MainWindowViewModel vm || TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
+        var dialog = RemoteEditDialog.Create("Stash staged changes", out var fields);
+        fields.Children.Add(
+            new TextBlock
+            {
+                Text = "Set your staged changes aside. Unstaged edits and untracked files stay in the working tree.",
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            }
+        );
+        var message = new TextBox { Watermark = "Message (optional)" };
+        fields.Children.Add(message);
+        await RemoteEditDialog.SubmitAsync(
+            dialog,
+            owner,
+            fields,
+            "Stash",
+            async () =>
+            {
+                var before = vm.Stashes.Count;
+                vm.StashMessage = message.Text ?? "";
+                if (vm.StashBlockedReason is { } blocked)
+                {
+                    return blocked;
+                }
+
+                await vm.SaveStagedStashCommand.ExecuteAsync(null);
+                return vm.Stashes.Count > before ? null : vm.Status;
+            }
+        );
+    }
+
+    private void Stash_SelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (e.AddedItems.OfType<StashTreeNode>().FirstOrDefault() is { Stash: { } stash })
+        {
+            InspectStash(stash);
+        }
+    }
+
+    private void Stash_Tapped(object? sender, TappedEventArgs e)
+    {
+        // Selecting the same stash again after viewing a commit should bring it back.
+        if (
+            (e.Source as Control)?.GetSelfAndVisualAncestors().OfType<TreeViewItem>().FirstOrDefault()?.DataContext
+            is StashTreeNode { Stash: { } stash }
+        )
+        {
+            InspectStash(stash);
+        }
+    }
+
+    private void InspectStash(GitStashInfo stash)
+    {
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.SelectedStash = stash;
+            vm.InspectStash(stash);
+        }
+    }
+
+    private void StashContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is not TreeView tree || DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        var node =
+            (e.Source as Control)?.GetSelfAndVisualAncestors().OfType<TreeViewItem>().FirstOrDefault()?.DataContext
+                as StashTreeNode
+            ?? tree.SelectedItem as StashTreeNode;
+        if (node is null)
+        {
+            return;
+        }
+
+        var items = new List<object>();
+        void Add(string label, Func<Task> action)
+        {
+            var item = new MenuItem { Header = label };
+            item.Click += async (_, _) => await action();
+            items.Add(item);
+        }
+
+        if (node.Stash is { } stash)
+        {
+            vm.SelectedStash = stash;
+            Add("Apply stash", () => RestoreStashAsync(stash, vm.ApplySelectedStashCommand, "Apply"));
+            Add("Pop stash", () => RestoreStashAsync(stash, vm.PopSelectedStashCommand, "Pop"));
+            Add(
+                "Copy message",
+                async () =>
+                {
+                    if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+                    {
+                        await clipboard.SetTextAsync(stash.Message);
+                    }
+                }
+            );
+            items.Add(new Separator());
+            Add("Drop stash…", () => DropStashAsync(node));
+        }
+        else
+        {
+            Add("Stash changes…", SaveStashAsync);
+            ((MenuItem)items[^1]).IsEnabled = !vm.HasNoChanges;
+        }
+
+        var control =
+            (e.Source as Control)?.GetSelfAndVisualAncestors().OfType<TreeViewItem>().FirstOrDefault() as Control
+            ?? tree;
+        control.ContextMenu = new ContextMenu { ItemsSource = items };
+        control.ContextMenu.Open(control);
+        e.Handled = true;
+    }
+
+    /// <summary>Applies or pops a stash, asking first when it would land on top of uncommitted changes.</summary>
+    private async Task RestoreStashAsync(GitStashInfo stash, IAsyncRelayCommand<bool?> command, string action)
+    {
+        if (DataContext is not MainWindowViewModel vm || TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
+        vm.SelectedStash = stash;
+        if (vm.HasNoChanges)
+        {
+            await command.ExecuteAsync(false);
+            return;
+        }
+
+        var changes = vm.ChangeCount == 1 ? "1 uncommitted change" : $"{vm.ChangeCount} uncommitted changes";
+        var dialog = RemoteEditDialog.Create(action + " stash over your changes?", out var fields);
+        fields.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"You have {changes}. The stash will be added on top of them, which can make the two harder to "
+                    + "tell apart. If the stash changes a file you've also changed, nothing is applied and the stash "
+                    + "is kept.",
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            }
+        );
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 8,
+        };
+        var no = new Button { Content = "No" };
+        var yes = new Button { Content = "Yes, " + action.ToLowerInvariant(), Classes = { "workspace", "primary" } };
+        var confirmed = false;
+        no.Click += (_, _) => dialog.Close();
+        yes.Click += (_, _) =>
+        {
+            confirmed = true;
+            dialog.Close();
+        };
+        dialog.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Escape)
+            {
+                dialog.Close();
+            }
+        };
+        buttons.Children.Add(no);
+        buttons.Children.Add(yes);
+        fields.Children.Add(buttons);
+        await dialog.ShowDialog(owner);
+        if (confirmed && vm.SelectedStash == stash)
+        {
+            await command.ExecuteAsync(true);
+        }
+    }
+
+    private async Task DropStashAsync(StashTreeNode node)
+    {
+        if (
+            DataContext is not MainWindowViewModel vm
+            || TopLevel.GetTopLevel(this) is not Window owner
+            || node.Stash is not { } stash
+        )
+        {
+            return;
+        }
+
+        var dialog = RemoteEditDialog.Create("Drop stash", out var fields);
+        fields.Children.Add(
+            new TextBlock
+            {
+                Text = $"Permanently delete \"{node.Name}\" without applying it. This can't be undone.",
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            }
+        );
+        await RemoteEditDialog.SubmitAsync(
+            dialog,
+            owner,
+            fields,
+            "Drop stash",
+            async () =>
+            {
+                vm.SelectedStash = stash;
+                var before = vm.Stashes.Count;
+                vm.StashDropConfirmation = node.Reference;
+                await vm.DropSelectedStashCommand.ExecuteAsync(null);
+                return vm.Stashes.Count < before ? null : vm.Status;
+            }
+        );
+    }
+
     internal ContextMenu BuildBranchMenu(string branch)
     {
         if (DataContext is not MainWindowViewModel vm)
@@ -478,7 +700,20 @@ public partial class NavigationView
         );
     }
 
-    private async void CreateBranch_Click(object? sender, RoutedEventArgs e) => await CreateBranchAtAsync("HEAD");
+    private async void CreateBranch_Click(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        await CreateBranchAtAsync("HEAD");
+    }
+
+    private async void AddRemote_Click(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (DataContext is MainWindowViewModel vm && TopLevel.GetTopLevel(this) is Window owner)
+        {
+            await RemoteEditDialog.ConnectionAsync(owner, vm, null);
+        }
+    }
 
     private async void CreateAnnotatedTag_Click(object? sender, RoutedEventArgs e)
     {
