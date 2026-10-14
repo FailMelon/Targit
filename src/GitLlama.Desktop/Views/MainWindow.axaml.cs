@@ -590,6 +590,17 @@ public partial class MainWindow : Window
         button.ContextMenu.Open(button);
     }
 
+    private void UpstreamPicker_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        button.ContextMenu = new ContextMenu { ItemsSource = UpstreamMenu.Items(this, vm) };
+        button.ContextMenu.Open(button);
+    }
+
     private async void OpenPath_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm)

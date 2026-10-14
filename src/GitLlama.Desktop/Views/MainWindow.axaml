@@ -372,8 +372,10 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
+                            <StackPanel Grid.Column="1"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
                             <Button Classes="workspace branch-picker"
-                                    Grid.Column="1"
                                     Width="170"
                                     Click="BranchPicker_Click"
                                     HorizontalAlignment="Stretch"
@@ -399,6 +401,41 @@
                                 </StackPanel>
                             </Button>
 
+                            <!-- Where the current branch pushes to and pulls from. -->
+                            <Button x:Name="UpstreamPicker"
+                                    Classes="workspace branch-picker"
+                                    Width="190"
+                                    Click="UpstreamPicker_Click"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    IsEnabled="{Binding HasRepository}"
+                                    ToolTip.Tip="{Binding UpstreamDetail}">
+                                <StackPanel Spacing="1">
+                                    <TextBlock Text="push / pull"
+                                               Classes="muted"
+                                               FontSize="10" />
+
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                                        <TextBlock Text="⇅" />
+
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding UpstreamCaption}"
+                                                   TextTrimming="CharacterEllipsis" />
+
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding UpstreamCounts}"
+                                                   Classes="muted"
+                                                   FontSize="11"
+                                                   VerticalAlignment="Center" />
+
+                                        <TextBlock Grid.Column="3"
+                                                   Text="⌄"
+                                                   Classes="muted" />
+                                    </Grid>
+                                </StackPanel>
+                            </Button>
+                            </StackPanel>
+
                             <StackPanel Grid.Column="2"
                                         Orientation="Horizontal"
                                         Spacing="6"
@@ -407,20 +444,20 @@
                                 <Button x:Name="FetchButton"
                                         Classes="workspace repository-action"
                                         Content="↓  Fetch"
-                                        Command="{Binding FetchRemoteCommand}"
-                                        ToolTip.Tip="Fetch selected remote" />
+                                        Command="{Binding FetchUpstreamCommand}"
+                                        ToolTip.Tip="{Binding FetchToolTip}" />
 
                                 <Button x:Name="PullButton"
                                         Classes="workspace repository-action"
                                         Content="↓  Pull"
                                         Command="{Binding PullFastForwardCommand}"
-                                        ToolTip.Tip="Pull tracked branch (fast-forward only)" />
+                                        ToolTip.Tip="{Binding PullToolTip}" />
 
                                 <Button x:Name="PushButton"
                                         Classes="workspace repository-action"
                                         Content="↑  Push"
-                                        Command="{Binding PushRemoteCommand}"
-                                        ToolTip.Tip="Push current branch to selected remote" />
+                                        Command="{Binding PushToUpstreamCommand}"
+                                        ToolTip.Tip="{Binding PushToolTip}" />
 
                                 <Button x:Name="RefreshButton"
                                         Classes="workspace repository-action"

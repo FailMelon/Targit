@@ -140,7 +140,11 @@ public partial class MainWindowViewModel
         };
         Repositories.CollectionChanged += (_, _) => FilterRepositories();
         BranchLines.CollectionChanged += (_, _) => FilterBranches();
-        Remotes.CollectionChanged += (_, _) => FilterBranches();
+        Remotes.CollectionChanged += (_, _) =>
+        {
+            FilterBranches();
+            NotifyUpstream();
+        };
         ChangeLines.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(ChangeCount));
@@ -369,6 +373,7 @@ public partial class MainWindowViewModel
         StagedFileCount = 0;
         RepositoryOperation = "None";
         UpstreamStatus = "No upstream";
+        Upstream = null;
         FileHistoryPath = "";
         FileHistorySummary = "Select a file to load its history.";
         OnPropertyChanged(nameof(HasRepository));

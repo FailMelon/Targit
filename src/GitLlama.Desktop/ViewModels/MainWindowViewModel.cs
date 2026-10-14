@@ -1598,16 +1598,20 @@ public partial class MainWindowViewModel : ObservableObject
                 }
             }
 
-            string upstream;
+            GitUpstream? tracked = null;
             try
             {
-                var divergence = await new GitBranchDivergenceService().GetCurrentAsync(repo.Path);
-                upstream = $"{divergence.Ahead} ahead · {divergence.Behind} behind";
+                tracked = await _upstreams.ReadAsync(repo.Path);
             }
-            catch (InvalidOperationException)
+            catch (Exception e) when (e is InvalidOperationException or LibGit2Sharp.LibGit2SharpException)
             {
-                upstream = "No upstream";
+                // Leave the upstream unknown; the toolbar offers to choose one.
             }
+
+            var upstream =
+                tracked is { Published: true } published ? $"{published.Ahead} ahead · {published.Behind} behind"
+                : tracked is { } pending ? $"{pending.Name} not pushed yet"
+                : "No upstream";
 
             if (
                 version == Interlocked.Read(ref _repositorySelectionVersion)
@@ -1615,6 +1619,7 @@ public partial class MainWindowViewModel : ObservableObject
             )
             {
                 UpstreamStatus = upstream;
+                Upstream = tracked;
             }
 
             await RefreshFeatureListsAsync(repo.Path, version, refreshVersion);
@@ -1933,7 +1938,15 @@ public partial class MainWindowViewModel : ObservableObject
                 return;
             }
 
-            var branch = await _remotes.PushCurrentBranchAsync(repo.Path, remote.Name, cancellationToken, options);
+            // Push to the branch the current branch tracks on this remote, which can have a different name.
+            var remoteBranch = Upstream is { } tracked && tracked.Remote == remote.Name ? tracked.Branch : null;
+            var branch = await _remotes.PushCurrentBranchAsync(
+                repo.Path,
+                remote.Name,
+                cancellationToken,
+                options,
+                remoteBranch
+            );
             if (version != Interlocked.Read(ref _repositorySelectionVersion))
             {
                 return;
@@ -1941,7 +1954,7 @@ public partial class MainWindowViewModel : ObservableObject
 
             MarkLfsLocksStale();
             await RefreshAsync();
-            Status = RemoteOperationFeedback = $"Pushed {branch} to {remote.Name}/{branch}.";
+            Status = RemoteOperationFeedback = $"Pushed {branch} to {remote.Name}/{remoteBranch ?? branch}.";
         }
         catch (Exception e)
         {
@@ -2150,6 +2163,14 @@ public partial class MainWindowViewModel : ObservableObject
     {
         if (SelectedRepository is not { } repo)
         {
+            return;
+        }
+
+        if (Upstream is not { Published: true })
+        {
+            Status = Upstream is { } pending
+                ? $"{pending.Name} isn't on the server yet, so there's nothing to pull. Push first."
+                : "Choose an upstream to pull from with the upstream picker next to the branch.";
             return;
         }
 

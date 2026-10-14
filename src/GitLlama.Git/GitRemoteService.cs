@@ -199,11 +199,16 @@ public sealed partial class GitRemoteService
         );
 
     /// <summary>Pushes the current local branch without force-updating remote history.</summary>
+    /// <summary>
+    /// Pushes the checked-out branch to <paramref name="remoteName"/>, to the branch of the same name unless
+    /// <paramref name="remoteBranchName"/> says otherwise. Sets the upstream when the branch doesn't have one yet.
+    /// </summary>
     public Task<string> PushCurrentBranchAsync(
         string repositoryPath,
         string remoteName,
         CancellationToken cancellationToken = default,
-        GitNetworkOptions? network = null
+        GitNetworkOptions? network = null,
+        string? remoteBranchName = null
     ) =>
         Task.Run(
             () =>
@@ -223,7 +228,10 @@ public sealed partial class GitRemoteService
                 var branch = repository.Head;
                 network?.EnsureAzureAccess(remote.PushUrl ?? remote.Url);
                 // Fully qualified source and destination, without a leading '+' (force).
-                var refspec = $"{branch.CanonicalName}:{branch.CanonicalName}";
+                var destination =
+                    "refs/heads/"
+                    + (string.IsNullOrWhiteSpace(remoteBranchName) ? branch.FriendlyName : remoteBranchName.Trim());
+                var refspec = $"{branch.CanonicalName}:{destination}";
                 cancellationToken.ThrowIfCancellationRequested();
                 if (GitLfsService.UsesLfs(repository))
                 {
@@ -320,7 +328,7 @@ public sealed partial class GitRemoteService
                         updater =>
                         {
                             updater.Remote = remote.Name;
-                            updater.UpstreamBranch = branch.CanonicalName;
+                            updater.UpstreamBranch = destination;
                         }
                     );
                 }

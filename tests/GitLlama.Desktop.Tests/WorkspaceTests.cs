@@ -456,6 +456,69 @@ public sealed class WorkspaceTests
     }
 
     [AvaloniaFact]
+    public async Task ToolbarShowsAndChangesWhereTheBranchPushesAndPulls()
+    {
+        using var fixture = new WorkspaceFixture();
+        var server = Path.Combine(Path.GetDirectoryName(fixture.RepositoryPath)!, "server.git");
+        Repository.Init(server, isBare: true);
+        using (var repository = new Repository(fixture.RepositoryPath))
+        {
+            repository.Network.Remotes.Add("origin", server);
+        }
+
+        var vm = await fixture.OpenAsync();
+        await vm.RefreshCommand.ExecuteAsync(null);
+        var branch = vm.CurrentBranch;
+        Assert.Null(vm.Upstream);
+        Assert.Equal("Not set", vm.UpstreamCaption);
+        Assert.Equal($"Push {branch} to origin/{branch}", vm.PushToolTip);
+        Assert.Equal("Fetch origin", vm.FetchToolTip);
+
+        // The first push creates the branch on origin and tracks it.
+        await vm.PushToUpstreamCommand.ExecuteAsync(null);
+        Assert.Equal($"origin/{branch}", vm.UpstreamCaption);
+        Assert.True(vm.Upstream!.Published);
+        Assert.Equal($"Pull origin/{branch} into {branch} (fast-forward only)", vm.PullToolTip);
+
+        // Choosing a branch that isn't on the server yet: Pull explains, Push creates it.
+        await vm.SetUpstreamToAsync("origin", "shared/work");
+        Assert.Equal("origin/shared/work", vm.UpstreamCaption);
+        Assert.Equal("new", vm.UpstreamCounts);
+        Assert.Equal($"Push {branch} to origin/shared/work", vm.PushToolTip);
+        await vm.PullFastForwardCommand.ExecuteAsync(null);
+        Assert.Contains("isn't on the server yet", vm.Status);
+        await vm.PushToUpstreamCommand.ExecuteAsync(null);
+        using (var bare = new Repository(server))
+        {
+            Assert.NotNull(bare.Branches["shared/work"]);
+        }
+
+        Assert.True(vm.Upstream!.Published);
+        Assert.Contains("shared/work", vm.RemoteBranchesOf("origin"));
+
+        var host = new Window();
+        host.Show();
+        try
+        {
+            var menu = UpstreamMenu.Items(host, vm);
+            var origin = menu.OfType<MenuItem>().Single(item => ((string)item.Header!).EndsWith("origin"));
+            Assert.Contains(
+                ((IEnumerable<object>)origin.ItemsSource!).OfType<MenuItem>(),
+                item => (string)item.Header! == "✓  origin/shared/work"
+            );
+            Assert.Contains(menu.OfType<MenuItem>(), item => (string)item.Header! == "Stop tracking");
+        }
+        finally
+        {
+            host.Close();
+        }
+
+        await vm.StopTrackingAsync();
+        Assert.Null(vm.Upstream);
+        Assert.Equal("Not set", vm.UpstreamCaption);
+    }
+
+    [AvaloniaFact]
     public async Task DeletedFilesCountAsStagedAndCanBeCommitted()
     {
         using var fixture = new WorkspaceFixture();
