@@ -33,7 +33,7 @@ public sealed class GitSubmoduleService
         network?.EnsureAzureAccess(module.Url);
         if (GitSystemTransport.IsSsh(module.Url) || network?.UsesAzureAuthorization(module.Url) == true)
         {
-            GitSystemTransport.RunAsync(path, ["submodule", "update", "--init", "--", module.Path], network ?? new GitNetworkOptions(), ct, ssh: GitSystemTransport.IsSsh(module.Url)).GetAwaiter().GetResult(); return;
+            GitSystemTransport.RunAsync(path, ["submodule", "update", "--init", "--", module.Path], network ?? new GitNetworkOptions(), ct, ssh: GitSystemTransport.IsSsh(module.Url), sshRemoteUrl: module.Url).GetAwaiter().GetResult(); return;
         }
         var fetch = (network ?? new GitNetworkOptions()).Fetch(ct);
         options.FetchOptions.CredentialsProvider = fetch.CredentialsProvider;

@@ -37,7 +37,13 @@ public partial class MainWindow : Window
         };
         WorkspaceDock.Factory = _factory;
         WorkspaceDock.Layout = layout;
-        DataContextChanged += (_, _) => { if (DataContext is MainWindowViewModel vm) vm.DockDocument = ShowDocument; };
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is not MainWindowViewModel vm) return;
+            vm.DockDocument = ShowDocument;
+            vm.SshSession.RequestPassphrase = async (request, ct) => await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => SshPromptDialog.UnlockAsync(this, request, ct));
+            vm.SshSession.RequestHostTrust = async (request, ct) => await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => SshPromptDialog.TrustHostAsync(this, request, ct));
+        };
         Opened += OnOpened;
         _factory.ActiveDockableChanged += (_, args) =>
         {
@@ -49,6 +55,7 @@ public partial class MainWindow : Window
             }
         };
         Closing += (_, _) => { SaveLayout(); (DataContext as MainWindowViewModel)?.StopRepositoryMonitoring(); };
+        Closed += (_, _) => { if (DataContext is MainWindowViewModel vm) { vm.CancelNetworkCommand.Execute(null); vm.SshSession.Dispose(); } };
         Activated += async (_, _) => { if (DataContext is MainWindowViewModel vm) await vm.RefreshFromWatcherAsync(); };
         KeyDown += (_, e) =>
         {

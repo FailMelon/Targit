@@ -24,7 +24,7 @@ public sealed class GitRepositoryLifecycleService
         cancellationToken.ThrowIfCancellationRequested();
         if (GitSystemTransport.IsSsh(url) || network?.UsesAzureAuthorization(url) == true)
         {
-            GitSystemTransport.RunAsync(null, ["clone", "--", url.Trim(), target], network ?? new GitNetworkOptions(), cancellationToken, ssh: GitSystemTransport.IsSsh(url)).GetAwaiter().GetResult();
+            GitSystemTransport.RunAsync(null, ["clone", "--", url.Trim(), target], network ?? new GitNetworkOptions(), cancellationToken, ssh: GitSystemTransport.IsSsh(url), sshRemoteUrl: url).GetAwaiter().GetResult();
             return target;
         }
         var options = new CloneOptions

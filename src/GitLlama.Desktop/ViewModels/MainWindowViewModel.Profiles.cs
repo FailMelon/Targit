@@ -42,6 +42,7 @@ public partial class MainWindowViewModel
         try
         {
             ActiveProfile = ProfileToSwitch = profile;
+            SshSession.Clear();
             ProfileName = profile.Name; ProfileAuthorName = profile.AuthorName; ProfileAuthorEmail = profile.AuthorEmail;
             UseCredentialManager = profile.UseCredentialManager; UseSshAgent = profile.UseSshAgent;
             // Clear the old private path first, then preserve an explicitly selected public path.

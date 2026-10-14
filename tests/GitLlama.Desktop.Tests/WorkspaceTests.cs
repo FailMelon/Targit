@@ -891,6 +891,8 @@ public sealed class WorkspaceTests
             var view = window.GetVisualDescendants().OfType<SettingsView>().Single();
             Assert.True(vm.UseSshAgent);
             Assert.True(view.FindControl<TextBox>("SshPrivateKeyInput")!.IsEffectivelyVisible);
+            Assert.True(view.FindControl<Button>("VerifyPuttyHostButton")!.IsEffectivelyVisible);
+            Assert.True(view.FindControl<Button>("LoadPageantKeyButton")!.IsEffectivelyVisible);
             Assert.True(view.FindControl<TextBox>("SshPublicKeyInput")!.IsEffectivelyVisible);
             Assert.True(view.FindControl<Button>("CopyPublicKeyButton")!.IsEnabled);
             SavePreview(window, "ssh-key-loading.png");

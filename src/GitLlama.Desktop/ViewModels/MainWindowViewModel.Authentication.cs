@@ -6,6 +6,12 @@ namespace GitLlama.Desktop.ViewModels;
 
 public partial class MainWindowViewModel
 {
+    public SshKeySession SshSession { get; }
+    [RelayCommand] private void LockSshSession()
+    {
+        if (IsAuthenticationBusy || IsNetworkBusy || IsFeatureBusy) { AuthenticationFeedback = "Wait for the current operation to finish before locking SSH."; return; }
+        SshSession.Clear(); AuthenticationFeedback = "SSH keys locked. GitLlama will ask for the passphrase on the next connection.";
+    }
     [ObservableProperty] private bool isSettingsOpen;
     [ObservableProperty] private string selectedSettingsSection = "Authentication";
     [ObservableProperty] private bool useCredentialManager = true;
@@ -13,7 +19,7 @@ public partial class MainWindowViewModel
     [ObservableProperty] private string sshPrivateKeyPath = "";
     [ObservableProperty] private string sshPublicKeyPath = "";
     [ObservableProperty] private string sshPublicKeyText = "";
-    [ObservableProperty] private string sshKeyFeedback = "Choose an OpenSSH private key and its public .pub file.";
+    [ObservableProperty] private string sshKeyFeedback = "Choose an SSH private key (OpenSSH or PuTTY) and its public .pub file.";
     private long _publicKeyRevision;
     public bool HasLoadedPublicKey => !string.IsNullOrWhiteSpace(SshPublicKeyText);
     [ObservableProperty] private string authenticationTestUrl = "";
@@ -45,6 +51,7 @@ public partial class MainWindowViewModel
     partial void OnUseSshAgentChanged(bool value) { if (!_loadingSettings && !_switchingProfile) _ = PersistAsync(); }
     partial void OnSshPrivateKeyPathChanged(string? oldValue, string newValue)
     {
+        SshSession.Clear();
         if (!_loadingSettings && !_switchingProfile) _ = PersistAsync();
         if (string.IsNullOrWhiteSpace(SshPublicKeyPath) || SshPublicKeyPath == oldValue + ".pub")
             SshPublicKeyPath = !string.IsNullOrWhiteSpace(newValue) && File.Exists(newValue + ".pub") ? newValue + ".pub" : "";

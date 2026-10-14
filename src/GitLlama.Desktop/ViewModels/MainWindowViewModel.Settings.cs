@@ -62,7 +62,7 @@ public partial class MainWindowViewModel : IDisposable
         catch (Exception e) { CapabilityDescription = "Native Git unavailable: " + SafeMessage(e); }
         DiagnosticsText = SecretRedactor.Redact($"GitLlama {typeof(MainWindowViewModel).Assembly.GetName().Version}\n" +
             $"OS: {RuntimeInformation.OSDescription}\nArchitecture: {RuntimeInformation.ProcessArchitecture}\nRuntime: {RuntimeInformation.FrameworkDescription}\n" +
-            CapabilityDescription + "\n\nCompatibility\nHTTPS: host-scoped session tokens or the configured system Git credential helper.\nSSH: system Git/OpenSSH, agent or explicit key, known_hosts verification required.\n" +
+            CapabilityDescription + "\n\nCompatibility\nHTTPS: host-scoped session tokens or the configured system Git credential helper.\nSSH: system Git with OpenSSH, in-app PuTTY key unlocking through SSH.NET, or optional Plink/Pageant. Trusted host verification required.\n" +
             "Worktrees: native create/open/lock/removal; removed working folders are preserved.\n" +
             "Rebase: guarded linear replay, not full Git CLI parity.\n" +
             "Native Git operations do not execute signing, LFS transfer or custom hooks. System Git SSH operations follow the user's Git configuration.\n" +
@@ -73,6 +73,7 @@ public partial class MainWindowViewModel : IDisposable
         if (_disposed) return;
         _disposed = true; StopRepositoryMonitoring(); CancelNetwork();
         _authenticationCancellation?.Cancel();
+        SshSession.Dispose();
         _githubConnectionCancellation?.Cancel(); _githubConnectionCancellation?.Dispose();
         _azurePersonalAccessTokens.Clear(); AzurePatInput = "";
         if (_ownsHostingProvider && _hostingProvider is IDisposable provider) provider.Dispose();

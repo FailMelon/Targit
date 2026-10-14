@@ -70,7 +70,7 @@ public sealed class GitRemoteService
         network?.EnsureAzureAccess(remote.Url);
         if (GitSystemTransport.IsSsh(remote.Url))
         {
-            GitSystemTransport.RunAsync(repositoryPath, ["fetch", "--", remote.Name], network ?? new GitNetworkOptions(), cancellationToken, ssh: true).GetAwaiter().GetResult(); return;
+            GitSystemTransport.RunAsync(repositoryPath, ["fetch", "--", remote.Name], network ?? new GitNetworkOptions(), cancellationToken, ssh: true, sshRemoteUrl: remote.Url).GetAwaiter().GetResult(); return;
         }
         if (network?.UsesAzureAuthorization(remote.Url) == true) { GitSystemTransport.RunAsync(repositoryPath, ["fetch", "--", remote.Name], network, cancellationToken).GetAwaiter().GetResult(); return; }
         cancellationToken.ThrowIfCancellationRequested();
@@ -96,7 +96,7 @@ public sealed class GitRemoteService
         // Fully qualified source and destination, without a leading '+' (force).
         var refspec = $"{branch.CanonicalName}:{branch.CanonicalName}";
         cancellationToken.ThrowIfCancellationRequested();
-        if (GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url) || network?.UsesAzureAuthorization(remote.PushUrl ?? remote.Url) == true) GitSystemTransport.RunAsync(repositoryPath, ["push", "--", remote.Name, refspec], network ?? new GitNetworkOptions(), cancellationToken, ssh: GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url)).GetAwaiter().GetResult();
+        if (GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url) || network?.UsesAzureAuthorization(remote.PushUrl ?? remote.Url) == true) GitSystemTransport.RunAsync(repositoryPath, ["push", "--", remote.Name, refspec], network ?? new GitNetworkOptions(), cancellationToken, ssh: GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url), sshRemoteUrl: remote.PushUrl ?? remote.Url).GetAwaiter().GetResult();
         else
         {
             var rejected = new List<PushStatusError>();
@@ -126,7 +126,7 @@ public sealed class GitRemoteService
         if (upstreamRemote is not null) network?.EnsureAzureAccess(upstreamRemote.Url);
         if (upstreamRemote is not null && (GitSystemTransport.IsSsh(upstreamRemote.Url) || network?.UsesAzureAuthorization(upstreamRemote.Url) == true))
         {
-            GitSystemTransport.RunAsync(repositoryPath, ["pull", "--ff-only", "--no-rebase"], network ?? new GitNetworkOptions(), cancellationToken, ssh: GitSystemTransport.IsSsh(upstreamRemote.Url)).GetAwaiter().GetResult(); return;
+            GitSystemTransport.RunAsync(repositoryPath, ["pull", "--ff-only", "--no-rebase"], network ?? new GitNetworkOptions(), cancellationToken, ssh: GitSystemTransport.IsSsh(upstreamRemote.Url), sshRemoteUrl: upstreamRemote.Url).GetAwaiter().GetResult(); return;
         }
 
         var signature = new Signature("GitLlama", "gitllama@localhost", DateTimeOffset.UtcNow);

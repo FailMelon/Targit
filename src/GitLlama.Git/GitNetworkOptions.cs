@@ -29,6 +29,8 @@ public sealed class GitNetworkOptions
     public string RepositoryPath { get; init; } = "";
     public bool UseSshAgent { get; init; } = true;
     public string SshPrivateKeyPath { get; init; } = "";
+    public SshKeySession? SshSession { get; init; }
+    public string SshHelperCommand { get; init; } = "";
     private bool _credentialSupplied;
     public IProgress<GitNetworkProgress>? Progress { get; init; }
 

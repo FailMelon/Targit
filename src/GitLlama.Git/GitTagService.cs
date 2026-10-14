@@ -100,7 +100,7 @@ public sealed class GitTagService
         network?.EnsureAzureAccess(remote.PushUrl ?? remote.Url);
         if (GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url) || network?.UsesAzureAuthorization(remote.PushUrl ?? remote.Url) == true)
         {
-            GitSystemTransport.RunAsync(repositoryPath, ["push", "--", remote.Name, $"refs/tags/{tag.FriendlyName}:refs/tags/{tag.FriendlyName}"], network ?? new GitNetworkOptions(), cancellationToken, ssh: GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url)).GetAwaiter().GetResult(); return;
+            GitSystemTransport.RunAsync(repositoryPath, ["push", "--", remote.Name, $"refs/tags/{tag.FriendlyName}:refs/tags/{tag.FriendlyName}"], network ?? new GitNetworkOptions(), cancellationToken, ssh: GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url), sshRemoteUrl: remote.PushUrl ?? remote.Url).GetAwaiter().GetResult(); return;
         }
         repository.Network.Push(remote, $"refs/tags/{tag.FriendlyName}:refs/tags/{tag.FriendlyName}",
             (network ?? new GitNetworkOptions()).Push(cancellationToken));
@@ -119,7 +119,7 @@ public sealed class GitTagService
             ?? throw new InvalidOperationException($"Remote '{remoteName}' does not exist.");
         cancellationToken.ThrowIfCancellationRequested();
         network?.EnsureAzureAccess(remote.PushUrl ?? remote.Url);
-        if (GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url) || network?.UsesAzureAuthorization(remote.PushUrl ?? remote.Url) == true) GitSystemTransport.RunAsync(repositoryPath, ["push", "--", remote.Name, $":refs/tags/{tagName}"], network ?? new GitNetworkOptions(), cancellationToken, ssh: GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url)).GetAwaiter().GetResult();
+        if (GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url) || network?.UsesAzureAuthorization(remote.PushUrl ?? remote.Url) == true) GitSystemTransport.RunAsync(repositoryPath, ["push", "--", remote.Name, $":refs/tags/{tagName}"], network ?? new GitNetworkOptions(), cancellationToken, ssh: GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url), sshRemoteUrl: remote.PushUrl ?? remote.Url).GetAwaiter().GetResult();
         else repository.Network.Push(remote, $":refs/tags/{tagName}", (network ?? new GitNetworkOptions()).Push(cancellationToken));
     }, cancellationToken);
 }

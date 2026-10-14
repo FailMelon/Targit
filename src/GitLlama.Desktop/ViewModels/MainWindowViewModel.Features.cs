@@ -121,6 +121,7 @@ public partial class MainWindowViewModel
         Username = string.IsNullOrWhiteSpace(NetworkSecret) && NetworkCredentialHost.Equals("github.com", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(GithubUsableToken) ? "x-access-token" : NetworkUsername,
         Secret = string.IsNullOrWhiteSpace(NetworkSecret) && NetworkCredentialHost.Equals("github.com", StringComparison.OrdinalIgnoreCase) ? GithubUsableToken : NetworkSecret, CredentialHost = NetworkCredentialHost,
         UseCredentialManager = UseCredentialManager, RepositoryPath = cloning ? "" : SelectedRepository?.Path ?? "", UseSshAgent = UseSshAgent, SshPrivateKeyPath = SshPrivateKeyPath,
+        SshSession = SshSession, SshHelperCommand = GitSystemTransport.QuoteSshArgument(Environment.ProcessPath!) + (string.Equals(Path.GetFileNameWithoutExtension(Environment.ProcessPath), "dotnet", StringComparison.OrdinalIgnoreCase) ? " " + GitSystemTransport.QuoteSshArgument(Path.Combine(AppContext.BaseDirectory, "GitLlama.dll")) : ""),
         Progress = new Progress<GitNetworkProgress>(p => { if (IsNetworkBusy && version == Interlocked.Read(ref _repositorySelectionVersion)) NetworkProgressText = p.Description; })
     };
     partial void OnCloneUrlChanged(string value)

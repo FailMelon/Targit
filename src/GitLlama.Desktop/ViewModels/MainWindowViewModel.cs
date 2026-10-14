@@ -584,6 +584,7 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(RepositorySessionManager sessions, JsonSettingsStore settings, GitWorkingTreeService gitActions, IHostingProvider? hostingProvider = null, Func<GitLlama.Providers.GitHubDeviceOAuth>? githubOAuthFactory = null, Func<string, string, CancellationToken, Task<IReadOnlyList<GitLlama.Providers.AzureRepository>>>? azureRepositoryLoader = null)
     {
         _sessions = sessions; _settings = settings; _gitActions = gitActions;
+        SshSession = new SshKeySession(Path.Combine(settings.DirectoryPath, "ssh-known-hosts.json"));
         if (githubOAuthFactory is not null) GithubOAuthFactory = githubOAuthFactory;
         if (azureRepositoryLoader is not null) AzureRepositoryLoader = azureRepositoryLoader;
         _hostingProvider = hostingProvider ?? new GitLlama.Providers.GitHubProvider();

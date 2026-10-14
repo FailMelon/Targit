@@ -63,6 +63,34 @@ public partial class StashesView : UserControl { public StashesView() => Avaloni
 public partial class SubmodulesView : UserControl { public SubmodulesView() => AvaloniaXamlLoader.Load(this); }
 public partial class SettingsView : UserControl
 {
+    private void LoadPageantKey_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        try
+        {
+            var plink = GitLlama.Git.GitSystemTransport.FindPlink();
+            var pageant = plink is null ? null : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(plink)!, "pageant.exe");
+            if (pageant is null || !System.IO.File.Exists(pageant)) throw new InvalidOperationException("Install the full PuTTY package, including Pageant, to unlock encrypted .ppk keys.");
+            using var process = System.Diagnostics.Process.Start(GitLlama.Git.PuttyHostVerification.CreatePageantStartInfo(pageant, vm.SshPrivateKeyPath));
+            vm.AuthenticationFeedback = "Pageant opened with your selected key. Enter its passphrase in Pageant, leave Pageant running, then retry in GitLlama. GitLlama does not store the passphrase.";
+        }
+        catch (Exception ex) { vm.AuthenticationFeedback = ex is InvalidOperationException ? ex.Message : "Pageant could not be opened. Check that PuTTY is installed."; }
+    }
+    private void VerifyPuttyHost_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm) return;
+        try
+        {
+            var plink = GitLlama.Git.GitSystemTransport.FindPlink();
+            var putty = plink is null ? null : System.IO.Path.Combine(System.IO.Path.GetDirectoryName(plink)!, "putty.exe");
+            if (putty is null || !System.IO.File.Exists(putty)) throw new InvalidOperationException("Install the full PuTTY package to open its host verification window.");
+            var url = string.IsNullOrWhiteSpace(vm.AuthenticationTestUrl) ? vm.SelectedRemote?.Url ?? "" : vm.AuthenticationTestUrl.Trim();
+            var start = GitLlama.Git.PuttyHostVerification.CreateStartInfo(url, putty, vm.SshPrivateKeyPath);
+            using var process = System.Diagnostics.Process.Start(start);
+            vm.AuthenticationFeedback = "PuTTY opened with your selected .ppk key, if configured. Verify and Accept the server fingerprint. PuTTY may ask for the key's passphrase; encrypted keys must also be loaded and unlocked in Pageant for GitLlama. Close PuTTY and retry here. Git hosting servers may close the PuTTY window because they do not provide shell access.";
+        }
+        catch (Exception ex) { vm.AuthenticationFeedback = ex is InvalidOperationException ? ex.Message : "PuTTY could not be opened. Check that PuTTY is installed."; }
+    }
     private async Task<bool> LaunchIntegrationBrowserAsync(Uri uri)
     {
         if ((uri.AbsoluteUri != "https://github.com/login/device" && !IsAzureTokenPage(uri)) || TopLevel.GetTopLevel(this)?.Launcher is not { } launcher) return false;
@@ -104,7 +132,7 @@ public partial class SettingsView : UserControl
         if (DataContext is not MainWindowViewModel vm || TopLevel.GetTopLevel(this) is not { } window) return;
         try
         {
-            var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Choose an OpenSSH private key", AllowMultiple = false });
+            var files = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions { Title = "Choose an SSH private key (OpenSSH or PuTTY)", AllowMultiple = false });
             if (files.FirstOrDefault()?.TryGetLocalPath() is { } path) { vm.SshPrivateKeyPath = path; vm.UseSshAgent = false; }
         }
         catch (Exception) { vm.SshKeyFeedback = "The private-key picker could not be opened."; }

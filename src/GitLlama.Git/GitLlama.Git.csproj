@@ -1,1 +1,1 @@
-<Project Sdk="Microsoft.NET.Sdk"><ItemGroup><PackageReference Include="LibGit2Sharp" Version="0.31.0"/><ProjectReference Include="../GitLlama.Core/GitLlama.Core.csproj"/></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><ItemGroup><PackageReference Include="LibGit2Sharp" Version="0.31.0" /><PackageReference Include="SSH.NET" Version="2026.0.0" /><ProjectReference Include="../GitLlama.Core/GitLlama.Core.csproj" /></ItemGroup></Project>

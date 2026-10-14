@@ -4,6 +4,8 @@ License texts are retained verbatim from the resolved NuGet packages. Avalonia, 
 
 | Package | Declared license | Included notices |
 | --- | --- | --- |
+| SSH.NET/2026.0.0 | MIT | [SSH.NET-LICENSE.txt](SSH.NET-LICENSE.txt), sshnet/SSH.NET 7b2fd3dbf2c86a80a7b06cea020aa5f821c9902e |
+| BouncyCastle.Cryptography/2.7.0 | MIT | [BouncyCastle-LICENSE.md](BouncyCastle-LICENSE.md), copied from NuGet package |
 | Microsoft.Identity.Client/4.91.0 | MIT | [Microsoft-Authentication-MIT.txt](Microsoft-Authentication-MIT.txt), AzureAD/microsoft-authentication-library-for-dotnet fa821737fbc278f735e751c3e81919b43373bdef |
 | Microsoft.IdentityModel.Abstractions/8.14.0 | MIT | [Microsoft-Authentication-MIT.txt](Microsoft-Authentication-MIT.txt), AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet c8f7d87bcda35557a68f6cb9c55856a2ee733856 |
 | System.Diagnostics.DiagnosticSource/6.0.1 | MIT | [dotnet-runtime-LICENSE.txt](dotnet-runtime-LICENSE.txt) |
