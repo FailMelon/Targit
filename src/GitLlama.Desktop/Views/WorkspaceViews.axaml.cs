@@ -1,7 +1,9 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using GitLlama.Core;
 using GitLlama.Desktop.ViewModels;
 
@@ -140,6 +142,27 @@ public partial class InspectorView : UserControl
             vm.ReviewStagedPatch = staged;
             vm.SelectedWorkingFile = file;
         }
+    }
+
+    private void WorkingFileContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is not ListBox list || DataContext is not MainWindowViewModel { UsesLfs: true } vm)
+        {
+            return;
+        }
+
+        var file =
+            (e.Source as Control)?.GetSelfAndVisualAncestors().OfType<ListBoxItem>().FirstOrDefault()?.DataContext
+                as WorkingFileRow
+            ?? list.SelectedItem as WorkingFileRow;
+        if (file is null)
+        {
+            return;
+        }
+
+        list.ContextMenu = new ContextMenu { ItemsSource = LfsLockMenu.Items(this, vm, file.Path).ToArray() };
+        list.ContextMenu.Open(list);
+        e.Handled = true;
     }
 
     private async void StageCheckbox_Click(object? sender, RoutedEventArgs e)

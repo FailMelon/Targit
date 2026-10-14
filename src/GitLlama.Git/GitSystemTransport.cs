@@ -309,6 +309,28 @@ public static class GitSystemTransport
             return "SSH key authentication failed. Load an authorized key into your agent, or choose the matching OpenSSH private key.";
         }
 
+        if (failure.Contains("unlock file with uncommitted changes", StringComparison.OrdinalIgnoreCase))
+        {
+            return "This file has uncommitted changes. Commit or discard them before unlocking it, or use Force unlock.";
+        }
+
+        if (failure.Contains("Lock exists", StringComparison.OrdinalIgnoreCase))
+        {
+            return "This file is already locked.";
+        }
+
+        if (
+            failure.Contains("unlock", StringComparison.OrdinalIgnoreCase)
+            && (
+                failure.Contains("403", StringComparison.Ordinal)
+                || failure.Contains("forbidden", StringComparison.OrdinalIgnoreCase)
+                || failure.Contains("locked by", StringComparison.OrdinalIgnoreCase)
+            )
+        )
+        {
+            return "Someone else holds this lock. Use Force unlock if you have permission to release it.";
+        }
+
         return "Git connection failed. Check account access, the configured credential helper, or SSH keys and trusted hosts.";
     }
 

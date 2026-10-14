@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
+using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
 using GitLlama.Desktop.ViewModels;
@@ -98,6 +99,176 @@ public partial class NavigationView
         {
             await SubmoduleDialog.AddAsync(owner, vm);
         }
+    }
+
+    private async void TrackLfs_Click(object? sender, RoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (DataContext is MainWindowViewModel vm)
+        {
+            await PromptAction(
+                "Track with Git LFS",
+                "Store files matching this pattern in Git LFS, for example *.psd, *.wav or Assets/**/*.uasset. Files already committed keep their history; stage them again to move them to LFS.",
+                "Track",
+                "",
+                value => vm.LfsPatternInput = value,
+                vm.TrackLfsPatternCommand
+            );
+        }
+    }
+
+    private void LfsPatternContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is not ListBox list || DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        var row =
+            (e.Source as Control)?.GetSelfAndVisualAncestors().OfType<ListBoxItem>().FirstOrDefault()?.DataContext
+                as LfsPatternRow
+            ?? list.SelectedItem as LfsPatternRow;
+        if (row is null)
+        {
+            return;
+        }
+
+        var locking = new MenuItem
+        {
+            Header = row.Lockable ? "Stop requiring locks for " + row.Pattern : "Require locks for " + row.Pattern,
+        };
+        locking.Click += async (_, _) =>
+        {
+            if (row.Lockable)
+            {
+                await vm.StopRequiringLfsLockingCommand.ExecuteAsync(row.Pattern);
+            }
+            else
+            {
+                await vm.RequireLfsLockingCommand.ExecuteAsync(row.Pattern);
+            }
+        };
+        var untrack = new MenuItem { Header = "Stop tracking " + row.Pattern };
+        untrack.Click += async (_, _) => await vm.UntrackLfsPatternCommand.ExecuteAsync(row.Pattern);
+        list.ContextMenu = new ContextMenu { ItemsSource = new[] { locking, untrack } };
+        list.ContextMenu.Open(list);
+        e.Handled = true;
+    }
+
+    private async void PruneLfs_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel vm || TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
+        vm.Status = "Checking which LFS files can be removed…";
+        if (await vm.PreviewLfsPruneAsync() is not { } preview)
+        {
+            return;
+        }
+
+        if (preview.Objects == 0)
+        {
+            vm.Status = "There are no old LFS files to remove. Recent and unpushed files are always kept.";
+            return;
+        }
+
+        var dialog = RemoteEditDialog.Create("Free up disk space", out var fields);
+        fields.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"Remove {preview.Objects} old LFS {(preview.Objects == 1 ? "file" : "files")} from this computer. "
+                    + $"Your LFS storage currently uses {MainWindowViewModel.FormatSize(preview.StorageBytes)}. "
+                    + "The server already has these files, and they're downloaded again if you check out a commit "
+                    + "that needs them. Files for recent commits and anything you haven't pushed are kept.",
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            }
+        );
+        vm.Status = "";
+        await RemoteEditDialog.SubmitAsync(
+            dialog,
+            owner,
+            fields,
+            preview.Objects == 1 ? "Remove 1 file" : $"Remove {preview.Objects} files",
+            async () =>
+            {
+                await vm.PruneLfsCommand.ExecuteAsync(null);
+                return null;
+            }
+        );
+    }
+
+    private async void LockLfsFile_Click(object? sender, RoutedEventArgs e)
+    {
+        if (
+            DataContext is not MainWindowViewModel { SelectedRepository: { } repository } vm
+            || TopLevel.GetTopLevel(this) is not { } top
+        )
+        {
+            return;
+        }
+
+        var start = await top.StorageProvider.TryGetFolderFromPathAsync(new Uri(repository.Path));
+        var picked = await top.StorageProvider.OpenFilePickerAsync(
+            new FilePickerOpenOptions
+            {
+                Title = "Choose a file to lock",
+                AllowMultiple = false,
+                SuggestedStartLocation = start,
+            }
+        );
+        if (picked.FirstOrDefault()?.TryGetLocalPath() is not { } file)
+        {
+            return;
+        }
+
+        var relative = Path.GetRelativePath(repository.Path, file).Replace('\\', '/');
+        if (relative.StartsWith("../", StringComparison.Ordinal) || Path.IsPathRooted(relative))
+        {
+            vm.Status = "Choose a file inside this repository.";
+            return;
+        }
+
+        await vm.LockLfsFileCommand.ExecuteAsync(relative);
+    }
+
+    private void LfsLockContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (sender is not ListBox list || DataContext is not MainWindowViewModel vm)
+        {
+            return;
+        }
+
+        var row =
+            (e.Source as Control)?.GetSelfAndVisualAncestors().OfType<ListBoxItem>().FirstOrDefault()?.DataContext
+                as LfsLockRow
+            ?? list.SelectedItem as LfsLockRow;
+        if (row is null)
+        {
+            return;
+        }
+
+        var copy = new MenuItem { Header = "Copy path" };
+        copy.Click += async (_, _) =>
+        {
+            if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
+            {
+                await clipboard.SetTextAsync(row.Path);
+            }
+        };
+        list.ContextMenu = new ContextMenu
+        {
+            ItemsSource = LfsLockMenu
+                .Items(this, vm, row.Path)
+                .Cast<object>()
+                .Append(new Separator())
+                .Append(copy)
+                .ToArray(),
+        };
+        list.ContextMenu.Open(list);
+        e.Handled = true;
     }
 
     private void SubmoduleContextRequested(object? sender, ContextRequestedEventArgs e)

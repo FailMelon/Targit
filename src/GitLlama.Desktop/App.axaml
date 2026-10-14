@@ -35,12 +35,28 @@
                 <TextBlock Grid.Column="1"
                            Text="{Binding AddedText}"
                            Foreground="#4EC9B0"
-                           HorizontalAlignment="Right" />
+                           HorizontalAlignment="Right"
+                           IsVisible="{Binding ShowLineCounts}" />
 
                 <TextBlock Grid.Column="2"
                            Text="{Binding DeletedText}"
                            Foreground="#F48771"
-                           HorizontalAlignment="Right" />
+                           HorizontalAlignment="Right"
+                           IsVisible="{Binding ShowLineCounts}" />
+
+                <Border Grid.Column="1"
+                        Grid.ColumnSpan="2"
+                        Background="#2B3B50"
+                        BorderBrush="#7F9FC9"
+                        BorderThickness="1"
+                        CornerRadius="3"
+                        Padding="4,0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding IsLfs}"
+                        ToolTip.Tip="Stored in Git LFS. Line counts aren't shown because Git only stores a pointer to the file.">
+                    <TextBlock Text="LFS" FontSize="9" />
+                </Border>
             </Grid>
         </DataTemplate>
     </Application.DataTemplates>

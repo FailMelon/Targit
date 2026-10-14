@@ -2338,6 +2338,140 @@ public sealed class WorkspaceTests
     }
 
     [AvaloniaFact]
+    public async Task LfsTrackedFilesAreStagedAsPointers()
+    {
+        using var fixture = new WorkspaceFixture();
+        var vm = await fixture.OpenAsync();
+        Assert.False(vm.UsesLfs);
+
+        vm.LfsPatternInput = "*.bin";
+        await vm.TrackLfsPatternCommand.ExecuteAsync(null);
+        await WaitUntilAsync(() => vm.LfsPatterns.Any(row => row.Pattern == "*.bin"));
+        Assert.True(vm.UsesLfs);
+
+        var content = Enumerable.Range(0, 100_000).Select(i => (byte)(i % 251)).ToArray();
+        File.WriteAllBytes(Path.Combine(fixture.RepositoryPath, "Hero.bin"), content);
+        await vm.RefreshCommand.ExecuteAsync(null);
+        await WaitUntilAsync(() => vm.WorkingFiles.Any(file => file.Path == "Hero.bin"));
+        vm.SelectedWorkingFile = vm.WorkingFiles.First(file => file.Path == "Hero.bin");
+        await vm.StageSelectedCommand.ExecuteAsync(null);
+
+        using (var repo = new Repository(fixture.RepositoryPath))
+        {
+            var staged = repo.Lookup<Blob>(repo.Index["Hero.bin"].Id);
+            Assert.StartsWith("version https://git-lfs.github.com/spec/v1", staged.GetContentText());
+        }
+
+        // The inspector marks LFS files, in working changes and in a commit's files.
+        await WaitUntilAsync(() => vm.WorkingFiles.Any(file => file is { Path: "Hero.bin", IsLfs: true }));
+        Assert.False(vm.WorkingFiles.Single(file => file.Path == "README.md").IsLfs);
+        using (var repo = new Repository(fixture.RepositoryPath))
+        {
+            var signature = new Signature("Robert Fryer", "robert@example.com", DateTimeOffset.UtcNow);
+            repo.Commit("Add hero model", signature, signature);
+        }
+
+        await vm.RefreshCommand.ExecuteAsync(null);
+        await WaitUntilAsync(() => vm.HistoryRows.Any(row => row.Subject == "Add hero model"));
+        vm.SelectedHistoryRow = vm.HistoryRows.First(row => row.Subject == "Add hero model");
+        await WaitUntilAsync(() => vm.HistoryFileRows.Any(file => file is { Path: "Hero.bin", IsLfs: true }));
+        Assert.False(vm.HistoryFileRows.Single(file => file.Path == "Hero.bin").ShowLineCounts);
+
+        var template = new DockContentTemplate(vm);
+        Avalonia.Application.Current!.DataTemplates.Add(template);
+        var window = new MainWindow(fixture.SettingsPath) { DataContext = vm };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            var patterns = window
+                .GetVisualDescendants()
+                .OfType<ListBox>()
+                .Single(list => list.Name == "LfsPatternList");
+            Assert.Equal(1, patterns.ItemCount);
+            SavePreview(window, "lfs-sidebar.png");
+        }
+        finally
+        {
+            window.Close();
+            Avalonia.Application.Current.DataTemplates.Remove(template);
+        }
+
+        await vm.UntrackLfsPatternCommand.ExecuteAsync("*.bin");
+        await WaitUntilAsync(() => vm.LfsPatterns.Count == 0);
+    }
+
+    [AvaloniaFact]
+    public async Task LfsLocksAppearInTheSidebarAndOnChangedFiles()
+    {
+        using var server = new GitLlama.Tests.Shared.FakeLfsLockServer();
+        using var fixture = new WorkspaceFixture();
+        using (var repo = new Repository(fixture.RepositoryPath))
+        {
+            repo.Config.Set("lfs.url", server.Url);
+        }
+
+        var vm = await fixture.OpenAsync();
+        vm.LfsPatternInput = "*.psd";
+        await vm.TrackLfsPatternCommand.ExecuteAsync(null);
+        await vm.RequireLfsLockingCommand.ExecuteAsync("*.psd");
+        await WaitUntilAsync(() => vm.LfsPatterns.Any(row => row is { Pattern: "*.psd", Lockable: true }));
+
+        Directory.CreateDirectory(Path.Combine(fixture.RepositoryPath, "Art"));
+        File.WriteAllText(Path.Combine(fixture.RepositoryPath, "Art", "Hero.psd"), "art");
+        using (var repo = new Repository(fixture.RepositoryPath))
+        {
+            Commands.Stage(repo, [".gitattributes", "Art/Hero.psd"]);
+            var signature = new Signature("Robert Fryer", "robert@example.com", DateTimeOffset.UtcNow);
+            repo.Commit("Add hero art", signature, signature);
+        }
+
+        File.WriteAllText(Path.Combine(fixture.RepositoryPath, "Art", "Map.psd"), "map");
+        server.Seed("Art/Map.psd", "Alex");
+
+        await vm.LockLfsFileCommand.ExecuteAsync("Art/Hero.psd");
+        await WaitUntilAsync(() => vm.LfsLocks.Count == 2);
+        Assert.Contains(vm.LfsLocks, row => row is { Path: "Art/Hero.psd", Owner: "you" });
+        Assert.Contains(vm.LfsLocks, row => row is { Path: "Art/Map.psd", Owner: "Alex" });
+
+        await vm.RefreshCommand.ExecuteAsync(null);
+        await WaitUntilAsync(() => vm.WorkingFiles.Any(file => file.Path == "Art/Map.psd" && file.HasLock));
+        var map = vm.WorkingFiles.Single(file => file.Path == "Art/Map.psd");
+        Assert.Contains("Alex", map.LockToolTip);
+        Assert.False(map.Lock!.IsOurs);
+        // Locking made the committed lockable file writable.
+        Assert.False(new FileInfo(Path.Combine(fixture.RepositoryPath, "Art", "Hero.psd")).IsReadOnly);
+
+        var template = new DockContentTemplate(vm);
+        Avalonia.Application.Current!.DataTemplates.Add(template);
+        var window = new MainWindow(fixture.SettingsPath) { DataContext = vm };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            var locks = window.GetVisualDescendants().OfType<ListBox>().Single(list => list.Name == "LfsLockList");
+            Assert.Equal(2, locks.ItemCount);
+            SavePreview(window, "lfs-locks.png");
+        }
+        finally
+        {
+            window.Close();
+            Avalonia.Application.Current.DataTemplates.Remove(template);
+        }
+
+        await vm.UnlockLfsFileCommand.ExecuteAsync("Art/Hero.psd");
+        await WaitUntilAsync(() => vm.LfsLocks.Count == 1);
+        Assert.True(new FileInfo(Path.Combine(fixture.RepositoryPath, "Art", "Hero.psd")).IsReadOnly);
+
+        // Someone else's lock can't be released without forcing it.
+        await vm.UnlockLfsFileCommand.ExecuteAsync("Art/Map.psd");
+        Assert.Contains("Force unlock", vm.Status);
+        await vm.ForceUnlockLfsFileCommand.ExecuteAsync("Art/Map.psd");
+        await WaitUntilAsync(() => vm.LfsLocks.Count == 0);
+        Assert.False(vm.WorkingFiles.Single(file => file.Path == "Art/Map.psd").HasLock);
+    }
+
+    [AvaloniaFact]
     public async Task SubmodulesAreListedAndCanBeEnteredAndLeftInTheSameTab()
     {
         using var fixture = new WorkspaceFixture();
@@ -2548,13 +2682,30 @@ public sealed class WorkspaceTests
             }
 
             _sessions.Dispose();
-            // Only remove this fixture's unique temporary directory.
-            foreach (var file in Directory.EnumerateFiles(_root, "*", SearchOption.AllDirectories))
+            GitLlama.Git.GitLfsFilter.Shutdown();
+            // Only remove this fixture's unique temporary directory. A background refresh can still be running a
+            // short git process in it, so retry briefly.
+            for (var attempt = 1; ; attempt++)
             {
-                File.SetAttributes(file, FileAttributes.Normal);
-            }
+                try
+                {
+                    foreach (var file in Directory.EnumerateFiles(_root, "*", SearchOption.AllDirectories))
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                    }
 
-            Directory.Delete(_root, true);
+                    Directory.Delete(_root, true);
+                    return;
+                }
+                catch (IOException) when (attempt < 20)
+                {
+                    Thread.Sleep(100);
+                }
+                catch (UnauthorizedAccessException) when (attempt < 20)
+                {
+                    Thread.Sleep(100);
+                }
+            }
         }
     }
 

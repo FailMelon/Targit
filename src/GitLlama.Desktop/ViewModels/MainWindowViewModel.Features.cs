@@ -192,6 +192,7 @@ public partial class MainWindowViewModel
         Submodules.Clear();
         SelectedSubmodule = null;
         OnPropertyChanged(nameof(HasSubmodules));
+        ResetLfs();
         SelectedWorktree = null;
         SelectedReflog = null;
         SelectedRepositoryFile = null;
@@ -318,6 +319,7 @@ public partial class MainWindowViewModel
         DeleteSelectedRemoteTagCommand.Cancel();
         UpdateSubmoduleCommand.Cancel();
         AddSubmoduleCommand.Cancel();
+        DownloadLfsFilesCommand.Cancel();
         ChangeRemoteBranchCommand.Cancel();
     }
 
@@ -798,6 +800,7 @@ public partial class MainWindowViewModel
         var files = await new GitFileBrowserService().ListAsync(path);
         var conflicts = await new GitConflictDetectionService().ListAsync(path);
         var submodules = await new GitSubmoduleService().ListAsync(path);
+        var lfs = await new GitLfsService().GetStatusAsync(path);
         if (
             version != Interlocked.Read(ref _repositorySelectionVersion)
             || refreshVersion != Interlocked.Read(ref _refreshRevision)
@@ -843,6 +846,7 @@ public partial class MainWindowViewModel
 
         SelectedSubmodule = Submodules.FirstOrDefault(m => m.Name == selectedSubmoduleName);
         OnPropertyChanged(nameof(HasSubmodules));
+        ApplyLfsStatus(lfs);
 
         if (
             SelectedHistoryScope is not ("All branches" or "Current branch")

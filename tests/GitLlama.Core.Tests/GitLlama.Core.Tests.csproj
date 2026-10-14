@@ -8,4 +8,7 @@
         <ProjectReference Include="../../src/GitLlama.Infrastructure/GitLlama.Infrastructure.csproj" />
         <ProjectReference Include="../../src/GitLlama.Providers/GitLlama.Providers.csproj" />
     </ItemGroup>
+    <ItemGroup>
+        <Compile Include="../Shared/FakeLfsLockServer.cs" Link="Shared/FakeLfsLockServer.cs" />
+    </ItemGroup>
 </Project>

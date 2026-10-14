@@ -27,6 +27,7 @@ Windows is the most tested platform. The Linux and macOS builds are newer, so pl
 - **Branches and more:** branches, tags, stashes, merges with conflict resolution, cherry-pick, revert, reset and worktrees.
 - **Remotes:** fetch, pull, push, add or edit remotes, and create, rename or delete branches on the server.
 - **GitHub:** browse, create, review, comment on and merge pull requests, and manage issues.
+- **Git LFS:** track large file types, stage and check them out as LFS files, and upload them when you push. Lock files so only you can change them, and mark file types as lockable so they stay read-only until locked. Needs [Git LFS](https://git-lfs.com) installed.
 - **Workspace:** dockable, rearrangeable panels with saved layouts, and automatic refresh when files change.
 
 ## Getting started
@@ -64,7 +65,7 @@ Settings are stored in your system's application data folder under `GitLlama`.
 
 ## Current limitations
 
-- Commit signing, Git LFS and Git hooks aren't run by GitLlama.
+- Commit signing and Git hooks aren't run by GitLlama.
 - Full interactive rebase isn't available yet.
 - GitHub Enterprise and Azure DevOps pull requests aren't supported yet.
 - History search covers the commits loaded so far (200 at a time; use **Load more** for older ones).

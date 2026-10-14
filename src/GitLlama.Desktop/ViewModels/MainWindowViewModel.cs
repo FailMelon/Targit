@@ -672,7 +672,7 @@ public partial class MainWindowViewModel : ObservableObject
                 + $"Parents: {(commit.Parents.Count == 0 ? "(root)" : string.Join(", ", commit.Parents))}{Environment.NewLine}"
                 + $"Refs: {(commit.Labels.Count == 0 ? "(none)" : string.Join(", ", commit.Labels))}{Environment.NewLine}"
                 + $"Files: {commit.Files.Count}{Environment.NewLine}{commit.Message}";
-            var rows = commit.Files.Select(HistoryFileRow.From).ToArray();
+            var rows = commit.Files.Select(HistoryFileRow.From).Select(WithLfs).ToArray();
             CollectionUpdates.Sync(HistoryFileRows, rows, file => file.Path);
             CollectionUpdates.Sync(HistoryFiles, rows.Select(file => file.Line), line => line);
             _historyFilePaths.Clear();
@@ -1111,6 +1111,8 @@ public partial class MainWindowViewModel : ObservableObject
         >? azureRepositoryLoader = null
     )
     {
+        // Stage and check out LFS files through git-lfs, as command-line Git does.
+        GitLfsFilter.EnsureRegistered();
         _sessions = sessions;
         _settings = settings;
         _gitActions = gitActions;
@@ -1211,6 +1213,8 @@ public partial class MainWindowViewModel : ObservableObject
         RemoteOperationFeedback = "";
         ClearGithubPushAccessFeedback();
         UpdateRepositoryBreadcrumbs();
+        // Long-running git-lfs processes keep their repository folder in use; start fresh for the new one.
+        GitLfsFilter.Shutdown();
         if (value is not null)
         {
             OpenRepositoryTab(value);
@@ -1501,7 +1505,7 @@ public partial class MainWindowViewModel : ObservableObject
             HasMoreHistory = historyPage.HasMore;
             RebuildPagedHistory();
             _changePaths.Clear();
-            var workingRows = overview.Changes.Select(WorkingFileRow.From).ToArray();
+            var workingRows = overview.Changes.Select(WorkingFileRow.From).Select(WithLfs).ToArray();
             CollectionUpdates.Sync(WorkingFiles, workingRows, file => file.Path);
             CollectionUpdates.Sync(ChangeLines, workingRows.Select(file => file.Line), line => line);
             foreach (var change in overview.Changes)
@@ -1833,6 +1837,7 @@ public partial class MainWindowViewModel : ObservableObject
                 return;
             }
 
+            MarkLfsLocksStale();
             await RefreshAsync();
             Status = $"Fetched {remote.Name}";
         }
@@ -1901,6 +1906,7 @@ public partial class MainWindowViewModel : ObservableObject
                 return;
             }
 
+            MarkLfsLocksStale();
             await RefreshAsync();
             Status = RemoteOperationFeedback = $"Pushed {branch} to {remote.Name}/{branch}.";
         }
@@ -2131,6 +2137,7 @@ public partial class MainWindowViewModel : ObservableObject
                 return;
             }
 
+            MarkLfsLocksStale();
             await RefreshAsync();
             Status = "Pull complete";
         }

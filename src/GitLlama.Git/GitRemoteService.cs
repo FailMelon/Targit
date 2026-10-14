@@ -225,6 +225,56 @@ public sealed partial class GitRemoteService
                 // Fully qualified source and destination, without a leading '+' (force).
                 var refspec = $"{branch.CanonicalName}:{branch.CanonicalName}";
                 cancellationToken.ThrowIfCancellationRequested();
+                if (GitLfsService.UsesLfs(repository))
+                {
+                    // Upload LFS content first so the pushed commits never point at missing files.
+                    if (GitLfsService.VersionAsync(cancellationToken).GetAwaiter().GetResult() is null)
+                    {
+                        throw new InvalidOperationException(
+                            "This repository uses Git LFS. Install Git LFS (https://git-lfs.com) to push it."
+                        );
+                    }
+
+                    var lfs = new GitLfsService();
+                    IReadOnlyList<GitLfsLock> locks = [];
+                    try
+                    {
+                        locks = lfs.GetLocksAsync(
+                                repositoryPath,
+                                remote.PushUrl ?? remote.Url,
+                                network ?? new GitNetworkOptions(),
+                                cancellationToken
+                            )
+                            .GetAwaiter()
+                            .GetResult();
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // The server doesn't support file locking; there's nothing to check.
+                    }
+
+                    var conflicts = GitLfsService.LockConflicts(repository, remote.Name, locks);
+                    if (conflicts.Count > 0)
+                    {
+                        throw new InvalidOperationException(
+                            "These files are locked by someone else, so your changes to them can't be pushed: "
+                                + string.Join(", ", conflicts.Select(entry => $"{entry.Path} ({entry.Owner})"))
+                                + ". Ask them to unlock the files, or undo your changes to them."
+                        );
+                    }
+
+                    lfs.PushAsync(
+                            repositoryPath,
+                            remote.Name,
+                            remote.PushUrl ?? remote.Url,
+                            branch.CanonicalName,
+                            network ?? new GitNetworkOptions(),
+                            cancellationToken
+                        )
+                        .GetAwaiter()
+                        .GetResult();
+                }
+
                 if (
                     GitSystemTransport.IsSsh(remote.PushUrl ?? remote.Url)
                     || network?.UsesAzureAuthorization(remote.PushUrl ?? remote.Url) == true

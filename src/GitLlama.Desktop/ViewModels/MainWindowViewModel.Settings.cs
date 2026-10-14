@@ -153,7 +153,7 @@ public partial class MainWindowViewModel : IDisposable
                 + "\n\nCompatibility\nHTTPS: host-scoped session tokens or the configured system Git credential helper.\nSSH: system Git with OpenSSH, in-app PuTTY key unlocking through SSH.NET, or optional Plink/Pageant. Trusted host verification required.\n"
                 + "Worktrees: native create/open/lock/removal; removed working folders are preserved.\n"
                 + "Rebase: guarded linear replay, not full Git CLI parity.\n"
-                + "Native Git operations do not execute signing, LFS transfer or custom hooks. System Git SSH operations follow the user's Git configuration.\n"
+                + "Git LFS files are filtered and transferred through git-lfs when it's installed. Native Git operations do not execute signing or custom hooks. System Git SSH operations follow the user's Git configuration.\n"
                 + "\nRecent operation status\n"
                 + string.Join('\n', OperationLog.Take(100))
         );

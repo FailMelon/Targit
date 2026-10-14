@@ -10,4 +10,7 @@
         <PackageReference Include="Avalonia.Headless.XUnit" Version="11.3.12" />
         <ProjectReference Include="../../src/GitLlama.Desktop/GitLlama.Desktop.csproj" />
     </ItemGroup>
+    <ItemGroup>
+        <Compile Include="../Shared/FakeLfsLockServer.cs" Link="Shared/FakeLfsLockServer.cs" />
+    </ItemGroup>
 </Project>

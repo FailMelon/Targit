@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="clr-namespace:GitLlama.Desktop.Views"
              x:Class="GitLlama.Desktop.Views.NavigationView">
@@ -181,6 +181,167 @@
                                        FontSize="11"
                                        Margin="8,4"
                                        IsVisible="{Binding !HasSubmodules}" />
+                        </StackPanel>
+                    </Expander>
+                </Border>
+
+                <Border Classes="category">
+                    <Expander Classes="navigation" IsExpanded="True">
+                        <Expander.Header>
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Git LFS" VerticalAlignment="Center" />
+
+                                <Button x:Name="TrackLfsButton"
+                                        Grid.Column="1"
+                                        Classes="workspace toolbar"
+                                        Content="＋"
+                                        Click="TrackLfs_Click"
+                                        IsEnabled="{Binding HasRepository}"
+                                        ToolTip.Tip="Track a file type with Git LFS"
+                                        Padding="6,0"
+                                        MinHeight="0" />
+                            </Grid>
+                        </Expander.Header>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding LfsWarning}"
+                                       Classes="muted"
+                                       FontSize="11"
+                                       Margin="8,4"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding HasLfsWarning}" />
+
+                            <Button Classes="workspace toolbar"
+                                    Content="Set up Git LFS for this repository"
+                                    Command="{Binding SetUpLfsCommand}"
+                                    IsVisible="{Binding CanSetUpLfs}"
+                                    HorizontalContentAlignment="Left" />
+
+                            <ListBox x:Name="LfsPatternList"
+                                     ItemsSource="{Binding LfsPatterns}"
+                                     ContextRequested="LfsPatternContextRequested"
+                                     MaxHeight="180">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="*,Auto"
+                                              ColumnSpacing="6"
+                                              ToolTip.Tip="{Binding ToolTip}">
+                                            <TextBlock Text="{Binding Pattern}" TextTrimming="CharacterEllipsis" />
+
+                                            <Path Grid.Column="1"
+                                                  Data="M 3,7 L 3,4.5 A 3,3 0 0 1 9,4.5 L 9,7 M 1.5,7 L 10.5,7 L 10.5,13 L 1.5,13 Z"
+                                                  Width="10"
+                                                  Height="12"
+                                                  Stretch="Uniform"
+                                                  Stroke="#AAB2BF"
+                                                  StrokeThickness="1.3"
+                                                  VerticalAlignment="Center"
+                                                  IsVisible="{Binding Lockable}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Text="No file types tracked. Use ＋ to store large files such as *.psd in Git LFS."
+                                       Classes="muted"
+                                       FontSize="11"
+                                       Margin="8,4"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding !UsesLfs}" />
+
+                            <TextBlock Text="{Binding LfsSummary}"
+                                       Classes="muted"
+                                       FontSize="11"
+                                       Margin="8,0" />
+
+                            <Button Classes="workspace toolbar"
+                                    Content="Download LFS files"
+                                    Command="{Binding DownloadLfsFilesCommand}"
+                                    IsVisible="{Binding CanDownloadLfs}"
+                                    HorizontalContentAlignment="Left" />
+
+                            <Button x:Name="PushAllLfsButton"
+                                    Classes="workspace toolbar"
+                                    Content="Push all LFS files"
+                                    Command="{Binding PushAllLfsFilesCommand}"
+                                    IsVisible="{Binding UsesLfs}"
+                                    ToolTip.Tip="Upload LFS files for every branch and tag. Use this when others see missing LFS files after a push."
+                                    HorizontalContentAlignment="Left" />
+
+                            <Button x:Name="PruneLfsButton"
+                                    Classes="workspace toolbar"
+                                    Content="Free up disk space…"
+                                    Click="PruneLfs_Click"
+                                    IsVisible="{Binding UsesLfs}"
+                                    ToolTip.Tip="Remove old LFS files from this computer that the server already has"
+                                    HorizontalContentAlignment="Left" />
+
+                            <Grid ColumnDefinitions="*,Auto"
+                                  Margin="8,6,0,0"
+                                  IsVisible="{Binding UsesLfs}">
+                                <TextBlock Text="Locks"
+                                           Classes="muted"
+                                           FontSize="11"
+                                           VerticalAlignment="Center" />
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button x:Name="LockLfsFileButton"
+                                            Classes="workspace toolbar"
+                                            Content="Lock a file…"
+                                            Click="LockLfsFile_Click"
+                                            ToolTip.Tip="Lock a file before editing it"
+                                            Padding="6,0"
+                                            MinHeight="0" />
+
+                                    <Button Classes="workspace toolbar"
+                                            Content="⟳"
+                                            Command="{Binding RefreshLfsLocksCommand}"
+                                            ToolTip.Tip="Refresh locks from the server"
+                                            Padding="6,0"
+                                            MinHeight="0" />
+                                </StackPanel>
+                            </Grid>
+
+                            <ListBox x:Name="LfsLockList"
+                                     ItemsSource="{Binding LfsLocks}"
+                                     ContextRequested="LfsLockContextRequested"
+                                     IsVisible="{Binding HasLfsLocks}"
+                                     MaxHeight="180">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="16,*,Auto"
+                                              ColumnSpacing="4"
+                                              ToolTip.Tip="{Binding ToolTip}">
+                                            <Path Data="M 3,7 L 3,4.5 A 3,3 0 0 1 9,4.5 L 9,7 M 1.5,7 L 10.5,7 L 10.5,13 L 1.5,13 Z"
+                                                  Width="10"
+                                                  Height="12"
+                                                  Stretch="Uniform"
+                                                  Stroke="{Binding Color}"
+                                                  StrokeThickness="1.3"
+                                                  VerticalAlignment="Center" />
+
+                                            <TextBlock Grid.Column="1"
+                                                       Text="{Binding Path}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding Owner}"
+                                                       Classes="muted"
+                                                       FontSize="11"
+                                                       Margin="6,0,4,0"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <TextBlock Text="{Binding LfsLocksMessage}"
+                                       Classes="muted"
+                                       FontSize="11"
+                                       Margin="8,0"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding HasLfsLocksMessage}" />
                         </StackPanel>
                     </Expander>
                 </Border>

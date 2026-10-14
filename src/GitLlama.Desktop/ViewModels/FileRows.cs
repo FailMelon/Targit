@@ -51,6 +51,18 @@ public sealed record WorkingFileRow(string Line, string Path, string State)
         : Status == "Added" ? "#4EC9B0"
         : "#A6A6A6";
 
+    /// <summary>Whether the file is stored in Git LFS.</summary>
+    public bool IsLfs { get; init; }
+
+    /// <summary>The Git LFS lock on this file, if any.</summary>
+    public GitLfsLock? Lock { get; init; }
+    public bool HasLock => Lock is not null;
+    public string LockColor => Lock?.IsOurs == true ? "#76D999" : "#F0B35A";
+    public string LockToolTip =>
+        Lock is null ? ""
+        : Lock.IsOurs ? "Locked by you"
+        : $"Locked by {Lock.Owner}. Your changes can't be pushed until they unlock it.";
+
     public static WorkingFileRow From(ChangedFile file) => new($"{file.State}  {file.Path}", file.Path, file.State);
 }
 
@@ -58,6 +70,10 @@ public sealed record HistoryFileRow(string Line, string Path, string Status, int
 {
     public string AddedText => $"+{Added}";
     public string DeletedText => $"−{Deleted}";
+
+    /// <summary>Whether the file is stored in Git LFS. Its line counts only describe the small pointer file.</summary>
+    public bool IsLfs { get; init; }
+    public bool ShowLineCounts => !IsLfs;
 
     public static HistoryFileRow From(GitHistoryFile file) =>
         new(
